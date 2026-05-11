@@ -1,0 +1,28 @@
+@import '@fontsource-variable/geist';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background-color: #0f0e0d;
+    color: #f0ede8;
+  }
+
+  * {
+    font-family: 'GeistVariable', system-ui, sans-serif;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #2e2c29;
+    border-radius: 9999px;
+  }
+}
