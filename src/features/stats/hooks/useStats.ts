@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useUser } from '@/hooks/useUser'
+import { queryKeys } from '@/lib/queryKeys'
 import {
   aggregateByCategory,
   aggregateByDay,
@@ -19,7 +20,7 @@ export function useStats(range: TimeRange) {
   const { from, to } = useMemo(() => getRangeDates(range), [range])
 
   const rangeQuery = useQuery({
-    queryKey: ['sessions', user?.id, { range, from: from.toISOString(), to: to.toISOString() }],
+    queryKey: queryKeys.sessionsStatsRange(user?.id, range, from.toISOString(), to.toISOString()),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sessions')
@@ -36,7 +37,7 @@ export function useStats(range: TimeRange) {
   })
 
   const heatmapQuery = useQuery({
-    queryKey: ['sessions', user?.id, 'heatmap'],
+    queryKey: queryKeys.sessionsHeatmap(user?.id),
     queryFn: async () => {
       const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
       const { data, error } = await supabase
@@ -53,7 +54,7 @@ export function useStats(range: TimeRange) {
   })
 
   const streakQuery = useQuery({
-    queryKey: ['sessions', user?.id, 'streak'],
+    queryKey: queryKeys.sessionsStreak(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sessions')

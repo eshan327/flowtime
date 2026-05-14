@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { BarChart3, CheckSquare, Home, LogOut } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import { Button } from '@/components/ui/Button'
 import { useUser } from '@/hooks/useUser'
 import { supabase } from '@/utils/supabase'
 
@@ -21,10 +22,42 @@ function mobileNavClassName(isActive: boolean) {
   ].join(' ')
 }
 
+function getUserDisplayName(userEmail: string | null | undefined, metadataName: unknown) {
+  if (typeof metadataName === 'string' && metadataName.trim().length > 0) {
+    return metadataName.trim()
+  }
+
+  if (typeof userEmail === 'string' && userEmail.length > 0) {
+    return userEmail.split('@')[0]
+  }
+
+  return 'Signed in'
+}
+
+function getInitials(label: string) {
+  const parts = label.trim().split(/\s+/).filter(Boolean)
+
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase()
+  }
+
+  return 'U'
+}
+
 export function Layout({ children }: { children: ReactNode }) {
   const { user } = useUser()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
+
+  const displayName = getUserDisplayName(
+    user?.email,
+    user?.user_metadata?.full_name ?? user?.user_metadata?.name
+  )
+  const initials = getInitials(displayName)
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
@@ -42,7 +75,6 @@ export function Layout({ children }: { children: ReactNode }) {
       <div className="mx-auto flex min-h-screen max-w-7xl md:flex-row">
         <aside className="hidden border-r border-surface-border px-5 py-6 md:flex md:w-72 md:shrink-0 md:flex-col">
           <p className="text-xs uppercase tracking-[0.14em] text-ink-tertiary">Flowtime</p>
-          <p className="mt-2 truncate text-sm text-ink-secondary">{user?.email ?? 'Signed in'}</p>
 
           <nav className="mt-5 grid gap-1">
             <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/">
@@ -60,15 +92,26 @@ export function Layout({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="mt-auto pt-8">
-            <button
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-surface-border px-3 py-2 text-sm text-ink-secondary transition hover:border-ink-secondary hover:text-ink-primary disabled:cursor-not-allowed disabled:opacity-70"
+            <div className="mb-3 flex items-center gap-3 rounded-lg border border-surface-border bg-surface-raised px-3 py-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-surface-border bg-surface-overlay text-sm font-medium text-ink-primary">
+                {initials}
+              </span>
+
+              <div className="min-w-0">
+                <p className="truncate text-sm text-ink-primary">{displayName}</p>
+                <p className="truncate text-xs text-ink-tertiary">{user?.email ?? 'Signed in'}</p>
+              </div>
+            </div>
+
+            <Button
+              className="w-full gap-2"
               disabled={isSigningOut}
               onClick={handleSignOut}
-              type="button"
+              variant="outlined"
             >
               <LogOut className="h-4 w-4" />
               {isSigningOut ? 'Signing out...' : 'Sign out'}
-            </button>
+            </Button>
 
             {signOutError ? <p className="mt-2 text-sm text-red-300">{signOutError}</p> : null}
           </div>
@@ -79,19 +122,24 @@ export function Layout({ children }: { children: ReactNode }) {
             <div>
               <p className="text-xs uppercase tracking-[0.14em] text-ink-tertiary">Flowtime</p>
               <p className="mt-1 max-w-[200px] truncate text-xs text-ink-secondary">
-                {user?.email ?? 'Signed in'}
+                {displayName}
               </p>
             </div>
 
-            <button
-              aria-label="Sign out"
-              className="rounded-lg border border-surface-border p-2 text-ink-secondary transition hover:border-ink-secondary hover:text-ink-primary disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={isSigningOut}
-              onClick={handleSignOut}
-              type="button"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-surface-border bg-surface-overlay text-xs font-medium text-ink-primary">
+                {initials}
+              </span>
+              <Button
+                aria-label="Sign out"
+                disabled={isSigningOut}
+                onClick={handleSignOut}
+                size="icon"
+                variant="outlined"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           </header>
 
           {signOutError ? (

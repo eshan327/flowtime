@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { COLOR_PRESETS } from '@/features/tasks/constants'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
 
@@ -27,18 +30,7 @@ export function AddCategoryForm({ isOpen, onClose, onCreate }: AddCategoryFormPr
     if (!isOpen) return
 
     nameInputRef.current?.focus()
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        handleClose()
-      }
-    }
-
-    document.addEventListener('keydown', handleEscape)
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-    }
-  }, [isOpen, handleClose])
+  }, [isOpen])
 
   const handleSubmit = async () => {
     const trimmed = name.trim()
@@ -64,57 +56,40 @@ export function AddCategoryForm({ isOpen, onClose, onCreate }: AddCategoryFormPr
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="w-full max-w-md rounded-xl border border-surface-border bg-surface-overlay p-5">
-        <h2 className="text-lg font-medium text-ink-primary">New category</h2>
+    <Modal isOpen={isOpen} onClose={handleClose} title="New category">
+      <Input
+        error={error ?? undefined}
+        label="Name"
+        onChange={(event) => setName(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            void handleSubmit()
+          }
+        }}
+        ref={nameInputRef}
+        value={name}
+      />
 
-        <label
-          className="mt-4 block text-xs uppercase tracking-[0.1em] text-ink-tertiary"
-          htmlFor="new-category-name"
-        >
-          Name
-        </label>
-        <input
-          className="mt-2 w-full rounded-lg border border-surface-border bg-surface-raised px-3 py-2 text-sm text-ink-primary outline-none transition focus:border-ink-secondary"
-          id="new-category-name"
-          onChange={(event) => setName(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              void handleSubmit()
-            }
-          }}
-          ref={nameInputRef}
-          value={name}
-        />
-
-        <p className="mt-4 text-xs uppercase tracking-[0.1em] text-ink-tertiary">Color</p>
-        <div className="mt-2">
-          <ColorPicker onChange={setColor} value={color} />
-        </div>
-
-        {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            className="rounded-lg border border-surface-border px-3 py-2 text-sm text-ink-secondary transition hover:border-ink-secondary hover:text-ink-primary"
-            onClick={handleClose}
-            type="button"
-          >
-            Cancel
-          </button>
-          <button
-            className="rounded-lg border border-ink-primary bg-ink-primary px-3 py-2 text-sm text-surface-base transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
-            disabled={isSubmitting}
-            onClick={() => {
-              void handleSubmit()
-            }}
-            type="button"
-          >
-            {isSubmitting ? 'Creating...' : 'Create category'}
-          </button>
-        </div>
+      <p className="mt-4 text-xs uppercase tracking-[0.1em] text-ink-tertiary">Color</p>
+      <div className="mt-2">
+        <ColorPicker onChange={setColor} value={color} />
       </div>
-    </div>
+
+      <div className="mt-5 flex justify-end gap-2">
+        <Button onClick={handleClose} variant="ghost">
+          Cancel
+        </Button>
+        <Button
+          loading={isSubmitting}
+          onClick={() => {
+            void handleSubmit()
+          }}
+          variant="filled"
+        >
+          {isSubmitting ? 'Creating...' : 'Create category'}
+        </Button>
+      </div>
+    </Modal>
   )
 }

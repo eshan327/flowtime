@@ -1,149 +1,100 @@
 # Flowtime
 
-Flowtime is a personal focus timer app based on the Flowtime (Flowmodoro) technique:
+Flowtime is a production-ready focus timer app built around the Flowtime (Flowmodoro) method:
+
 - Work until you naturally stop.
-- Take a proportional break: break length = work length / 5.
+- Earn a proportional break: break length = work length / 5.
 
-This repository is built from the specification in [FLOWTIME_SPEC.md](FLOWTIME_SPEC.md).
+Live app: https://flowtimeboard.vercel.app
 
-## Current Status
+Specification source: [FLOWTIME_SPEC.md](FLOWTIME_SPEC.md)
 
-- Step 1 (Scaffold): complete
-- Step 2 (Supabase/Auth): complete
-- Step 3 (App shell): complete
-- Step 4 (Tasks): complete
-- Step 5 (Timer): complete
-- Step 6 (Notifications/Audio): complete
-- Step 7 (Stats): complete
-- Step 8 (Polish): complete
-- Step 9 (Deploy): automated portion complete, human validation pending
+## Project Status
 
-Deployment prep in repo:
-- [vercel.json](vercel.json) added for SPA rewrites
-- [.env.example](.env.example) documents required env vars
-- Production build verified with `pnpm build`
-- Vercel production env vars configured
-- Production alias is live: https://flowtime-weld.vercel.app
+- All spec phases (1-9) are implemented.
+- UI and data-layer refactors are complete (shared primitives, centralized query keys, shared ordering logic).
+- Local quality gates pass (`pnpm lint`, `pnpm build`, `pnpm exec tsc --noEmit`).
+- Production deploy is active on Vercel.
+
+## Core Features
+
+- Google OAuth authentication via Supabase.
+- Task management with:
+	- Categories and uncategorized tasks.
+	- Subtasks with completion and reorder support.
+	- Drag-and-drop ordering for categories, tasks, and subtasks.
+- Timer workflow:
+	- Start work on a selected task (or no task).
+	- Stop anytime and automatically compute earned break.
+	- Run break, skip break, and resume next session.
+	- Session persistence to Supabase.
+- Stats dashboard:
+	- Range views (day/week/month/year).
+	- Streak tracking.
+	- Category/task aggregation.
+	- Heatmap-style historical activity.
+- Responsive shell for desktop and mobile navigation.
 
 ## Tech Stack
 
-- React 18, Vite, TypeScript (strict)
+- React 18 + Vite
+- TypeScript (strict)
 - Tailwind CSS v3
 - React Router v6
 - TanStack Query v5
 - Zustand
 - Supabase
-- Recharts, Lucide, clsx, tailwind-merge
-- ESLint, Prettier, simple-git-hooks, lint-staged
+- Recharts + Lucide
+- ESLint + Prettier + simple-git-hooks + lint-staged
 
-## Setup
+## Local Development
 
-### 1) Install dependencies
+1. Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-### 2) Approve build scripts (pnpm v11+)
-
-In environments with build-script approval enabled, allow required packages:
+2. If your environment requires build-script approvals (pnpm v11+):
 
 ```bash
 pnpm approve-builds simple-git-hooks supabase
 ```
 
-This writes approvals into [pnpm-workspace.yaml](pnpm-workspace.yaml).
-
-### 3) Ensure git hooks are registered
-
-If hooks are not present in `.git/hooks/`, run:
-
-```bash
-pnpm dlx simple-git-hooks
-```
-
-### 4) Start the app
+3. Start the app:
 
 ```bash
 pnpm dev
 ```
 
-## Deployment (Step 9)
+## Environment Variables
 
-### 1) Ensure local checks pass
-
-```bash
-pnpm lint
-pnpm build
-```
-
-### 2) Push to GitHub
-
-```bash
-git add .
-git commit -m "Prepare deployment"
-git push origin main
-```
-
-### 3) Connect to Vercel
-
-- Import this repository in Vercel (Framework Preset: Vite).
-- Build command: `pnpm build`
-- Output directory: `dist`
-- Confirm [vercel.json](vercel.json) rewrite is detected.
-
-### 4) Add Vercel environment variables
+Documented in [.env.example](.env.example).
 
 Required:
+
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-Optional fallback supported by code:
+Optional fallback:
+
 - `VITE_SUPABASE_ANON_KEY`
 
-### 5) OAuth callback/domain alignment
+## Scripts
 
-After first production deploy:
-- In Supabase Auth URL configuration:
-	- Site URL = production app domain
-	- Redirect allowlist includes production app domain and `http://localhost:5173`
-- In Google Cloud OAuth settings:
-	- Update origins/redirect configuration to match the Supabase callback and production domain setup
+- `pnpm dev` - run local dev server
+- `pnpm lint` - lint source files
+- `pnpm build` - type-check and build for production
+- `pnpm preview` - preview production bundle locally
+- `pnpm update-types` - regenerate Supabase types in [src/types/supabase.ts](src/types/supabase.ts)
 
-### 6) Production validation checklist
+## Deployment Notes
 
-- Sign in with Google on production URL
-- Start and stop a session, verify session row is created
-- Open the app on a second device, verify data sync
-- Verify mobile viewport shows the bottom tab bar
-- Refresh `/`, `/tasks`, and `/stats` directly to confirm no 404s
-
-## Available Scripts
-
-- `pnpm dev`: run the Vite dev server
-- `pnpm build`: type-check and build for production
-- `pnpm lint`: lint `src/**/*.ts(x)`
-- `pnpm preview`: preview production build
-- `pnpm update-types`: regenerate Supabase types in [src/types/supabase.ts](src/types/supabase.ts)
-
-## Manual Validation (Phase 1)
-
-The following checks are passing in this workspace:
-- `pnpm lint`
-- `pnpm build`
-- `pnpm dev`
-- [public/icon.png](public/icon.png) is 192x192
-
-## Human-Required Actions
-
-These actions require your direct account access and cannot be fully automated by the coding agent:
-
-1. Align OAuth production domain settings in Supabase and Google Cloud.
-2. Validate Google login flow on the production domain.
-3. Validate cross-device sync using a second device.
-4. Validate mobile behavior on a real phone viewport/device.
+- Vercel config for SPA rewrites is in [vercel.json](vercel.json).
+- Build output directory is `dist`.
+- For auth to work in production, Supabase and Google OAuth callback/origin settings must match the deployed domain.
 
 ## Notes
 
-- The project intentionally does not include automated tests per the current spec.
-- Keep implementation decisions aligned with [FLOWTIME_SPEC.md](FLOWTIME_SPEC.md) unless there is a clear reason to deviate.
+- The spec for this project does not require an automated test suite.
+- Keep implementation changes aligned with [FLOWTIME_SPEC.md](FLOWTIME_SPEC.md) unless intentionally revising product scope.

@@ -17,11 +17,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isActive = true
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!isActive) return
-      setUser(data.session?.user ?? null)
-      setLoading(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!isActive) return
+        setUser(data.session?.user ?? null)
+        setLoading(false)
+      })
+      .catch(() => {
+        if (!isActive) return
+        setUser(null)
+        setLoading(false)
+      })
 
     const {
       data: { subscription },

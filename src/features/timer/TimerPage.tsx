@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { X } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { SessionSummary } from '@/features/timer/components/SessionSummary'
 import { TaskSelector } from '@/features/timer/components/TaskSelector'
@@ -13,6 +15,7 @@ import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
 import { requestNotificationPermission } from '@/lib/notifications'
+import { queryKeys } from '@/lib/queryKeys'
 import { formatClock, formatDuration, formatShortDuration } from '@/lib/utils'
 import { supabase } from '@/utils/supabase'
 
@@ -36,12 +39,13 @@ export function TimerPage() {
   const setSelectedTask = useTimerStore((state) => state.setSelectedTask)
 
   useTimer()
+  const runawaySaveKeyRef = useRef<string | null>(null)
 
   const startOfToday = new Date()
   startOfToday.setHours(0, 0, 0, 0)
 
   const todaySummary = useQuery({
-    queryKey: ['sessions', user?.id, 'today-summary', startOfToday.toISOString()],
+    queryKey: queryKeys.sessionsTodaySummary(user?.id, startOfToday.toISOString()),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sessions')
@@ -79,6 +83,10 @@ export function TimerPage() {
   const handleStopWork = () => {
     void requestNotificationPermission()
 
+    if (saveSession.isPending) {
+      return
+    }
+
     if (!startedAt || !user) {
       stopWork()
       return
@@ -98,18 +106,30 @@ export function TimerPage() {
   }
 
   useEffect(() => {
-    if (runawayDetected && startedAt && user) {
-      saveSession.mutate({
-        user_id: user.id,
-        task_id: selectedTaskId,
-        work_seconds: MAX_SESSION_SECONDS,
-        break_seconds: Math.floor(MAX_SESSION_SECONDS / 5),
-        started_at: startedAt.toISOString(),
-        ended_at: new Date().toISOString(),
-      })
+    if (!runawayDetected) {
+      runawaySaveKeyRef.current = null
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runawayDetected])
+
+    if (!startedAt || !user || saveSession.isPending) {
+      return
+    }
+
+    const saveKey = `${user.id}:${startedAt.toISOString()}`
+    if (runawaySaveKeyRef.current === saveKey) {
+      return
+    }
+
+    runawaySaveKeyRef.current = saveKey
+    saveSession.mutate({
+      user_id: user.id,
+      task_id: selectedTaskId,
+      work_seconds: MAX_SESSION_SECONDS,
+      break_seconds: Math.floor(MAX_SESSION_SECONDS / 5),
+      started_at: startedAt.toISOString(),
+      ended_at: new Date().toISOString(),
+    })
+  }, [runawayDetected, saveSession, selectedTaskId, startedAt, user])
 
   return (
     <section className="mx-auto flex min-h-[75vh] w-full max-w-3xl flex-col justify-center">
@@ -129,15 +149,11 @@ export function TimerPage() {
         />
 
         {selectedTask ? (
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-surface-border px-3 py-1 text-xs text-ink-secondary">
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{
-                backgroundColor:
-                  selectedTask.categories?.color ?? selectedTask.color ?? DEFAULT_TASK_COLOR,
-              }}
+          <div className="mt-4">
+            <Badge
+              color={selectedTask.categories?.color ?? selectedTask.color ?? DEFAULT_TASK_COLOR}
+              label={selectedTask.name}
             />
-            {selectedTask.name}
           </div>
         ) : null}
 
@@ -161,14 +177,15 @@ export function TimerPage() {
                   Couldn't save session - check your connection. You focused for{' '}
                   {formatDuration(saveSession.variables.work_seconds)}.
                 </p>
-                <button
+                <Button
                   aria-label="Dismiss save error"
-                  className="rounded p-1 transition hover:bg-red-900/40"
+                  className="p-0 transition hover:bg-red-900/40"
                   onClick={() => saveSession.reset()}
-                  type="button"
+                  size="icon"
+                  variant="ghost"
                 >
                   <X className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </div>
           ) : null}
@@ -185,14 +202,15 @@ export function TimerPage() {
               {runawayDetected ? (
                 <div className="mt-3 flex items-start justify-between gap-3 rounded-lg border border-amber-700/40 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
                   <p>Looks like you left the timer running. We capped this session at 6 hours.</p>
-                  <button
+                  <Button
                     aria-label="Dismiss runaway warning"
-                    className="rounded p-1 transition hover:bg-amber-900/40"
+                    className="p-0 transition hover:bg-amber-900/40"
                     onClick={dismissRunaway}
-                    type="button"
+                    size="icon"
+                    variant="ghost"
                   >
                     <X className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               ) : null}
             </div>

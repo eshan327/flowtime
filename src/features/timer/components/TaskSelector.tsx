@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import type { TaskWithCategory } from '@/types'
@@ -65,11 +66,11 @@ export function TaskSelector({
 
   return (
     <div className="relative w-full max-w-md" ref={containerRef}>
-      <button
-        className="flex w-full items-center justify-between rounded-lg border border-surface-border bg-surface-raised px-3 py-2 text-sm text-ink-primary transition hover:border-ink-secondary disabled:cursor-not-allowed disabled:opacity-70"
+      <Button
+        className="w-full justify-between px-3"
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
-        type="button"
+        variant="outlined"
       >
         {isLoading ? (
           <span className="flex items-center gap-2 text-ink-secondary">
@@ -80,12 +81,12 @@ export function TaskSelector({
           <span className="truncate">{selectedTask ? selectedTask.name : 'No task'}</span>
         )}
         <ChevronDown className="h-4 w-4 text-ink-tertiary" />
-      </button>
+      </Button>
 
       {isOpen && !disabled ? (
         <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-lg border border-surface-border bg-surface-overlay p-1 shadow-xl">
-          <button
-            className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
+          <Button
+            className={`flex w-full items-center justify-start gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
               selectedTaskId === null
                 ? 'bg-surface-raised text-ink-primary'
                 : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
@@ -94,11 +95,12 @@ export function TaskSelector({
               onSelectTask(null)
               setIsOpen(false)
             }}
-            type="button"
+            size="sm"
+            variant="ghost"
           >
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-ink-tertiary" />
             No task
-          </button>
+          </Button>
 
           {groupedTasks.map((group) => (
             <div className="mt-1" key={group.key}>
@@ -110,8 +112,8 @@ export function TaskSelector({
                 const dotColor = task.categories?.color ?? task.color ?? DEFAULT_TASK_COLOR
 
                 return (
-                  <button
-                    className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
+                  <Button
+                    className={`flex w-full items-center justify-start gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
                       selectedTaskId === task.id
                         ? 'bg-surface-raised text-ink-primary'
                         : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
@@ -121,14 +123,15 @@ export function TaskSelector({
                       onSelectTask(task.id)
                       setIsOpen(false)
                     }}
-                    type="button"
+                    size="sm"
+                    variant="ghost"
                   >
                     <span
                       className="inline-block h-2.5 w-2.5 rounded-full"
                       style={{ backgroundColor: dotColor }}
                     />
                     <span className="truncate">{task.name}</span>
-                  </button>
+                  </Button>
                 )
               })}
             </div>

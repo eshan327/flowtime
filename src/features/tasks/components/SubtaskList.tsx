@@ -1,35 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, GripVertical, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { AddTaskForm } from '@/features/tasks/components/AddTaskForm'
 import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
-import type { Subtask } from '@/types'
-
-type DropPlacement = 'before' | 'after'
+import { getDropInsertPosition, type DropPlacement } from '@/lib/ordering'
 
 interface SubtaskListProps {
   taskId: string
   accentColor: string
-}
-
-function getNewPosition(
-  subtasks: Subtask[],
-  draggedSubtaskId: string,
-  targetSubtaskId: string,
-  placement: DropPlacement
-) {
-  const ordered = [...subtasks].sort((a, b) => a.position - b.position)
-  const withoutDragged = ordered.filter((subtask) => subtask.id !== draggedSubtaskId)
-  const targetIndex = withoutDragged.findIndex((subtask) => subtask.id === targetSubtaskId)
-  if (targetIndex === -1) return null
-
-  const insertIndex = placement === 'before' ? targetIndex : targetIndex + 1
-  const previous = withoutDragged[insertIndex - 1]
-  const next = withoutDragged[insertIndex]
-
-  if (!previous && !next) return 0
-  if (!previous && next) return next.position - 1
-  if (previous && !next) return previous.position + 1
-  return (previous.position + next.position) / 2
 }
 
 export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
@@ -95,7 +74,12 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
       return
     }
 
-    const newPosition = getNewPosition(subtasks, draggedSubtaskId, targetSubtaskId, placement)
+    const newPosition = getDropInsertPosition(
+      subtasks,
+      draggedSubtaskId,
+      targetSubtaskId,
+      placement
+    )
     if (newPosition === null) {
       clearDragState()
       return
@@ -159,33 +143,35 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                 className="flex items-center gap-2 border-l-2 px-2 py-2"
                 style={{ borderLeftColor: accentColor }}
               >
-                <button
+                <Button
                   aria-label={`Reorder subtask ${subtask.name}`}
-                  className="cursor-grab rounded p-1 text-ink-tertiary transition hover:text-ink-secondary"
+                  className="cursor-grab p-0 text-ink-tertiary transition hover:text-ink-secondary"
                   onMouseDown={() => setDragEnabledId(subtask.id)}
                   onMouseUp={() => setDragEnabledId(null)}
-                  type="button"
+                  size="icon"
+                  variant="ghost"
                 >
                   <GripVertical className="h-4 w-4" />
-                </button>
+                </Button>
 
-                <button
+                <Button
                   aria-label={`Complete ${subtask.name}`}
-                  className="flex h-5 w-5 items-center justify-center rounded-full border border-surface-border text-ink-tertiary transition hover:border-ink-secondary hover:text-ink-primary"
+                  className="h-5 w-5 rounded-full p-0 text-ink-tertiary transition hover:text-ink-primary"
                   onClick={() => {
                     setCompletingSubtaskId(subtask.id)
                     window.setTimeout(() => {
                       void completeSubtask.mutateAsync(subtask.id)
                     }, 300)
                   }}
-                  type="button"
+                  size="icon"
+                  variant="outlined"
                 >
                   <Check className="h-3 w-3" />
-                </button>
+                </Button>
 
                 {isEditing ? (
-                  <input
-                    className="w-full rounded border border-surface-border bg-surface-overlay px-2 py-1 text-sm text-ink-primary outline-none focus:border-ink-secondary"
+                  <Input
+                    className="w-full px-2 py-1 text-sm"
                     onBlur={() => {
                       void handleSaveEdit(subtask.id)
                     }}
@@ -206,28 +192,30 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                     value={draftName}
                   />
                 ) : (
-                  <button
-                    className="flex-1 text-left text-sm text-ink-primary"
+                  <Button
+                    className="h-auto flex-1 justify-start p-0 text-left text-sm text-ink-primary"
                     onDoubleClick={() => {
                       setEditingSubtaskId(subtask.id)
                       setDraftName(subtask.name)
                     }}
-                    type="button"
+                    size="sm"
+                    variant="ghost"
                   >
                     {subtask.name}
-                  </button>
+                  </Button>
                 )}
 
-                <button
+                <Button
                   aria-label={`Delete ${subtask.name}`}
-                  className="rounded p-1 text-ink-tertiary transition hover:text-red-300"
+                  className="p-0 text-ink-tertiary transition hover:text-red-300"
                   onClick={() => {
                     void deleteSubtask.mutateAsync(subtask.id)
                   }}
-                  type="button"
+                  size="icon"
+                  variant="ghost"
                 >
                   <Trash2 className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </div>
 

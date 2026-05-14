@@ -1,40 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DEFAULT_TASK_COLOR, POSITION_RENORMALIZE_THRESHOLD } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
+import { getNextPosition, requireUserId, shouldRenormalizeById } from '@/lib/ordering'
+import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/utils/supabase'
 import type { Task, TaskWithCategory } from '@/types'
 
 export function tasksQueryKey(userId?: string) {
-  return ['tasks', userId] as const
-}
-
-function assertUserId(userId?: string): string {
-  if (!userId) {
-    throw new Error('User is not authenticated')
-  }
-
-  return userId
-}
-
-function getNextPosition(items: Array<{ position: number }>) {
-  const maxPosition = items.length > 0 ? Math.max(...items.map((item) => item.position)) : -1
-  return maxPosition + 1
-}
-
-function shouldRenormalize(items: TaskWithCategory[], movedTaskId: string) {
-  const movedIndex = items.findIndex((item) => item.id === movedTaskId)
-  if (movedIndex === -1) return false
-
-  const moved = items[movedIndex]
-  const previous = items[movedIndex - 1]
-  const next = items[movedIndex + 1]
-
-  const previousGap = previous
-    ? Math.abs(moved.position - previous.position)
-    : Number.POSITIVE_INFINITY
-  const nextGap = next ? Math.abs(next.position - moved.position) : Number.POSITIVE_INFINITY
-
-  return Math.min(previousGap, nextGap) < POSITION_RENORMALIZE_THRESHOLD
+  return queryKeys.tasks(userId)
 }
 
 function toTaskRow(task: TaskWithCategory, position: number): Task {
@@ -75,7 +48,7 @@ export function useTasks() {
 
   const addTask = useMutation({
     mutationFn: async ({ name, categoryId }: { name: string; categoryId: string | null }) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
       const existing = queryClient.getQueryData<TaskWithCategory[]>(tasksQueryKey(userId)) ?? []
       const tasksInCategory = existing.filter((task) => task.category_id === categoryId)
 
@@ -103,7 +76,7 @@ export function useTasks() {
 
   const updateTask = useMutation({
     mutationFn: async ({ id, name, color }: { id: string; name?: string; color?: string }) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
       const updates: Partial<Pick<Task, 'name' | 'color'>> = {}
 
       if (name !== undefined) {
@@ -129,7 +102,7 @@ export function useTasks() {
 
   const completeTask = useMutation({
     mutationFn: async (id: string) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
       const { error } = await supabase
         .from('tasks')
         .update({ completed_at: new Date().toISOString() })
@@ -140,24 +113,26 @@ export function useTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tasksQueryKey(user?.id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtasksRoot() })
     },
   })
 
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
       const { error } = await supabase.from('tasks').delete().eq('id', id).eq('user_id', userId)
 
       if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tasksQueryKey(user?.id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtasksRoot() })
     },
   })
 
   const moveTask = useMutation({
     mutationFn: async ({ id, categoryId }: { id: string; categoryId: string | null }) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
       const existing = queryClient.getQueryData<TaskWithCategory[]>(tasksQueryKey(userId)) ?? []
       const currentTask = existing.find((task) => task.id === id)
       const tasksInTargetCategory = existing.filter(
@@ -192,7 +167,7 @@ export function useTasks() {
 
   const reorderTask = useMutation({
     mutationFn: async ({ id, newPosition }: { id: string; newPosition: number }) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
 
       const { error } = await supabase
         .from('tasks')
@@ -207,7 +182,7 @@ export function useTasks() {
         .map((task) => (task.id === id ? { ...task, position: newPosition } : task))
         .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
 
-      if (!shouldRenormalize(reordered, id)) return
+      if (!shouldRenormalizeById(reordered, id, POSITION_RENORMALIZE_THRESHOLD)) return
 
       const renormalized = reordered.map((task, index) => toTaskRow(task, index))
       const { error: renormalizeError } = await supabase.from('tasks').upsert(renormalized, {

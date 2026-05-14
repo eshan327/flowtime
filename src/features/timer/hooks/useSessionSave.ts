@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/utils/supabase'
 
 interface SaveSessionInput {
@@ -18,8 +19,8 @@ export function useSessionSave() {
       const { error } = await supabase.from('sessions').insert(payload)
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sessions'] })
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sessions(variables.user_id) })
     },
   })
 }

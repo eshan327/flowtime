@@ -1,4 +1,5 @@
 import type { TimeRange } from '@/types'
+import { Button } from '@/components/ui/Button'
 
 interface TimeRangeSelectorProps {
   value: TimeRange
@@ -16,18 +17,19 @@ export function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps) {
   return (
     <div className="inline-flex rounded-lg border border-surface-border bg-surface-raised p-1">
       {OPTIONS.map((option) => (
-        <button
-          className={`rounded-md px-3 py-1.5 text-sm transition ${
+        <Button
+          className={
             value === option.value
               ? 'bg-surface-overlay text-ink-primary'
               : 'text-ink-secondary hover:text-ink-primary'
-          }`}
+          }
           key={option.value}
           onClick={() => onChange(option.value)}
-          type="button"
+          size="sm"
+          variant="ghost"
         >
           {option.label}
-        </button>
+        </Button>
       ))}
     </div>
   )

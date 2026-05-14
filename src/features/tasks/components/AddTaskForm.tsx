@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Plus, X } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 
 interface AddTaskFormProps {
   label: string
@@ -39,21 +41,16 @@ export function AddTaskForm({ label, onAdd }: AddTaskFormProps) {
 
   if (!isOpen) {
     return (
-      <button
-        className="inline-flex items-center gap-1 text-sm text-ink-secondary transition hover:text-ink-primary"
-        onClick={() => setIsOpen(true)}
-        type="button"
-      >
+      <Button className="gap-1 px-0" onClick={() => setIsOpen(true)} size="sm" variant="ghost">
         <Plus className="h-4 w-4" />
         {label}
-      </button>
+      </Button>
     )
   }
 
   return (
     <div className="flex items-center gap-2">
-      <input
-        className="w-full rounded-lg border border-surface-border bg-surface-overlay px-3 py-2 text-sm text-ink-primary outline-none transition focus:border-ink-secondary"
+      <Input
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {
@@ -71,26 +68,23 @@ export function AddTaskForm({ label, onAdd }: AddTaskFormProps) {
         value={value}
       />
 
-      <button
+      <Button
         aria-label="Save"
-        className="rounded-md border border-surface-border p-2 text-ink-secondary transition hover:border-ink-secondary hover:text-ink-primary disabled:cursor-not-allowed disabled:opacity-60"
+        className="p-0"
         disabled={isSubmitting}
+        loading={isSubmitting}
         onClick={() => {
           void handleSubmit()
         }}
-        type="button"
+        size="icon"
+        variant="outlined"
       >
-        <Check className="h-4 w-4" />
-      </button>
+        {!isSubmitting ? <Check className="h-4 w-4" /> : null}
+      </Button>
 
-      <button
-        aria-label="Cancel"
-        className="rounded-md border border-surface-border p-2 text-ink-secondary transition hover:border-ink-secondary hover:text-ink-primary"
-        onClick={reset}
-        type="button"
-      >
+      <Button aria-label="Cancel" className="p-0" onClick={reset} size="icon" variant="outlined">
         <X className="h-4 w-4" />
-      </button>
+      </Button>
     </div>
   )
 }

@@ -1,40 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { POSITION_RENORMALIZE_THRESHOLD } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
+import { getNextPosition, requireUserId, shouldRenormalizeById } from '@/lib/ordering'
+import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/utils/supabase'
 import type { Category } from '@/types'
 
 export function categoriesQueryKey(userId?: string) {
-  return ['categories', userId] as const
-}
-
-function assertUserId(userId?: string): string {
-  if (!userId) {
-    throw new Error('User is not authenticated')
-  }
-
-  return userId
-}
-
-function getNextPosition(items: Array<{ position: number }>) {
-  const maxPosition = items.length > 0 ? Math.max(...items.map((item) => item.position)) : -1
-  return maxPosition + 1
-}
-
-function shouldRenormalize(items: Category[], movedCategoryId: string) {
-  const movedIndex = items.findIndex((item) => item.id === movedCategoryId)
-  if (movedIndex === -1) return false
-
-  const moved = items[movedIndex]
-  const previous = items[movedIndex - 1]
-  const next = items[movedIndex + 1]
-
-  const previousGap = previous
-    ? Math.abs(moved.position - previous.position)
-    : Number.POSITIVE_INFINITY
-  const nextGap = next ? Math.abs(next.position - moved.position) : Number.POSITIVE_INFINITY
-
-  return Math.min(previousGap, nextGap) < POSITION_RENORMALIZE_THRESHOLD
+  return queryKeys.categories(userId)
 }
 
 export function useCategories() {
@@ -59,7 +32,7 @@ export function useCategories() {
 
   const addCategory = useMutation({
     mutationFn: async ({ name, color }: { name: string; color: string }) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
       const existing = queryClient.getQueryData<Category[]>(categoriesQueryKey(userId)) ?? []
 
       const { data, error } = await supabase
@@ -78,13 +51,13 @@ export function useCategories() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoriesQueryKey(user?.id) })
-      queryClient.invalidateQueries({ queryKey: ['tasks', user?.id] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
     },
   })
 
   const renameCategory = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
       const { error } = await supabase
         .from('categories')
         .update({ name: name.trim() })
@@ -95,13 +68,13 @@ export function useCategories() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoriesQueryKey(user?.id) })
-      queryClient.invalidateQueries({ queryKey: ['tasks', user?.id] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
     },
   })
 
   const recolorCategory = useMutation({
     mutationFn: async ({ id, color }: { id: string; color: string }) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
       const { error } = await supabase
         .from('categories')
         .update({ color })
@@ -112,13 +85,13 @@ export function useCategories() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoriesQueryKey(user?.id) })
-      queryClient.invalidateQueries({ queryKey: ['tasks', user?.id] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
     },
   })
 
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
       const { error } = await supabase
         .from('categories')
         .delete()
@@ -129,13 +102,13 @@ export function useCategories() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoriesQueryKey(user?.id) })
-      queryClient.invalidateQueries({ queryKey: ['tasks', user?.id] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
     },
   })
 
   const reorderCategory = useMutation({
     mutationFn: async ({ id, newPosition }: { id: string; newPosition: number }) => {
-      const userId = assertUserId(user?.id)
+      const userId = requireUserId(user?.id)
 
       const { error } = await supabase
         .from('categories')
@@ -150,7 +123,7 @@ export function useCategories() {
         .map((category) => (category.id === id ? { ...category, position: newPosition } : category))
         .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
 
-      if (!shouldRenormalize(reordered, id)) return
+      if (!shouldRenormalizeById(reordered, id, POSITION_RENORMALIZE_THRESHOLD)) return
 
       const renormalized = reordered.map((category, index) => ({
         ...category,
@@ -165,7 +138,7 @@ export function useCategories() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoriesQueryKey(user?.id) })
-      queryClient.invalidateQueries({ queryKey: ['tasks', user?.id] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
     },
   })
 

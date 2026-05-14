@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { GripVertical, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
+import { getDropInsertPosition, type DropPlacement } from '@/lib/ordering'
 import type { Category } from '@/types'
-
-type DropPlacement = 'before' | 'after'
 
 interface CategoryTabsProps {
   categories: Category[]
@@ -14,27 +14,6 @@ interface CategoryTabsProps {
   onRecolorCategory: (id: string, color: string) => Promise<void> | void
   onDeleteCategory: (id: string) => Promise<void> | void
   onReorderCategory: (id: string, newPosition: number) => Promise<void> | void
-}
-
-function getNewPosition(
-  categories: Category[],
-  draggedCategoryId: string,
-  targetCategoryId: string,
-  placement: DropPlacement
-) {
-  const ordered = [...categories].sort((a, b) => a.position - b.position)
-  const withoutDragged = ordered.filter((category) => category.id !== draggedCategoryId)
-  const targetIndex = withoutDragged.findIndex((category) => category.id === targetCategoryId)
-  if (targetIndex === -1) return null
-
-  const insertIndex = placement === 'before' ? targetIndex : targetIndex + 1
-  const previous = withoutDragged[insertIndex - 1]
-  const next = withoutDragged[insertIndex]
-
-  if (!previous && !next) return 0
-  if (!previous && next) return next.position - 1
-  if (previous && !next) return previous.position + 1
-  return (previous.position + next.position) / 2
 }
 
 export function CategoryTabs({
@@ -98,7 +77,7 @@ export function CategoryTabs({
       return
     }
 
-    const newPosition = getNewPosition(
+    const newPosition = getDropInsertPosition(
       orderedCategories,
       draggedCategoryId,
       targetCategoryId,
@@ -117,17 +96,18 @@ export function CategoryTabs({
   return (
     <>
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        <button
+        <Button
           className={`border-b-2 px-3 py-2 text-sm transition ${
             activeTab === 'all'
               ? 'border-ink-primary text-ink-primary'
               : 'border-transparent text-ink-secondary hover:text-ink-primary'
           }`}
           onClick={() => onChangeTab('all')}
-          type="button"
+          size="sm"
+          variant="ghost"
         >
           All
-        </button>
+        </Button>
 
         {orderedCategories.map((category) => (
           <div
@@ -183,38 +163,41 @@ export function CategoryTabs({
               <span className="absolute bottom-0 right-0 top-0 w-0.5 bg-ink-primary" />
             ) : null}
 
-            <button
+            <Button
               className="flex items-center gap-2 px-1 py-1 text-sm"
               onClick={() => onChangeTab(category.id)}
-              type="button"
+              size="sm"
+              variant="ghost"
             >
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full"
                 style={{ backgroundColor: category.color }}
               />
               <span className="whitespace-nowrap">{category.name}</span>
-            </button>
+            </Button>
 
-            <button
+            <Button
               aria-label={`Reorder ${category.name}`}
-              className="cursor-grab rounded p-1 text-ink-tertiary hover:text-ink-secondary"
+              className="cursor-grab p-0 text-ink-tertiary hover:text-ink-secondary"
               onMouseDown={() => setDragEnabledId(category.id)}
               onMouseUp={() => setDragEnabledId(null)}
-              type="button"
+              size="icon"
+              variant="ghost"
             >
               <GripVertical className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           </div>
         ))}
 
-        <button
+        <Button
           aria-label="Add category"
-          className="rounded-lg border border-surface-border p-2 text-ink-secondary transition hover:border-ink-secondary hover:text-ink-primary"
+          className="p-0"
           onClick={onAddCategory}
-          type="button"
+          size="icon"
+          variant="outlined"
         >
           <Plus className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
 
       {contextMenu ? (
@@ -223,8 +206,8 @@ export function CategoryTabs({
           ref={menuRef}
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
-          <button
-            className="w-full rounded-md px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+          <Button
+            className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
             onClick={() => {
               const nextName = window.prompt('Rename category', contextMenu.category.name)
               if (!nextName) return
@@ -235,20 +218,22 @@ export function CategoryTabs({
               void onRenameCategory(contextMenu.category.id, trimmed)
               setContextMenu(null)
             }}
-            type="button"
+            size="sm"
+            variant="ghost"
           >
             Rename
-          </button>
+          </Button>
 
-          <button
-            className="w-full rounded-md px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+          <Button
+            className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
             onClick={() => {
               setShowColorPickerForCategoryId(contextMenu.category.id)
             }}
-            type="button"
+            size="sm"
+            variant="ghost"
           >
             Change color
-          </button>
+          </Button>
 
           {showColorPickerForCategoryId === contextMenu.category.id ? (
             <div className="px-3 py-2">
@@ -263,16 +248,17 @@ export function CategoryTabs({
             </div>
           ) : null}
 
-          <button
-            className="w-full rounded-md px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-raised"
+          <Button
+            className="w-full justify-start px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-raised"
             onClick={() => {
               void onDeleteCategory(contextMenu.category.id)
               setContextMenu(null)
             }}
-            type="button"
+            size="sm"
+            variant="ghost"
           >
             Delete
-          </button>
+          </Button>
         </div>
       ) : null}
     </>

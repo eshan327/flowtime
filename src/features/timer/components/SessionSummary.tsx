@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/Badge'
 import { formatClock, formatDuration } from '@/lib/utils'
 
 interface SessionSummaryProps {
@@ -25,13 +26,12 @@ export function SessionSummary({
       </p>
 
       {taskName ? (
-        <p className="mt-2 flex items-center gap-2 text-sm text-ink-secondary">
-          Task: {taskName}
-          <span
-            className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: taskColor ?? '#a8a8a8' }}
-          />
-        </p>
+        <div className="mt-2">
+          <p className="text-sm text-ink-secondary">Task</p>
+          <div className="mt-1">
+            <Badge color={taskColor ?? '#a8a8a8'} label={taskName} />
+          </div>
+        </div>
       ) : null}
     </section>
   )

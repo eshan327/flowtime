@@ -1,4 +1,5 @@
 import { ListTodo } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { AddTaskForm } from '@/features/tasks/components/AddTaskForm'
 import { TaskItem } from '@/features/tasks/components/TaskItem'
@@ -109,12 +110,8 @@ export function TaskList({
 
       {sections.map((section) => (
         <section className="space-y-3" key={section.key}>
-          <header className="flex items-center gap-2">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: section.color }}
-            />
-            <h3 className="text-sm text-ink-secondary">{section.title}</h3>
+          <header>
+            <Badge color={section.color} label={section.title} />
           </header>
 
           <div className="space-y-2">

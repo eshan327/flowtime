@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui/Button'
 import { supabase } from '@/utils/supabase'
 
 function GoogleIcon() {
@@ -58,15 +59,16 @@ export function LoginPage() {
           Focus until you stop, then take the break you earn.
         </p>
 
-        <button
-          className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg border border-surface-border bg-surface-overlay px-4 py-3 text-sm text-ink-primary transition hover:border-ink-secondary hover:bg-surface-border disabled:cursor-not-allowed disabled:opacity-70"
+        <Button
+          className="mt-8 w-full gap-2"
           disabled={isSubmitting}
+          loading={isSubmitting}
           onClick={handleContinueWithGoogle}
-          type="button"
+          variant="outlined"
         >
-          <GoogleIcon />
+          {!isSubmitting ? <GoogleIcon /> : null}
           <span>{isSubmitting ? 'Connecting...' : 'Continue with Google'}</span>
-        </button>
+        </Button>
 
         {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
       </section>

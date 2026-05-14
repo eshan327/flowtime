@@ -7,13 +7,14 @@ import {
   MoreHorizontal,
   Trash2,
 } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
 import { SubtaskList } from '@/features/tasks/components/SubtaskList'
 import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
+import { getDropInsertPosition, type DropPlacement } from '@/lib/ordering'
 import type { Category, TaskWithCategory } from '@/types'
-
-type DropPlacement = 'before' | 'after'
 
 interface TaskItemProps {
   task: TaskWithCategory
@@ -24,27 +25,6 @@ interface TaskItemProps {
   onUpdateTask: (payload: { id: string; name?: string; color?: string }) => Promise<void> | void
   onMoveTask: (payload: { id: string; categoryId: string | null }) => Promise<void> | void
   onReorderTask: (payload: { id: string; newPosition: number }) => Promise<void> | void
-}
-
-function getNewPosition(
-  tasks: TaskWithCategory[],
-  draggedTaskId: string,
-  targetTaskId: string,
-  placement: DropPlacement
-) {
-  const ordered = [...tasks].sort((a, b) => a.position - b.position)
-  const withoutDragged = ordered.filter((task) => task.id !== draggedTaskId)
-  const targetIndex = withoutDragged.findIndex((task) => task.id === targetTaskId)
-  if (targetIndex === -1) return null
-
-  const insertIndex = placement === 'before' ? targetIndex : targetIndex + 1
-  const previous = withoutDragged[insertIndex - 1]
-  const next = withoutDragged[insertIndex]
-
-  if (!previous && !next) return 0
-  if (!previous && next) return next.position - 1
-  if (previous && !next) return previous.position + 1
-  return (previous.position + next.position) / 2
 }
 
 export function TaskItem({
@@ -58,7 +38,7 @@ export function TaskItem({
   onReorderTask,
 }: TaskItemProps) {
   const accentColor = task.categories?.color ?? task.color ?? DEFAULT_TASK_COLOR
-  const { subtasks } = useSubtasks(task.id)
+  const { subtasks, completedCount, totalCount } = useSubtasks(task.id)
 
   const [isExpanded, setIsExpanded] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -130,7 +110,7 @@ export function TaskItem({
       return
     }
 
-    const newPosition = getNewPosition(tasksInGroup, draggedTaskId, task.id, placement)
+    const newPosition = getDropInsertPosition(tasksInGroup, draggedTaskId, task.id, placement)
     if (newPosition === null) {
       setDropPlacement(null)
       return
@@ -189,19 +169,20 @@ export function TaskItem({
           className="flex items-center gap-2 border-l-2 px-2 py-2"
           style={{ borderLeftColor: accentColor }}
         >
-          <button
+          <Button
             aria-label={`Reorder ${task.name}`}
-            className="cursor-grab rounded p-1 text-ink-tertiary transition hover:text-ink-secondary"
+            className="cursor-grab p-0 text-ink-tertiary transition hover:text-ink-secondary"
             onMouseDown={() => setDragEnabled(true)}
             onMouseUp={() => setDragEnabled(false)}
-            type="button"
+            size="icon"
+            variant="ghost"
           >
             <GripVertical className="h-4 w-4" />
-          </button>
+          </Button>
 
-          <button
+          <Button
             aria-label={`Complete ${task.name}`}
-            className="flex h-5 w-5 items-center justify-center rounded-full border border-surface-border text-ink-tertiary transition hover:border-ink-secondary hover:text-ink-primary"
+            className="h-5 w-5 rounded-full p-0 text-ink-tertiary transition hover:text-ink-primary"
             onClick={() => {
               setIsCompleting(true)
               window.setTimeout(() => {
@@ -210,15 +191,16 @@ export function TaskItem({
                 })
               }, 300)
             }}
-            type="button"
+            size="icon"
+            variant="outlined"
           >
             <Check className="h-3 w-3" />
-          </button>
+          </Button>
 
           <div className="min-w-0 flex-1">
             {isEditing ? (
-              <input
-                className="w-full rounded border border-surface-border bg-surface-overlay px-2 py-1 text-sm text-ink-primary outline-none focus:border-ink-secondary"
+              <Input
+                className="w-full px-2 py-1 text-sm"
                 onBlur={() => {
                   void handleSaveName()
                 }}
@@ -239,125 +221,135 @@ export function TaskItem({
                 value={draftName}
               />
             ) : (
-              <button
-                className="w-full truncate text-left text-sm text-ink-primary"
+              <Button
+                className="h-auto w-full justify-start p-0 text-left text-sm text-ink-primary"
                 onDoubleClick={() => {
                   setIsEditing(true)
                   setDraftName(task.name)
                 }}
-                type="button"
+                size="sm"
+                variant="ghost"
               >
                 {task.name}
-              </button>
+              </Button>
             )}
 
-            {subtasks.length > 0 ? (
-              <p className="mt-0.5 text-xs text-ink-tertiary">{subtasks.length} subtasks</p>
+            {totalCount > 0 ? (
+              <p className="mt-0.5 text-xs text-ink-tertiary">
+                {completedCount}/{totalCount} done
+              </p>
             ) : null}
           </div>
 
           {showSubtaskToggle ? (
-            <button
+            <Button
               aria-label={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
-              className="rounded p-1 text-ink-tertiary transition hover:text-ink-secondary"
+              className="p-0 text-ink-tertiary transition hover:text-ink-secondary"
               onClick={() => setIsExpanded((current) => !current)}
-              type="button"
+              size="icon"
+              variant="ghost"
             >
               {isExpanded ? (
                 <ChevronDown className="h-4 w-4" />
               ) : (
                 <ChevronRight className="h-4 w-4" />
               )}
-            </button>
+            </Button>
           ) : null}
 
           <div className="relative" ref={menuRef}>
-            <button
+            <Button
               aria-label={`Task options for ${task.name}`}
-              className="rounded p-1 text-ink-tertiary transition hover:text-ink-secondary"
+              className="p-0 text-ink-tertiary transition hover:text-ink-secondary"
               onClick={() => {
                 setIsMenuOpen((current) => !current)
                 setShowMoveMenu(false)
                 setShowColorPicker(false)
               }}
-              type="button"
+              size="icon"
+              variant="ghost"
             >
               <MoreHorizontal className="h-4 w-4" />
-            </button>
+            </Button>
 
             {isMenuOpen ? (
               <div className="absolute right-0 z-20 mt-1 w-52 rounded-lg border border-surface-border bg-surface-overlay p-1 shadow-xl">
-                <button
-                  className="w-full rounded-md px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                <Button
+                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
                   onClick={() => {
                     setIsEditing(true)
                     setDraftName(task.name)
                     closeMenu()
                   }}
-                  type="button"
+                  size="sm"
+                  variant="ghost"
                 >
                   Edit name
-                </button>
+                </Button>
 
-                <button
-                  className="w-full rounded-md px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                <Button
+                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
                   onClick={() => {
                     setShowMoveMenu((current) => !current)
                     setShowColorPicker(false)
                   }}
-                  type="button"
+                  size="sm"
+                  variant="ghost"
                 >
                   Move to category
-                </button>
+                </Button>
 
                 {showMoveMenu ? (
                   <div className="mt-1 space-y-1 border-t border-surface-border pt-1">
-                    <button
-                      className="w-full rounded-md px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                    <Button
+                      className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
                       onClick={() => {
                         void onMoveTask({ id: task.id, categoryId: null })
                         closeMenu()
                       }}
-                      type="button"
+                      size="sm"
+                      variant="ghost"
                     >
                       Remove from category
-                    </button>
+                    </Button>
 
                     {categories.map((category) => (
-                      <button
-                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                      <Button
+                        className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
                         key={category.id}
                         onClick={() => {
                           void onMoveTask({ id: task.id, categoryId: category.id })
                           closeMenu()
                         }}
-                        type="button"
+                        size="sm"
+                        variant="ghost"
                       >
                         <span
                           className="inline-block h-2.5 w-2.5 rounded-full"
                           style={{ backgroundColor: category.color }}
                         />
                         {category.name}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 ) : null}
 
                 {task.category_id === null ? (
-                  <button
-                    className="w-full rounded-md px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                  <Button
+                    className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
                     onClick={() => {
                       setShowColorPicker((current) => !current)
                       setShowMoveMenu(false)
                     }}
-                    type="button"
+                    size="sm"
+                    variant="ghost"
                   >
                     Change color
-                  </button>
+                  </Button>
                 ) : null}
 
-                <button
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-raised"
+                <Button
+                  className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-raised"
                   onClick={() => {
                     closeMenu()
                     setIsDeleting(true)
@@ -367,11 +359,12 @@ export function TaskItem({
                       })
                     }, 300)
                   }}
-                  type="button"
+                  size="sm"
+                  variant="ghost"
                 >
                   <Trash2 className="h-4 w-4" />
                   Delete
-                </button>
+                </Button>
               </div>
             ) : null}
           </div>
