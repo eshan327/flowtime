@@ -1,28 +1,34 @@
-import { useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Settings2, X } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { SessionSummary } from '@/features/timer/components/SessionSummary'
+import { TimerSettingsModal } from '@/features/timer/components/TimerSettingsModal'
 import { TaskSelector } from '@/features/timer/components/TaskSelector'
 import { TimerClock } from '@/features/timer/components/TimerClock'
 import { TimerControls } from '@/features/timer/components/TimerControls'
 import { useSessionSave } from '@/features/timer/hooks/useSessionSave'
+import { useTodaySummary } from '@/features/timer/hooks/useTodaySummary'
 import { useTimer } from '@/features/timer/hooks/useTimer'
+import { getBreakSeconds, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { MAX_SESSION_SECONDS, useTimerStore } from '@/features/timer/stores/timerStore'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
 import { requestNotificationPermission } from '@/lib/notifications'
-import { queryKeys } from '@/lib/queryKeys'
-import { formatClock, formatDuration, formatShortDuration } from '@/lib/utils'
-import { supabase } from '@/utils/supabase'
+import { formatClock, formatDuration } from '@/lib/utils'
 
 export function TimerPage() {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+
   const { user } = useUser()
   const { tasks, isLoading: tasksLoading, error: tasksError } = useTasks()
   const saveSession = useSessionSave()
+
+  const breakDivisor = useTimerSettingsStore((state) => state.breakDivisor)
+  const notificationsEnabled = useTimerSettingsStore((state) => state.notificationsEnabled)
+  const chimeEnabled = useTimerSettingsStore((state) => state.chimeEnabled)
 
   const phase = useTimerStore((state) => state.phase)
   const workSeconds = useTimerStore((state) => state.workSeconds)
@@ -30,44 +36,35 @@ export function TimerPage() {
   const breakTotal = useTimerStore((state) => state.breakTotal)
   const startedAt = useTimerStore((state) => state.startedAt)
   const selectedTaskId = useTimerStore((state) => state.selectedTaskId)
-  const lastSessionTaskId = useTimerStore((state) => state.lastSessionTaskId)
+  const lastSessionTaskName = useTimerStore((state) => state.lastSessionTaskName)
+  const lastSessionTaskColor = useTimerStore((state) => state.lastSessionTaskColor)
   const runawayDetected = useTimerStore((state) => state.runawayDetected)
   const dismissRunaway = useTimerStore((state) => state.dismissRunaway)
   const startWork = useTimerStore((state) => state.startWork)
   const stopWork = useTimerStore((state) => state.stopWork)
   const skipBreak = useTimerStore((state) => state.skipBreak)
   const setSelectedTask = useTimerStore((state) => state.setSelectedTask)
+  const setSelectedTaskSnapshot = useTimerStore((state) => state.setSelectedTaskSnapshot)
 
-  useTimer()
+  useTimer({ breakDivisor, notificationsEnabled, chimeEnabled })
   const runawaySaveKeyRef = useRef<string | null>(null)
-
-  const startOfToday = new Date()
-  startOfToday.setHours(0, 0, 0, 0)
-
-  const todaySummary = useQuery({
-    queryKey: queryKeys.sessionsTodaySummary(user?.id, startOfToday.toISOString()),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sessions')
-        .select('work_seconds')
-        .eq('user_id', user!.id)
-        .gte('started_at', startOfToday.toISOString())
-
-      if (error) throw error
-
-      const sessions = data ?? []
-      const totalWorkSeconds = sessions.reduce((sum, session) => sum + session.work_seconds, 0)
-
-      return {
-        count: sessions.length,
-        totalWorkSeconds,
-      }
-    },
-    enabled: !!user,
-  })
+  const todaySummary = useTodaySummary()
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null
-  const sessionTask = tasks.find((task) => task.id === lastSessionTaskId) ?? null
+  const selectedTaskColor =
+    selectedTask?.categories?.color ?? selectedTask?.color ?? DEFAULT_TASK_COLOR
+
+  useEffect(() => {
+    if (!selectedTask) {
+      setSelectedTaskSnapshot(null)
+      return
+    }
+
+    setSelectedTaskSnapshot({
+      name: selectedTask.name,
+      color: selectedTaskColor,
+    })
+  }, [selectedTask, selectedTaskColor, setSelectedTaskSnapshot])
 
   const secondaryText =
     phase === 'idle'
@@ -75,20 +72,29 @@ export function TimerPage() {
         ? selectedTask.name
         : 'Select a task to begin'
       : phase === 'working'
-        ? `Break earned: ${formatClock(Math.floor(workSeconds / 5))}`
+        ? `Break earned: ${formatClock(getBreakSeconds(workSeconds, breakDivisor))}`
         : phase === 'breaking'
           ? `You earned ${formatClock(breakTotal)} - take it easy`
           : 'Break complete - ready for the next session'
 
   const handleStopWork = () => {
-    void requestNotificationPermission()
+    if (notificationsEnabled) {
+      void requestNotificationPermission()
+    }
 
     if (saveSession.isPending) {
       return
     }
 
+    const sessionTask = selectedTask
+      ? {
+          name: selectedTask.name,
+          color: selectedTaskColor,
+        }
+      : null
+
     if (!startedAt || !user) {
-      stopWork()
+      stopWork({ sessionTask, breakDivisor })
       return
     }
 
@@ -96,13 +102,13 @@ export function TimerPage() {
       user_id: user.id,
       task_id: selectedTaskId,
       work_seconds: workSeconds,
-      break_seconds: Math.floor(workSeconds / 5),
+      break_seconds: getBreakSeconds(workSeconds, breakDivisor),
       started_at: startedAt.toISOString(),
       ended_at: new Date().toISOString(),
     }
 
     saveSession.mutate(payload)
-    stopWork()
+    stopWork({ sessionTask, breakDivisor })
   }
 
   useEffect(() => {
@@ -125,15 +131,27 @@ export function TimerPage() {
       user_id: user.id,
       task_id: selectedTaskId,
       work_seconds: MAX_SESSION_SECONDS,
-      break_seconds: Math.floor(MAX_SESSION_SECONDS / 5),
+      break_seconds: getBreakSeconds(MAX_SESSION_SECONDS, breakDivisor),
       started_at: startedAt.toISOString(),
       ended_at: new Date().toISOString(),
     })
-  }, [runawayDetected, saveSession, selectedTaskId, startedAt, user])
+  }, [runawayDetected, saveSession, selectedTaskId, startedAt, user, breakDivisor])
 
   return (
     <section className="mx-auto flex min-h-[75vh] w-full max-w-3xl flex-col justify-center">
       <div className="mx-auto w-full max-w-md rounded-2xl border border-surface-border bg-surface-raised p-6">
+        <div className="mb-3 flex justify-end">
+          <Button
+            className="gap-2"
+            onClick={() => setIsSettingsOpen(true)}
+            size="sm"
+            variant="ghost"
+          >
+            <Settings2 className="h-4 w-4" />
+            Timer settings
+          </Button>
+        </div>
+
         {tasksError ? (
           <p className="mb-3 rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
             Unable to load tasks right now. You can still run an uncategorized timer session.
@@ -150,10 +168,7 @@ export function TimerPage() {
 
         {selectedTask ? (
           <div className="mt-4">
-            <Badge
-              color={selectedTask.categories?.color ?? selectedTask.color ?? DEFAULT_TASK_COLOR}
-              label={selectedTask.name}
-            />
+            <Badge color={selectedTaskColor} label={selectedTask.name} />
           </div>
         ) : null}
 
@@ -194,8 +209,8 @@ export function TimerPage() {
             <div className="mt-4 w-full">
               <SessionSummary
                 breakTotal={breakTotal}
-                taskColor={sessionTask?.categories?.color ?? sessionTask?.color ?? null}
-                taskName={sessionTask?.name ?? null}
+                taskColor={lastSessionTaskColor}
+                taskName={lastSessionTaskName}
                 workSeconds={workSeconds}
               />
 
@@ -218,6 +233,8 @@ export function TimerPage() {
         </div>
       </div>
 
+      <TimerSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
       {todaySummary.isError ? (
         <p className="mx-auto mt-4 text-sm text-red-300">Unable to load today's summary.</p>
       ) : todaySummary.isLoading ? (
@@ -228,7 +245,7 @@ export function TimerPage() {
       ) : (
         <p className="mx-auto mt-4 text-sm text-ink-secondary">
           Today: {todaySummary.data?.count ?? 0} sessions ·{' '}
-          {formatShortDuration(todaySummary.data?.totalWorkSeconds ?? 0)}
+          {formatDuration(todaySummary.data?.totalWorkSeconds ?? 0)}
         </p>
       )}
     </section>

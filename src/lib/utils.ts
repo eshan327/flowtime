@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import type {
+  CategorySeconds,
   CategorySummary,
   DaySummary,
   HeatmapDay,
@@ -46,31 +47,29 @@ function getSessionCategoryName(session: SessionWithTask) {
   return session.tasks?.categories?.name ?? 'Uncategorized'
 }
 
-function aggregateCategorySeconds(sessions: SessionWithTask[]) {
-  const map = new Map<
-    string,
-    { categoryId: string | null; categoryName: string; color: string; seconds: number }
-  >()
+function addSessionToCategoryBuckets(
+  buckets: Map<string, CategorySeconds>,
+  session: SessionWithTask
+) {
+  const categoryId = getSessionCategoryId(session)
+  const mapKey = categoryId ?? 'uncategorized'
+  const existing = buckets.get(mapKey)
 
-  for (const session of sessions) {
-    const categoryId = getSessionCategoryId(session)
-    const mapKey = categoryId ?? 'uncategorized'
-    const existing = map.get(mapKey)
-
-    if (existing) {
-      existing.seconds += session.work_seconds
-      continue
-    }
-
-    map.set(mapKey, {
-      categoryId,
-      categoryName: getSessionCategoryName(session),
-      color: getSessionColor(session),
-      seconds: session.work_seconds,
-    })
+  if (existing) {
+    existing.seconds += session.work_seconds
+    return
   }
 
-  return Array.from(map.values()).sort((a, b) => b.seconds - a.seconds)
+  buckets.set(mapKey, {
+    categoryId,
+    categoryName: getSessionCategoryName(session),
+    color: getSessionColor(session),
+    seconds: session.work_seconds,
+  })
+}
+
+function toSortedCategoryBuckets(buckets: Map<string, CategorySeconds>) {
+  return Array.from(buckets.values()).sort((a, b) => b.seconds - a.seconds)
 }
 
 export function cn(...inputs: ClassValue[]) {
@@ -99,10 +98,6 @@ export function formatDuration(totalSeconds: number) {
   }
 
   return `${minutes}m`
-}
-
-export function formatShortDuration(totalSeconds: number) {
-  return formatDuration(totalSeconds)
 }
 
 export function getTaskColor(task: TaskWithCategory) {
@@ -156,7 +151,14 @@ export function aggregateByHour(sessions: SessionWithTask[]): DaySummary[] {
   const dayStart = new Date(now)
   dayStart.setHours(0, 0, 0, 0)
 
-  const dayMap = new Map<string, DaySummary>()
+  const dayMap = new Map<
+    string,
+    {
+      date: string
+      totalSeconds: number
+      byCategory: Map<string, CategorySeconds>
+    }
+  >()
 
   for (let hour = 0; hour < 24; hour += 1) {
     const keyDate = new Date(dayStart)
@@ -165,7 +167,7 @@ export function aggregateByHour(sessions: SessionWithTask[]): DaySummary[] {
     dayMap.set(key, {
       date: key,
       totalSeconds: 0,
-      byCategory: [],
+      byCategory: new Map(),
     })
   }
 
@@ -175,12 +177,14 @@ export function aggregateByHour(sessions: SessionWithTask[]): DaySummary[] {
     if (!entry) continue
 
     entry.totalSeconds += session.work_seconds
-    entry.byCategory = aggregateCategorySeconds(
-      sessions.filter((item) => toHourKey(new Date(item.started_at)) === key)
-    )
+    addSessionToCategoryBuckets(entry.byCategory, session)
   }
 
-  return Array.from(dayMap.values())
+  return Array.from(dayMap.values()).map((entry) => ({
+    date: entry.date,
+    totalSeconds: entry.totalSeconds,
+    byCategory: toSortedCategoryBuckets(entry.byCategory),
+  }))
 }
 
 export function aggregateByDay(sessions: SessionWithTask[], from: Date, to: Date): DaySummary[] {
@@ -190,11 +194,18 @@ export function aggregateByDay(sessions: SessionWithTask[], from: Date, to: Date
   const end = new Date(to)
   end.setHours(0, 0, 0, 0)
 
-  const map = new Map<string, DaySummary>()
+  const map = new Map<
+    string,
+    {
+      date: string
+      totalSeconds: number
+      byCategory: Map<string, CategorySeconds>
+    }
+  >()
 
   for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
     const key = toLocalDateKey(cursor)
-    map.set(key, { date: key, totalSeconds: 0, byCategory: [] })
+    map.set(key, { date: key, totalSeconds: 0, byCategory: new Map() })
   }
 
   for (const session of sessions) {
@@ -203,15 +214,14 @@ export function aggregateByDay(sessions: SessionWithTask[], from: Date, to: Date
     if (!day) continue
 
     day.totalSeconds += session.work_seconds
+    addSessionToCategoryBuckets(day.byCategory, session)
   }
 
-  for (const [key, day] of map.entries()) {
-    day.byCategory = aggregateCategorySeconds(
-      sessions.filter((session) => toLocalDateKey(new Date(session.started_at)) === key)
-    )
-  }
-
-  return Array.from(map.values())
+  return Array.from(map.values()).map((entry) => ({
+    date: entry.date,
+    totalSeconds: entry.totalSeconds,
+    byCategory: toSortedCategoryBuckets(entry.byCategory),
+  }))
 }
 
 export function aggregateByWeek(sessions: SessionWithTask[]): DaySummary[] {
@@ -219,13 +229,20 @@ export function aggregateByWeek(sessions: SessionWithTask[]): DaySummary[] {
   const firstWeekStart = new Date(thisWeekStart)
   firstWeekStart.setDate(firstWeekStart.getDate() - 51 * 7)
 
-  const map = new Map<string, DaySummary>()
+  const map = new Map<
+    string,
+    {
+      date: string
+      totalSeconds: number
+      byCategory: Map<string, CategorySeconds>
+    }
+  >()
 
   for (let index = 0; index < 52; index += 1) {
     const weekStart = new Date(firstWeekStart)
     weekStart.setDate(weekStart.getDate() + index * 7)
     const key = toLocalDateKey(weekStart)
-    map.set(key, { date: key, totalSeconds: 0, byCategory: [] })
+    map.set(key, { date: key, totalSeconds: 0, byCategory: new Map() })
   }
 
   for (const session of sessions) {
@@ -234,17 +251,14 @@ export function aggregateByWeek(sessions: SessionWithTask[]): DaySummary[] {
     if (!week) continue
 
     week.totalSeconds += session.work_seconds
+    addSessionToCategoryBuckets(week.byCategory, session)
   }
 
-  for (const [key, week] of map.entries()) {
-    week.byCategory = aggregateCategorySeconds(
-      sessions.filter(
-        (session) => toLocalDateKey(toWeekStart(new Date(session.started_at))) === key
-      )
-    )
-  }
-
-  return Array.from(map.values())
+  return Array.from(map.values()).map((entry) => ({
+    date: entry.date,
+    totalSeconds: entry.totalSeconds,
+    byCategory: toSortedCategoryBuckets(entry.byCategory),
+  }))
 }
 
 export function aggregateByCategory(sessions: SessionWithTask[]): CategorySummary[] {
@@ -328,7 +342,15 @@ export function buildHeatmapData(sessions: SessionWithTask[]): HeatmapDay[] {
   const start = new Date(end)
   start.setDate(start.getDate() - 364)
 
-  const map = new Map<string, HeatmapDay>()
+  const map = new Map<
+    string,
+    {
+      date: string
+      totalSeconds: number
+      dominantColor: string | null
+      byCategory: Map<string, CategorySeconds>
+    }
+  >()
 
   for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
     const key = toLocalDateKey(cursor)
@@ -336,7 +358,7 @@ export function buildHeatmapData(sessions: SessionWithTask[]): HeatmapDay[] {
       date: key,
       totalSeconds: 0,
       dominantColor: null,
-      byCategory: [],
+      byCategory: new Map(),
     })
   }
 
@@ -346,19 +368,19 @@ export function buildHeatmapData(sessions: SessionWithTask[]): HeatmapDay[] {
     if (!entry) continue
 
     entry.totalSeconds += session.work_seconds
+    addSessionToCategoryBuckets(entry.byCategory, session)
   }
 
-  for (const [key, entry] of map.entries()) {
-    const sameDaySessions = sessions.filter(
-      (session) => toLocalDateKey(new Date(session.started_at)) === key
-    )
-    const byCategory = aggregateCategorySeconds(sameDaySessions)
+  return Array.from(map.values()).map((entry) => {
+    const byCategory = toSortedCategoryBuckets(entry.byCategory)
 
-    entry.byCategory = byCategory
-    entry.dominantColor = byCategory[0]?.color ?? null
-  }
-
-  return Array.from(map.values())
+    return {
+      date: entry.date,
+      totalSeconds: entry.totalSeconds,
+      dominantColor: byCategory[0]?.color ?? null,
+      byCategory,
+    }
+  })
 }
 
 export function getRangeDates(range: TimeRange): { from: Date; to: Date } {

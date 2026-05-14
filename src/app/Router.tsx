@@ -1,21 +1,38 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from '@/components/ui/Layout'
+import { Spinner } from '@/components/ui/Spinner'
 import { AuthGuard } from '@/features/auth/components/AuthGuard'
-import { StatsPage } from '@/features/stats/StatsPage'
-import { TasksPage } from '@/features/tasks/TasksPage'
-import { TimerPage } from '@/features/timer/TimerPage'
+
+const TimerPage = lazy(() =>
+  import('@/features/timer/TimerPage').then((mod) => ({ default: mod.TimerPage }))
+)
+const TasksPage = lazy(() =>
+  import('@/features/tasks/TasksPage').then((mod) => ({ default: mod.TasksPage }))
+)
+const StatsPage = lazy(() =>
+  import('@/features/stats/StatsPage').then((mod) => ({ default: mod.StatsPage }))
+)
 
 export function Router() {
   return (
     <BrowserRouter>
       <AuthGuard>
         <Layout>
-          <Routes>
-            <Route element={<TimerPage />} path="/" />
-            <Route element={<TasksPage />} path="/tasks" />
-            <Route element={<StatsPage />} path="/stats" />
-            <Route element={<Navigate replace to="/" />} path="*" />
-          </Routes>
+          <Suspense
+            fallback={
+              <div className="flex h-[60vh] items-center justify-center">
+                <Spinner />
+              </div>
+            }
+          >
+            <Routes>
+              <Route element={<TimerPage />} path="/" />
+              <Route element={<TasksPage />} path="/tasks" />
+              <Route element={<StatsPage />} path="/stats" />
+              <Route element={<Navigate replace to="/" />} path="*" />
+            </Routes>
+          </Suspense>
         </Layout>
       </AuthGuard>
     </BrowserRouter>

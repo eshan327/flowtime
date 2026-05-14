@@ -3,7 +3,13 @@ import { MAX_SESSION_SECONDS, useTimerStore } from '@/features/timer/stores/time
 import { playDoneChime } from '@/lib/audio'
 import { sendNotification } from '@/lib/notifications'
 
-export function useTimer() {
+interface UseTimerOptions {
+  breakDivisor: number
+  notificationsEnabled: boolean
+  chimeEnabled: boolean
+}
+
+export function useTimer({ breakDivisor, notificationsEnabled, chimeEnabled }: UseTimerOptions) {
   const phase = useTimerStore((state) => state.phase)
   const startedAt = useTimerStore((state) => state.startedAt)
   const breakEndAt = useTimerStore((state) => state.breakEndAt)
@@ -21,7 +27,7 @@ export function useTimer() {
         const elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000)
 
         if (elapsed >= MAX_SESSION_SECONDS) {
-          triggerRunaway()
+          triggerRunaway({ breakDivisor })
           return
         }
 
@@ -31,8 +37,14 @@ export function useTimer() {
         if (remaining <= 0) {
           if (!breakCompletedTriggered) {
             breakCompletedTriggered = true
-            sendNotification('Break complete', 'Time to focus again.')
-            playDoneChime()
+
+            if (notificationsEnabled) {
+              sendNotification('Break complete', 'Time to focus again.')
+            }
+
+            if (chimeEnabled) {
+              playDoneChime()
+            }
           }
 
           finishBreak()
@@ -56,5 +68,15 @@ export function useTimer() {
       window.clearInterval(interval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [phase, startedAt, breakEndAt, setWorkSeconds, finishBreak, triggerRunaway])
+  }, [
+    phase,
+    startedAt,
+    breakEndAt,
+    setWorkSeconds,
+    finishBreak,
+    triggerRunaway,
+    breakDivisor,
+    notificationsEnabled,
+    chimeEnabled,
+  ])
 }

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { DEFAULT_BREAK_DIVISOR, getBreakSeconds } from '@/features/timer/stores/timerSettingsStore'
 
 export type TimerPhase = 'idle' | 'working' | 'breaking' | 'done'
 
@@ -11,16 +12,23 @@ interface TimerState {
   breakTotal: number
   startedAt: Date | null
   selectedTaskId: string | null
-  lastSessionTaskId: string | null
+  selectedTaskName: string | null
+  selectedTaskColor: string | null
+  lastSessionTaskName: string | null
+  lastSessionTaskColor: string | null
   runawayDetected: boolean
   startWork: () => void
-  stopWork: () => void
+  stopWork: (options?: {
+    sessionTask?: { name: string | null; color: string | null } | null
+    breakDivisor?: number
+  }) => void
   setWorkSeconds: (seconds: number) => void
   finishBreak: () => void
   skipBreak: () => void
   reset: () => void
   setSelectedTask: (taskId: string | null) => void
-  triggerRunaway: () => void
+  setSelectedTaskSnapshot: (task: { name: string; color: string } | null) => void
+  triggerRunaway: (options?: { breakDivisor?: number }) => void
   dismissRunaway: () => void
 }
 
@@ -31,7 +39,10 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   breakTotal: 0,
   startedAt: null,
   selectedTaskId: null,
-  lastSessionTaskId: null,
+  selectedTaskName: null,
+  selectedTaskColor: null,
+  lastSessionTaskName: null,
+  lastSessionTaskColor: null,
   runawayDetected: false,
 
   startWork: () =>
@@ -41,20 +52,25 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       breakEndAt: null,
       breakTotal: 0,
       startedAt: new Date(),
-      lastSessionTaskId: null,
+      lastSessionTaskName: null,
+      lastSessionTaskColor: null,
       runawayDetected: false,
     }),
 
-  stopWork: () => {
-    const { workSeconds, selectedTaskId } = get()
-    const breakDuration = Math.floor(workSeconds / 5)
+  stopWork: (options) => {
+    const { workSeconds, selectedTaskName, selectedTaskColor } = get()
+    const breakDuration = getBreakSeconds(
+      workSeconds,
+      options?.breakDivisor ?? DEFAULT_BREAK_DIVISOR
+    )
     const breakEndAt = new Date(Date.now() + breakDuration * 1000)
 
     set({
       phase: 'breaking',
       breakEndAt,
       breakTotal: breakDuration,
-      lastSessionTaskId: selectedTaskId,
+      lastSessionTaskName: options?.sessionTask?.name ?? selectedTaskName,
+      lastSessionTaskColor: options?.sessionTask?.color ?? selectedTaskColor,
     })
   },
 
@@ -69,7 +85,8 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       breakTotal: 0,
       workSeconds: 0,
       startedAt: null,
-      lastSessionTaskId: null,
+      lastSessionTaskName: null,
+      lastSessionTaskColor: null,
     }),
 
   reset: () =>
@@ -79,22 +96,38 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       breakEndAt: null,
       breakTotal: 0,
       startedAt: null,
-      lastSessionTaskId: null,
+      lastSessionTaskName: null,
+      lastSessionTaskColor: null,
       runawayDetected: false,
     }),
 
-  setSelectedTask: (taskId) => set({ selectedTaskId: taskId }),
+  setSelectedTask: (taskId) =>
+    set((state) => ({
+      selectedTaskId: taskId,
+      selectedTaskName: taskId !== state.selectedTaskId ? null : state.selectedTaskName,
+      selectedTaskColor: taskId !== state.selectedTaskId ? null : state.selectedTaskColor,
+    })),
 
-  triggerRunaway: () => {
-    const { selectedTaskId } = get()
-    const breakDuration = Math.floor(MAX_SESSION_SECONDS / 5)
+  setSelectedTaskSnapshot: (task) =>
+    set({
+      selectedTaskName: task?.name ?? null,
+      selectedTaskColor: task?.color ?? null,
+    }),
+
+  triggerRunaway: (options) => {
+    const { selectedTaskName, selectedTaskColor } = get()
+    const breakDuration = getBreakSeconds(
+      MAX_SESSION_SECONDS,
+      options?.breakDivisor ?? DEFAULT_BREAK_DIVISOR
+    )
 
     set({
       phase: 'done',
       workSeconds: MAX_SESSION_SECONDS,
       breakEndAt: null,
       breakTotal: breakDuration,
-      lastSessionTaskId: selectedTaskId,
+      lastSessionTaskName: selectedTaskName,
+      lastSessionTaskColor: selectedTaskColor,
       runawayDetected: true,
     })
   },

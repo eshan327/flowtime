@@ -47,6 +47,8 @@ export function CategoryTabs({
   )
 
   const menuRef = useRef<HTMLDivElement>(null)
+  const longPressTimeoutRef = useRef<number | null>(null)
+  const longPressTriggeredRef = useRef(false)
 
   useEffect(() => {
     if (!contextMenu) return
@@ -64,6 +66,32 @@ export function CategoryTabs({
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [contextMenu])
+
+  useEffect(() => {
+    if (!contextMenu) {
+      longPressTriggeredRef.current = false
+    }
+  }, [contextMenu])
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimeoutRef.current !== null) {
+        window.clearTimeout(longPressTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const clearLongPress = () => {
+    if (longPressTimeoutRef.current !== null) {
+      window.clearTimeout(longPressTimeoutRef.current)
+      longPressTimeoutRef.current = null
+    }
+  }
+
+  const openCategoryMenu = (category: Category, x: number, y: number) => {
+    setContextMenu({ category, x, y })
+    setShowColorPickerForCategoryId(null)
+  }
 
   const clearDragState = () => {
     setDragEnabledId(null)
@@ -120,12 +148,23 @@ export function CategoryTabs({
             key={category.id}
             onContextMenu={(event) => {
               event.preventDefault()
-              setContextMenu({
-                category,
-                x: event.clientX,
-                y: event.clientY,
-              })
-              setShowColorPickerForCategoryId(null)
+              openCategoryMenu(category, event.clientX, event.clientY)
+            }}
+            onTouchCancel={clearLongPress}
+            onTouchEnd={clearLongPress}
+            onTouchMove={clearLongPress}
+            onTouchStart={(event) => {
+              if (event.touches.length !== 1) return
+
+              const clientX = event.touches[0].clientX
+              const clientY = event.touches[0].clientY
+              clearLongPress()
+              longPressTriggeredRef.current = false
+
+              longPressTimeoutRef.current = window.setTimeout(() => {
+                longPressTriggeredRef.current = true
+                openCategoryMenu(category, clientX, clientY)
+              }, 450)
             }}
             onDragEnd={clearDragState}
             onDragOver={(event) => {
@@ -165,7 +204,14 @@ export function CategoryTabs({
 
             <Button
               className="flex items-center gap-2 px-1 py-1 text-sm"
-              onClick={() => onChangeTab(category.id)}
+              onClick={() => {
+                if (longPressTriggeredRef.current) {
+                  longPressTriggeredRef.current = false
+                  return
+                }
+
+                onChangeTab(category.id)
+              }}
               size="sm"
               variant="ghost"
             >

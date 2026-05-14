@@ -87,7 +87,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
       <div
         aria-modal="true"
         className={cn(
-          'w-full max-w-md rounded-xl border border-surface-border bg-surface-overlay p-5 shadow-2xl',
+          'animate-modal-in w-full max-w-md rounded-xl border border-surface-border bg-surface-overlay p-5 shadow-2xl',
           className
         )}
         ref={panelRef}

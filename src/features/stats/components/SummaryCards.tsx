@@ -1,4 +1,4 @@
-import { formatShortDuration } from '@/lib/utils'
+import { formatDuration } from '@/lib/utils'
 
 interface SummaryCardsProps {
   totalSessions: number
@@ -25,7 +25,7 @@ export function SummaryCards({
   return (
     <div className="grid gap-3 md:grid-cols-3">
       <SummaryCard label="Sessions" value={String(totalSessions)} />
-      <SummaryCard label="Focus Time" value={formatShortDuration(totalWorkSeconds)} />
+      <SummaryCard label="Focus Time" value={formatDuration(totalWorkSeconds)} />
       <SummaryCard
         label="Current Streak"
         value={`${currentStreak} day${currentStreak === 1 ? '' : 's'}`}
