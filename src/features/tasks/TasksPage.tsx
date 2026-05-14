@@ -17,6 +17,7 @@ export function TasksPage() {
     addCategory,
     renameCategory,
     recolorCategory,
+    archiveCategory,
     deleteCategory,
     reorderCategory,
   } = useCategories()
@@ -70,6 +71,12 @@ export function TasksPage() {
         activeTab={resolvedActiveTab}
         categories={categories}
         onAddCategory={() => setIsAddCategoryOpen(true)}
+        onArchiveCategory={async (id) => {
+          await archiveCategory.mutateAsync(id)
+          if (resolvedActiveTab === id) {
+            setActiveTab('all')
+          }
+        }}
         onChangeTab={setActiveTab}
         onDeleteCategory={async (id) => {
           await deleteCategory.mutateAsync(id)

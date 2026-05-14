@@ -50,11 +50,11 @@ export function TaskItem({
   const [showMoveMenu, setShowMoveMenu] = useState(false)
   const [showColorPicker, setShowColorPicker] = useState(false)
 
-  const [dragEnabled, setDragEnabled] = useState(false)
   const [dropPlacement, setDropPlacement] = useState<DropPlacement | null>(null)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const dragIntentRef = useRef(false)
 
   useEffect(() => {
     if (!isMenuOpen) return
@@ -134,9 +134,9 @@ export function TaskItem({
             ? 'max-h-0 -translate-x-2 overflow-hidden opacity-0'
             : 'max-h-[1000px] translate-x-0 opacity-100'
         }`}
-        draggable={dragEnabled}
+        draggable
         onDragEnd={() => {
-          setDragEnabled(false)
+          dragIntentRef.current = false
           setDropPlacement(null)
         }}
         onDragOver={(event) => {
@@ -150,7 +150,7 @@ export function TaskItem({
           setDropPlacement(placement)
         }}
         onDragStart={(event) => {
-          if (!dragEnabled) {
+          if (!dragIntentRef.current) {
             event.preventDefault()
             return
           }
@@ -172,8 +172,15 @@ export function TaskItem({
           <Button
             aria-label={`Reorder ${task.name}`}
             className="cursor-grab p-0 text-ink-tertiary transition hover:text-ink-secondary"
-            onMouseDown={() => setDragEnabled(true)}
-            onMouseUp={() => setDragEnabled(false)}
+            onPointerCancel={() => {
+              dragIntentRef.current = false
+            }}
+            onPointerDown={() => {
+              dragIntentRef.current = true
+            }}
+            onPointerUp={() => {
+              dragIntentRef.current = false
+            }}
             size="icon"
             variant="ghost"
           >

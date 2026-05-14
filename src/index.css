@@ -25,6 +25,15 @@
     background: #2e2c29;
     border-radius: 9999px;
   }
+
+  input::-webkit-contacts-auto-fill-button,
+  input::-webkit-credentials-auto-fill-button {
+    display: none !important;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    visibility: hidden;
+  }
 }
 
 @layer utilities {

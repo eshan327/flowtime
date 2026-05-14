@@ -58,11 +58,12 @@ export function AddCategoryForm({ isOpen, onClose, onCreate }: AddCategoryFormPr
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="New category">
       <Input
-        autoComplete="off"
+        autoCapitalize="off"
+        autoComplete="new-password"
         autoCorrect="off"
         error={error ?? undefined}
         label="Name"
-        name="category-name"
+        name="category-title"
         onChange={(event) => setName(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {

@@ -142,13 +142,36 @@ export function useCategories() {
     },
   })
 
+  const archiveCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const userId = requireUserId(user?.id)
+      const { error } = await supabase
+        .from('categories')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', userId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: categoriesQueryKey(user?.id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
+    },
+  })
+
+  const allCategories = categoriesQuery.data ?? []
+  const categories = allCategories.filter((category) => category.archived_at == null)
+  const archivedCategories = allCategories.filter((category) => category.archived_at != null)
+
   return {
-    categories: categoriesQuery.data ?? [],
+    categories,
+    archivedCategories,
     isLoading: categoriesQuery.isLoading,
     error: categoriesQuery.error,
     addCategory,
     renameCategory,
     recolorCategory,
+    archiveCategory,
     deleteCategory,
     reorderCategory,
   }

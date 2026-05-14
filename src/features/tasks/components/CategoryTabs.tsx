@@ -12,6 +12,7 @@ interface CategoryTabsProps {
   onAddCategory: () => void
   onRenameCategory: (id: string, name: string) => Promise<void> | void
   onRecolorCategory: (id: string, color: string) => Promise<void> | void
+  onArchiveCategory: (id: string) => Promise<void> | void
   onDeleteCategory: (id: string) => Promise<void> | void
   onReorderCategory: (id: string, newPosition: number) => Promise<void> | void
 }
@@ -23,6 +24,7 @@ export function CategoryTabs({
   onAddCategory,
   onRenameCategory,
   onRecolorCategory,
+  onArchiveCategory,
   onDeleteCategory,
   onReorderCategory,
 }: CategoryTabsProps) {
@@ -31,8 +33,6 @@ export function CategoryTabs({
     [categories]
   )
 
-  const [dragEnabledId, setDragEnabledId] = useState<string | null>(null)
-  const [draggedCategoryId, setDraggedCategoryId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<{ id: string; placement: DropPlacement } | null>(
     null
   )
@@ -47,6 +47,7 @@ export function CategoryTabs({
   )
 
   const menuRef = useRef<HTMLDivElement>(null)
+  const dragIntentCategoryIdRef = useRef<string | null>(null)
   const longPressTimeoutRef = useRef<number | null>(null)
   const longPressTriggeredRef = useRef(false)
 
@@ -94,12 +95,15 @@ export function CategoryTabs({
   }
 
   const clearDragState = () => {
-    setDragEnabledId(null)
-    setDraggedCategoryId(null)
+    dragIntentCategoryIdRef.current = null
     setDropTarget(null)
   }
 
-  const handleDrop = async (targetCategoryId: string, placement: DropPlacement) => {
+  const handleDrop = async (
+    draggedCategoryId: string,
+    targetCategoryId: string,
+    placement: DropPlacement
+  ) => {
     if (!draggedCategoryId || draggedCategoryId === targetCategoryId) {
       clearDragState()
       return
@@ -144,7 +148,7 @@ export function CategoryTabs({
                 ? 'text-ink-primary'
                 : 'text-ink-secondary hover:text-ink-primary'
             }`}
-            draggable={dragEnabledId === category.id}
+            draggable
             key={category.id}
             onContextMenu={(event) => {
               event.preventDefault()
@@ -168,7 +172,9 @@ export function CategoryTabs({
             }}
             onDragEnd={clearDragState}
             onDragOver={(event) => {
-              if (!draggedCategoryId || draggedCategoryId === category.id) return
+              const draggedId = event.dataTransfer.getData('application/x-flowtime-category-id')
+              if (!draggedId || draggedId === category.id) return
+              if (!orderedCategories.some((item) => item.id === draggedId)) return
 
               event.preventDefault()
               const rect = event.currentTarget.getBoundingClientRect()
@@ -176,19 +182,20 @@ export function CategoryTabs({
               setDropTarget({ id: category.id, placement })
             }}
             onDragStart={(event) => {
-              if (dragEnabledId !== category.id) {
+              if (dragIntentCategoryIdRef.current !== category.id) {
                 event.preventDefault()
                 return
               }
 
-              setDraggedCategoryId(category.id)
               event.dataTransfer.effectAllowed = 'move'
-              event.dataTransfer.setData('text/plain', category.id)
+              event.dataTransfer.setData('application/x-flowtime-category-id', category.id)
             }}
             onDrop={(event) => {
               event.preventDefault()
+              const draggedId = event.dataTransfer.getData('application/x-flowtime-category-id')
+              if (!draggedId) return
               if (!dropTarget || dropTarget.id !== category.id) return
-              void handleDrop(category.id, dropTarget.placement)
+              void handleDrop(draggedId, category.id, dropTarget.placement)
             }}
             style={{
               borderBottomColor: activeTab === category.id ? category.color : 'transparent',
@@ -225,8 +232,15 @@ export function CategoryTabs({
             <Button
               aria-label={`Reorder ${category.name}`}
               className="cursor-grab p-0 text-ink-tertiary hover:text-ink-secondary"
-              onMouseDown={() => setDragEnabledId(category.id)}
-              onMouseUp={() => setDragEnabledId(null)}
+              onPointerCancel={() => {
+                dragIntentCategoryIdRef.current = null
+              }}
+              onPointerDown={() => {
+                dragIntentCategoryIdRef.current = category.id
+              }}
+              onPointerUp={() => {
+                dragIntentCategoryIdRef.current = null
+              }}
               size="icon"
               variant="ghost"
             >
@@ -281,6 +295,18 @@ export function CategoryTabs({
             Change color
           </Button>
 
+          <Button
+            className="w-full justify-start px-3 py-2 text-left text-sm text-amber-200 transition hover:bg-surface-raised"
+            onClick={() => {
+              void onArchiveCategory(contextMenu.category.id)
+              setContextMenu(null)
+            }}
+            size="sm"
+            variant="ghost"
+          >
+            Archive
+          </Button>
+
           {showColorPickerForCategoryId === contextMenu.category.id ? (
             <div className="px-3 py-2">
               <ColorPicker
@@ -303,7 +329,7 @@ export function CategoryTabs({
             size="sm"
             variant="ghost"
           >
-            Delete
+            Delete permanently
           </Button>
         </div>
       ) : null}

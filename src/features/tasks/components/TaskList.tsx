@@ -24,6 +24,7 @@ interface TaskSection {
   categoryId: string | null
   color: string
   tasks: TaskWithCategory[]
+  isArchivedCategory?: boolean
 }
 
 function sortByPosition<T extends { position: number; created_at: string }>(items: T[]) {
@@ -39,6 +40,7 @@ function buildSections(
 ): TaskSection[] {
   const sortedCategories = sortByPosition(categories)
   const sortedTasks = sortByPosition(tasks)
+  const activeCategoryIds = new Set(sortedCategories.map((category) => category.id))
 
   if (activeTab !== 'all') {
     const activeCategory = sortedCategories.find((category) => category.id === activeTab) ?? null
@@ -51,6 +53,7 @@ function buildSections(
         categoryId,
         color: activeCategory?.color ?? DEFAULT_TASK_COLOR,
         tasks: sortedTasks.filter((task) => task.category_id === categoryId),
+        isArchivedCategory: false,
       },
     ]
   }
@@ -67,8 +70,32 @@ function buildSections(
       categoryId: category.id,
       color: category.color,
       tasks: categoryTasks,
+      isArchivedCategory: false,
     })
   }
+
+  const archivedSectionsByCategoryId = new Map<string, TaskSection>()
+  for (const task of sortedTasks) {
+    if (!task.category_id) continue
+    if (activeCategoryIds.has(task.category_id)) continue
+
+    const existingSection = archivedSectionsByCategoryId.get(task.category_id)
+    if (existingSection) {
+      existingSection.tasks.push(task)
+      continue
+    }
+
+    archivedSectionsByCategoryId.set(task.category_id, {
+      key: `archived-${task.category_id}`,
+      title: `${task.categories?.name ?? 'Retired category'} (archived)`,
+      categoryId: task.category_id,
+      color: task.categories?.color ?? task.color ?? DEFAULT_TASK_COLOR,
+      tasks: [task],
+      isArchivedCategory: true,
+    })
+  }
+
+  sections.push(...archivedSectionsByCategoryId.values())
 
   const uncategorizedTasks = sortedTasks.filter((task) => task.category_id === null)
   if (uncategorizedTasks.length > 0 || sections.length === 0) {
@@ -78,6 +105,7 @@ function buildSections(
       categoryId: null,
       color: DEFAULT_TASK_COLOR,
       tasks: uncategorizedTasks,
+      isArchivedCategory: false,
     })
   }
 
@@ -130,15 +158,21 @@ export function TaskList({
             ))}
           </div>
 
-          <AddTaskForm
-            label="Add task"
-            onAdd={async (name) => {
-              await onAddTask({
-                name,
-                categoryId: section.categoryId,
-              })
-            }}
-          />
+          {section.isArchivedCategory ? (
+            <p className="text-xs text-ink-tertiary">
+              This category is archived. Move tasks to an active category to keep using them.
+            </p>
+          ) : (
+            <AddTaskForm
+              label="Add task"
+              onAdd={async (name) => {
+                await onAddTask({
+                  name,
+                  categoryId: section.categoryId,
+                })
+              }}
+            />
+          )}
         </section>
       ))}
     </div>

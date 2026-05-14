@@ -51,9 +51,10 @@ export function AddTaskForm({ label, onAdd }: AddTaskFormProps) {
   return (
     <div className="flex items-center gap-2">
       <Input
-        autoComplete="off"
+        autoCapitalize="off"
+        autoComplete="new-password"
         autoCorrect="off"
-        name="task-name"
+        name="task-title"
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {
@@ -66,7 +67,7 @@ export function AddTaskForm({ label, onAdd }: AddTaskFormProps) {
             reset()
           }
         }}
-        placeholder="Name"
+        placeholder="Task title"
         ref={inputRef}
         spellCheck={false}
         value={value}

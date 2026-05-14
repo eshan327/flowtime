@@ -26,13 +26,12 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
   const [draftName, setDraftName] = useState('')
   const [completingSubtaskId, setCompletingSubtaskId] = useState<string | null>(null)
 
-  const [dragEnabledId, setDragEnabledId] = useState<string | null>(null)
-  const [draggedSubtaskId, setDraggedSubtaskId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<{ id: string; placement: DropPlacement } | null>(
     null
   )
 
   const inputRef = useRef<HTMLInputElement>(null)
+  const dragIntentSubtaskIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (editingSubtaskId) {
@@ -42,8 +41,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
   }, [editingSubtaskId])
 
   const clearDragState = () => {
-    setDragEnabledId(null)
-    setDraggedSubtaskId(null)
+    dragIntentSubtaskIdRef.current = null
     setDropTarget(null)
   }
 
@@ -68,7 +66,11 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
     setDraftName('')
   }
 
-  const handleDrop = async (targetSubtaskId: string, placement: DropPlacement) => {
+  const handleDrop = async (
+    draggedSubtaskId: string,
+    targetSubtaskId: string,
+    placement: DropPlacement
+  ) => {
     if (!draggedSubtaskId || draggedSubtaskId === targetSubtaskId) {
       clearDragState()
       return
@@ -111,7 +113,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                   ? 'max-h-0 -translate-x-2 overflow-hidden opacity-0'
                   : 'max-h-20 translate-x-0 opacity-100'
               }`}
-              draggable={dragEnabledId === subtask.id}
+              draggable
               onDragEnd={clearDragState}
               onDragOver={(event) => {
                 const draggedId = event.dataTransfer.getData('application/x-flowtime-subtask-id')
@@ -124,19 +126,20 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                 setDropTarget({ id: subtask.id, placement })
               }}
               onDragStart={(event) => {
-                if (dragEnabledId !== subtask.id) {
+                if (dragIntentSubtaskIdRef.current !== subtask.id) {
                   event.preventDefault()
                   return
                 }
 
-                setDraggedSubtaskId(subtask.id)
                 event.dataTransfer.effectAllowed = 'move'
                 event.dataTransfer.setData('application/x-flowtime-subtask-id', subtask.id)
               }}
               onDrop={(event) => {
                 event.preventDefault()
+                const draggedId = event.dataTransfer.getData('application/x-flowtime-subtask-id')
+                if (!draggedId) return
                 if (!dropTarget || dropTarget.id !== subtask.id) return
-                void handleDrop(subtask.id, dropTarget.placement)
+                void handleDrop(draggedId, subtask.id, dropTarget.placement)
               }}
             >
               <div
@@ -146,8 +149,15 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                 <Button
                   aria-label={`Reorder subtask ${subtask.name}`}
                   className="cursor-grab p-0 text-ink-tertiary transition hover:text-ink-secondary"
-                  onMouseDown={() => setDragEnabledId(subtask.id)}
-                  onMouseUp={() => setDragEnabledId(null)}
+                  onPointerCancel={() => {
+                    dragIntentSubtaskIdRef.current = null
+                  }}
+                  onPointerDown={() => {
+                    dragIntentSubtaskIdRef.current = subtask.id
+                  }}
+                  onPointerUp={() => {
+                    dragIntentSubtaskIdRef.current = null
+                  }}
                   size="icon"
                   variant="ghost"
                 >
