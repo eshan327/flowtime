@@ -15,6 +15,9 @@ dist-ssr
 # Supabase local state
 supabase/.temp/
 supabase/.branches/
+# Optional AI tooling artifacts
+.agents/
+skills-lock.json
 
 # Editor directories and files
 .vscode/
