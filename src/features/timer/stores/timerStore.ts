@@ -45,7 +45,12 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   lastSessionTaskColor: null,
   runawayDetected: false,
 
-  startWork: () =>
+  startWork: () => {
+    const { selectedTaskId } = get()
+    if (!selectedTaskId) {
+      return
+    }
+
     set({
       phase: 'working',
       workSeconds: 0,
@@ -55,7 +60,8 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       lastSessionTaskName: null,
       lastSessionTaskColor: null,
       runawayDetected: false,
-    }),
+    })
+  },
 
   stopWork: (options) => {
     const { workSeconds, selectedTaskName, selectedTaskColor } = get()

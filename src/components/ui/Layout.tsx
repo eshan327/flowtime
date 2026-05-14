@@ -48,6 +48,23 @@ function getInitials(label: string) {
   return 'U'
 }
 
+function formatJoinedDate(createdAt: string | null | undefined) {
+  if (typeof createdAt !== 'string' || createdAt.length === 0) {
+    return null
+  }
+
+  const parsed = new Date(createdAt)
+  if (Number.isNaN(parsed.getTime())) {
+    return null
+  }
+
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 export function Layout({ children }: { children: ReactNode }) {
   const { user } = useUser()
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -58,6 +75,7 @@ export function Layout({ children }: { children: ReactNode }) {
     user?.user_metadata?.full_name ?? user?.user_metadata?.name
   )
   const initials = getInitials(displayName)
+  const joinedDate = formatJoinedDate(user?.created_at)
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
@@ -100,6 +118,9 @@ export function Layout({ children }: { children: ReactNode }) {
               <div className="min-w-0">
                 <p className="truncate text-sm text-ink-primary">{displayName}</p>
                 <p className="truncate text-xs text-ink-tertiary">{user?.email ?? 'Signed in'}</p>
+                {joinedDate ? (
+                  <p className="truncate text-[11px] text-ink-tertiary">Joined {joinedDate}</p>
+                ) : null}
               </div>
             </div>
 

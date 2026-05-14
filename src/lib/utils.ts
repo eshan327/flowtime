@@ -29,9 +29,20 @@ function toWeekStart(date: Date) {
   const weekStart = new Date(date)
   weekStart.setHours(0, 0, 0, 0)
   const day = weekStart.getDay()
-  const offsetFromMonday = (day + 6) % 7
-  weekStart.setDate(weekStart.getDate() - offsetFromMonday)
+  weekStart.setDate(weekStart.getDate() - day)
   return weekStart
+}
+
+function toStartOfDay(date: Date) {
+  const start = new Date(date)
+  start.setHours(0, 0, 0, 0)
+  return start
+}
+
+function toEndOfDay(date: Date) {
+  const end = new Date(date)
+  end.setHours(23, 59, 59, 999)
+  return end
 }
 
 function getSessionColor(session: SessionWithTask) {
@@ -146,10 +157,8 @@ export function computeStreak(sessions: { started_at: string }[]) {
   return { current, longest }
 }
 
-export function aggregateByHour(sessions: SessionWithTask[]): DaySummary[] {
-  const now = new Date()
-  const dayStart = new Date(now)
-  dayStart.setHours(0, 0, 0, 0)
+export function aggregateByHour(sessions: SessionWithTask[], anchorDate: Date): DaySummary[] {
+  const dayStart = toStartOfDay(anchorDate)
 
   const dayMap = new Map<
     string,
@@ -224,10 +233,9 @@ export function aggregateByDay(sessions: SessionWithTask[], from: Date, to: Date
   }))
 }
 
-export function aggregateByWeek(sessions: SessionWithTask[]): DaySummary[] {
-  const thisWeekStart = toWeekStart(new Date())
-  const firstWeekStart = new Date(thisWeekStart)
-  firstWeekStart.setDate(firstWeekStart.getDate() - 51 * 7)
+export function aggregateByWeek(sessions: SessionWithTask[], from: Date, to: Date): DaySummary[] {
+  const firstWeekStart = toWeekStart(from)
+  const end = toStartOfDay(to)
 
   const map = new Map<
     string,
@@ -238,9 +246,12 @@ export function aggregateByWeek(sessions: SessionWithTask[]): DaySummary[] {
     }
   >()
 
-  for (let index = 0; index < 52; index += 1) {
-    const weekStart = new Date(firstWeekStart)
-    weekStart.setDate(weekStart.getDate() + index * 7)
+  for (
+    const cursor = new Date(firstWeekStart);
+    cursor <= end;
+    cursor.setDate(cursor.getDate() + 7)
+  ) {
+    const weekStart = new Date(cursor)
     const key = toLocalDateKey(weekStart)
     map.set(key, { date: key, totalSeconds: 0, byCategory: new Map() })
   }
@@ -384,24 +395,57 @@ export function buildHeatmapData(sessions: SessionWithTask[]): HeatmapDay[] {
 }
 
 export function getRangeDates(range: TimeRange): { from: Date; to: Date } {
-  const to = new Date()
-  const from = new Date(to)
-  from.setHours(0, 0, 0, 0)
+  return getRangeDatesForAnchor(range, new Date())
+}
+
+export function getRangeDatesForAnchor(
+  range: TimeRange,
+  anchorDate: Date
+): { from: Date; to: Date } {
+  const anchor = new Date(anchorDate)
 
   if (range === 'day') {
-    return { from, to }
+    const from = toStartOfDay(anchor)
+    return { from, to: toEndOfDay(from) }
   }
 
   if (range === 'week') {
-    from.setDate(from.getDate() - 6)
-    return { from, to }
+    const from = toWeekStart(anchor)
+    const to = new Date(from)
+    to.setDate(from.getDate() + 6)
+    return { from, to: toEndOfDay(to) }
   }
 
   if (range === 'month') {
-    from.setDate(from.getDate() - 29)
-    return { from, to }
+    const from = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
+    const to = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)
+    return { from, to: toEndOfDay(to) }
   }
 
-  from.setDate(from.getDate() - 364)
-  return { from, to }
+  const from = new Date(anchor.getFullYear(), 0, 1)
+  const to = new Date(anchor.getFullYear(), 11, 31)
+  return { from, to: toEndOfDay(to) }
+}
+
+export function shiftRangeAnchor(range: TimeRange, anchorDate: Date, direction: -1 | 1): Date {
+  const { from } = getRangeDatesForAnchor(range, anchorDate)
+  const next = new Date(from)
+
+  if (range === 'day') {
+    next.setDate(next.getDate() + direction)
+    return next
+  }
+
+  if (range === 'week') {
+    next.setDate(next.getDate() + direction * 7)
+    return next
+  }
+
+  if (range === 'month') {
+    next.setMonth(next.getMonth() + direction)
+    return next
+  }
+
+  next.setFullYear(next.getFullYear() + direction)
+  return next
 }

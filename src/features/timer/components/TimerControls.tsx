@@ -3,12 +3,19 @@ import { Button } from '@/components/ui/Button'
 
 interface TimerControlsProps {
   phase: TimerPhase
+  canStartWork: boolean
   onStartWork: () => void
   onStopWork: () => void
   onSkipBreak: () => void
 }
 
-export function TimerControls({ phase, onStartWork, onStopWork, onSkipBreak }: TimerControlsProps) {
+export function TimerControls({
+  phase,
+  canStartWork,
+  onStartWork,
+  onStopWork,
+  onSkipBreak,
+}: TimerControlsProps) {
   if (phase === 'working') {
     return (
       <Button onClick={onStopWork} variant="outlined">
@@ -26,7 +33,7 @@ export function TimerControls({ phase, onStartWork, onStopWork, onSkipBreak }: T
   }
 
   return (
-    <Button onClick={onStartWork} variant="filled">
+    <Button disabled={!canStartWork} onClick={onStartWork} variant="filled">
       Start working
     </Button>
   )

@@ -29,6 +29,7 @@ export function TimerPage() {
   const breakDivisor = useTimerSettingsStore((state) => state.breakDivisor)
   const notificationsEnabled = useTimerSettingsStore((state) => state.notificationsEnabled)
   const chimeEnabled = useTimerSettingsStore((state) => state.chimeEnabled)
+  const chimeId = useTimerSettingsStore((state) => state.chimeId)
 
   const phase = useTimerStore((state) => state.phase)
   const workSeconds = useTimerStore((state) => state.workSeconds)
@@ -46,13 +47,14 @@ export function TimerPage() {
   const setSelectedTask = useTimerStore((state) => state.setSelectedTask)
   const setSelectedTaskSnapshot = useTimerStore((state) => state.setSelectedTaskSnapshot)
 
-  useTimer({ breakDivisor, notificationsEnabled, chimeEnabled })
+  useTimer({ breakDivisor, notificationsEnabled, chimeEnabled, chimeId })
   const runawaySaveKeyRef = useRef<string | null>(null)
   const todaySummary = useTodaySummary()
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null
   const selectedTaskColor =
     selectedTask?.categories?.color ?? selectedTask?.color ?? DEFAULT_TASK_COLOR
+  const canStartWork = !!selectedTask
 
   useEffect(() => {
     if (!selectedTask) {
@@ -111,6 +113,14 @@ export function TimerPage() {
     stopWork({ sessionTask, breakDivisor })
   }
 
+  const handleStartWork = () => {
+    if (!canStartWork) {
+      return
+    }
+
+    startWork()
+  }
+
   useEffect(() => {
     if (!runawayDetected) {
       runawaySaveKeyRef.current = null
@@ -154,7 +164,7 @@ export function TimerPage() {
 
         {tasksError ? (
           <p className="mb-3 rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
-            Unable to load tasks right now. You can still run an uncategorized timer session.
+            Unable to load tasks right now. Pick a task before starting a timer session.
           </p>
         ) : null}
 
@@ -178,8 +188,9 @@ export function TimerPage() {
 
           <div className="mt-6">
             <TimerControls
+              canStartWork={canStartWork}
               onSkipBreak={skipBreak}
-              onStartWork={startWork}
+              onStartWork={handleStartWork}
               onStopWork={handleStopWork}
               phase={phase}
             />

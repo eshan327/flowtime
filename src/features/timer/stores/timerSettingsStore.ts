@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { DEFAULT_DONE_CHIME_ID, DONE_CHIME_OPTIONS, type ChimeOptionId } from '@/lib/audio'
 
 export const DEFAULT_BREAK_DIVISOR = 5
 export const MIN_BREAK_DIVISOR = 2
@@ -16,13 +17,25 @@ export function getBreakSeconds(workSeconds: number, breakDivisor: number) {
   return Math.floor(safeWorkSeconds / safeDivisor)
 }
 
+const validChimeIds = new Set<ChimeOptionId>(DONE_CHIME_OPTIONS.map((option) => option.id))
+
+export function sanitizeChimeId(value: string | null | undefined): ChimeOptionId {
+  if (!value) return DEFAULT_DONE_CHIME_ID
+  if (validChimeIds.has(value as ChimeOptionId)) {
+    return value as ChimeOptionId
+  }
+  return DEFAULT_DONE_CHIME_ID
+}
+
 interface TimerSettingsState {
   breakDivisor: number
   notificationsEnabled: boolean
   chimeEnabled: boolean
+  chimeId: ChimeOptionId
   setBreakDivisor: (value: number) => void
   setNotificationsEnabled: (enabled: boolean) => void
   setChimeEnabled: (enabled: boolean) => void
+  setChimeId: (chimeId: ChimeOptionId) => void
   resetSettings: () => void
 }
 
@@ -32,6 +45,7 @@ export const useTimerSettingsStore = create<TimerSettingsState>()(
       breakDivisor: DEFAULT_BREAK_DIVISOR,
       notificationsEnabled: true,
       chimeEnabled: true,
+      chimeId: DEFAULT_DONE_CHIME_ID,
 
       setBreakDivisor: (value) =>
         set({
@@ -40,12 +54,14 @@ export const useTimerSettingsStore = create<TimerSettingsState>()(
 
       setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
       setChimeEnabled: (enabled) => set({ chimeEnabled: enabled }),
+      setChimeId: (chimeId) => set({ chimeId: sanitizeChimeId(chimeId) }),
 
       resetSettings: () =>
         set({
           breakDivisor: DEFAULT_BREAK_DIVISOR,
           notificationsEnabled: true,
           chimeEnabled: true,
+          chimeId: DEFAULT_DONE_CHIME_ID,
         }),
     }),
     {

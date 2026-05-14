@@ -1,10 +1,12 @@
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { DONE_CHIME_OPTIONS, playDoneChime } from '@/lib/audio'
 import {
   DEFAULT_BREAK_DIVISOR,
   MAX_BREAK_DIVISOR,
   MIN_BREAK_DIVISOR,
+  sanitizeChimeId,
   useTimerSettingsStore,
 } from '@/features/timer/stores/timerSettingsStore'
 
@@ -45,10 +47,16 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
   const breakDivisor = useTimerSettingsStore((state) => state.breakDivisor)
   const notificationsEnabled = useTimerSettingsStore((state) => state.notificationsEnabled)
   const chimeEnabled = useTimerSettingsStore((state) => state.chimeEnabled)
+  const chimeId = useTimerSettingsStore((state) => state.chimeId)
   const setBreakDivisor = useTimerSettingsStore((state) => state.setBreakDivisor)
   const setNotificationsEnabled = useTimerSettingsStore((state) => state.setNotificationsEnabled)
   const setChimeEnabled = useTimerSettingsStore((state) => state.setChimeEnabled)
+  const setChimeId = useTimerSettingsStore((state) => state.setChimeId)
   const resetSettings = useTimerSettingsStore((state) => state.resetSettings)
+
+  const selectedChime =
+    DONE_CHIME_OPTIONS.find((option) => option.id === sanitizeChimeId(chimeId)) ??
+    DONE_CHIME_OPTIONS[0]
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Timer Settings">
@@ -83,6 +91,43 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
             label="Break completion chime"
             onChange={setChimeEnabled}
           />
+
+          <div className="rounded-lg border border-surface-border bg-surface-base p-3">
+            <label
+              className="block text-xs uppercase tracking-[0.1em] text-ink-tertiary"
+              htmlFor="chime-sound"
+            >
+              Chime sound
+            </label>
+
+            <select
+              className="mt-2 w-full rounded-lg border border-surface-border bg-surface-overlay px-3 py-2 text-sm text-ink-primary outline-none transition focus:border-ink-secondary disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!chimeEnabled}
+              id="chime-sound"
+              onChange={(event) => setChimeId(sanitizeChimeId(event.target.value))}
+              value={selectedChime.id}
+            >
+              {DONE_CHIME_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+
+            <p className="mt-2 text-xs text-ink-secondary">{selectedChime.description}</p>
+
+            <div className="mt-3 flex justify-end">
+              <Button
+                onClick={() => {
+                  playDoneChime(selectedChime.id)
+                }}
+                size="sm"
+                variant="outlined"
+              >
+                Preview sound
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-1">
