@@ -8,19 +8,22 @@ This repository is built from the specification in [FLOWTIME_SPEC.md](FLOWTIME_S
 
 ## Current Status
 
-- Phase 0 planning: complete
-- Phase 1 scaffold: complete
-- Phase 2+ feature implementation: pending
+- Step 1 (Scaffold): complete
+- Step 2 (Supabase/Auth): complete
+- Step 3 (App shell): complete
+- Step 4 (Tasks): complete
+- Step 5 (Timer): complete
+- Step 6 (Notifications/Audio): complete
+- Step 7 (Stats): complete
+- Step 8 (Polish): complete
+- Step 9 (Deploy): automated portion complete, human validation pending
 
-Phase 1 includes:
-- React 18 + Vite + strict TypeScript setup
-- Tailwind v3 + Geist font + warm dark design tokens
-- Path aliases configured in both [tsconfig.json](tsconfig.json) and [tsconfig.app.json](tsconfig.app.json)
-- ESLint + Prettier
-- simple-git-hooks + lint-staged pre-commit linting
-- Full feature-first folder structure scaffold
-- [.env.example](.env.example) template
-- [public/icon.png](public/icon.png) notification icon (192x192)
+Deployment prep in repo:
+- [vercel.json](vercel.json) added for SPA rewrites
+- [.env.example](.env.example) documents required env vars
+- Production build verified with `pnpm build`
+- Vercel production env vars configured
+- Production alias is live: https://flowtime-weld.vercel.app
 
 ## Tech Stack
 
@@ -65,6 +68,56 @@ pnpm dlx simple-git-hooks
 pnpm dev
 ```
 
+## Deployment (Step 9)
+
+### 1) Ensure local checks pass
+
+```bash
+pnpm lint
+pnpm build
+```
+
+### 2) Push to GitHub
+
+```bash
+git add .
+git commit -m "Prepare deployment"
+git push origin main
+```
+
+### 3) Connect to Vercel
+
+- Import this repository in Vercel (Framework Preset: Vite).
+- Build command: `pnpm build`
+- Output directory: `dist`
+- Confirm [vercel.json](vercel.json) rewrite is detected.
+
+### 4) Add Vercel environment variables
+
+Required:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Optional fallback supported by code:
+- `VITE_SUPABASE_ANON_KEY`
+
+### 5) OAuth callback/domain alignment
+
+After first production deploy:
+- In Supabase Auth URL configuration:
+	- Site URL = production app domain
+	- Redirect allowlist includes production app domain and `http://localhost:5173`
+- In Google Cloud OAuth settings:
+	- Update origins/redirect configuration to match the Supabase callback and production domain setup
+
+### 6) Production validation checklist
+
+- Sign in with Google on production URL
+- Start and stop a session, verify session row is created
+- Open the app on a second device, verify data sync
+- Verify mobile viewport shows the bottom tab bar
+- Refresh `/`, `/tasks`, and `/stats` directly to confirm no 404s
+
 ## Available Scripts
 
 - `pnpm dev`: run the Vite dev server
@@ -81,16 +134,14 @@ The following checks are passing in this workspace:
 - `pnpm dev`
 - [public/icon.png](public/icon.png) is 192x192
 
-## Human-Required Actions (Before/At Phase 2)
+## Human-Required Actions
 
 These actions require your direct account access and cannot be fully automated by the coding agent:
 
-1. Create a Supabase project.
-2. Run SQL migrations in the Supabase SQL editor (in order, from the spec).
-3. Configure Google OAuth in Supabase Auth and Google Cloud Console.
-4. Create `.env.local` with real values from your Supabase project.
-5. Replace `<your-project-ref>` in the `update-types` script in [package.json](package.json).
-6. Run `pnpm update-types` after schema changes.
+1. Align OAuth production domain settings in Supabase and Google Cloud.
+2. Validate Google login flow on the production domain.
+3. Validate cross-device sync using a second device.
+4. Validate mobile behavior on a real phone viewport/device.
 
 ## Notes
 
