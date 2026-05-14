@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { AddTaskForm } from '@/features/tasks/components/AddTaskForm'
 import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
-import { getDropInsertPosition, type DropPlacement } from '@/lib/ordering'
+import { getDragData, getDropInsertPosition, setDragData, type DropPlacement } from '@/lib/ordering'
 
 interface SubtaskListProps {
   taskId: string
@@ -25,6 +25,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   const [completingSubtaskId, setCompletingSubtaskId] = useState<string | null>(null)
+  const [draggedSubtaskId, setDraggedSubtaskId] = useState<string | null>(null)
 
   const [dropTarget, setDropTarget] = useState<{ id: string; placement: DropPlacement } | null>(
     null
@@ -42,6 +43,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
 
   const clearDragState = () => {
     dragIntentSubtaskIdRef.current = null
+    setDraggedSubtaskId(null)
     setDropTarget(null)
   }
 
@@ -116,11 +118,14 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
               draggable
               onDragEnd={clearDragState}
               onDragOver={(event) => {
-                const draggedId = event.dataTransfer.getData('application/x-flowtime-subtask-id')
-                if (!draggedId || draggedId === subtask.id) return
-                if (!subtasks.some((item) => item.id === draggedId)) return
-
                 event.preventDefault()
+
+                const activeDraggedId =
+                  draggedSubtaskId ??
+                  getDragData(event.dataTransfer, 'application/x-flowtime-subtask-id')
+                if (!activeDraggedId || activeDraggedId === subtask.id) return
+                if (!subtasks.some((item) => item.id === activeDraggedId)) return
+
                 const rect = event.currentTarget.getBoundingClientRect()
                 const placement = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
                 setDropTarget({ id: subtask.id, placement })
@@ -131,15 +136,23 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                   return
                 }
 
-                event.dataTransfer.effectAllowed = 'move'
-                event.dataTransfer.setData('application/x-flowtime-subtask-id', subtask.id)
+                setDraggedSubtaskId(subtask.id)
+                setDragData(event.dataTransfer, 'application/x-flowtime-subtask-id', subtask.id)
               }}
               onDrop={(event) => {
                 event.preventDefault()
-                const draggedId = event.dataTransfer.getData('application/x-flowtime-subtask-id')
+                const draggedId =
+                  draggedSubtaskId ??
+                  getDragData(event.dataTransfer, 'application/x-flowtime-subtask-id')
                 if (!draggedId) return
-                if (!dropTarget || dropTarget.id !== subtask.id) return
-                void handleDrop(draggedId, subtask.id, dropTarget.placement)
+
+                const rect = event.currentTarget.getBoundingClientRect()
+                const fallbackPlacement: DropPlacement =
+                  event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+                const placement =
+                  dropTarget?.id === subtask.id ? dropTarget.placement : fallbackPlacement
+
+                void handleDrop(draggedId, subtask.id, placement)
               }}
             >
               <div

@@ -13,7 +13,7 @@ import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
 import { SubtaskList } from '@/features/tasks/components/SubtaskList'
 import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
-import { getDropInsertPosition, type DropPlacement } from '@/lib/ordering'
+import { getDragData, getDropInsertPosition, setDragData, type DropPlacement } from '@/lib/ordering'
 import type { Category, TaskWithCategory } from '@/types'
 
 interface TaskItemProps {
@@ -140,11 +140,19 @@ export function TaskItem({
           setDropPlacement(null)
         }}
         onDragOver={(event) => {
-          const draggedId = event.dataTransfer.getData('application/x-flowtime-task-id')
-          if (!draggedId || draggedId === task.id) return
-          if (!tasksInGroup.some((item) => item.id === draggedId)) return
-
           event.preventDefault()
+
+          const draggedId = getDragData(event.dataTransfer, 'application/x-flowtime-task-id')
+          if (draggedId === task.id) {
+            setDropPlacement(null)
+            return
+          }
+
+          if (draggedId && !tasksInGroup.some((item) => item.id === draggedId)) {
+            setDropPlacement(null)
+            return
+          }
+
           const rect = event.currentTarget.getBoundingClientRect()
           const placement = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
           setDropPlacement(placement)
@@ -155,14 +163,20 @@ export function TaskItem({
             return
           }
 
-          event.dataTransfer.effectAllowed = 'move'
-          event.dataTransfer.setData('application/x-flowtime-task-id', task.id)
+          setDragData(event.dataTransfer, 'application/x-flowtime-task-id', task.id)
         }}
         onDrop={(event) => {
           event.preventDefault()
-          const draggedId = event.dataTransfer.getData('application/x-flowtime-task-id')
-          if (!draggedId || !dropPlacement) return
-          void handleDrop(draggedId, dropPlacement)
+          const draggedId = getDragData(event.dataTransfer, 'application/x-flowtime-task-id')
+          if (!draggedId) {
+            setDropPlacement(null)
+            return
+          }
+
+          const rect = event.currentTarget.getBoundingClientRect()
+          const fallbackPlacement: DropPlacement =
+            event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+          void handleDrop(draggedId, dropPlacement ?? fallbackPlacement)
         }}
       >
         <div

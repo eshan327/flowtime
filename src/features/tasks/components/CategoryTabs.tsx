@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { GripVertical, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
-import { getDropInsertPosition, type DropPlacement } from '@/lib/ordering'
+import { getDragData, getDropInsertPosition, setDragData, type DropPlacement } from '@/lib/ordering'
 import type { Category } from '@/types'
 
 interface CategoryTabsProps {
@@ -33,6 +33,7 @@ export function CategoryTabs({
     [categories]
   )
 
+  const [draggedCategoryId, setDraggedCategoryId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<{ id: string; placement: DropPlacement } | null>(
     null
   )
@@ -96,6 +97,7 @@ export function CategoryTabs({
 
   const clearDragState = () => {
     dragIntentCategoryIdRef.current = null
+    setDraggedCategoryId(null)
     setDropTarget(null)
   }
 
@@ -172,11 +174,14 @@ export function CategoryTabs({
             }}
             onDragEnd={clearDragState}
             onDragOver={(event) => {
-              const draggedId = event.dataTransfer.getData('application/x-flowtime-category-id')
-              if (!draggedId || draggedId === category.id) return
-              if (!orderedCategories.some((item) => item.id === draggedId)) return
-
               event.preventDefault()
+
+              const activeDraggedId =
+                draggedCategoryId ??
+                getDragData(event.dataTransfer, 'application/x-flowtime-category-id')
+              if (!activeDraggedId || activeDraggedId === category.id) return
+              if (!orderedCategories.some((item) => item.id === activeDraggedId)) return
+
               const rect = event.currentTarget.getBoundingClientRect()
               const placement = event.clientX < rect.left + rect.width / 2 ? 'before' : 'after'
               setDropTarget({ id: category.id, placement })
@@ -187,15 +192,23 @@ export function CategoryTabs({
                 return
               }
 
-              event.dataTransfer.effectAllowed = 'move'
-              event.dataTransfer.setData('application/x-flowtime-category-id', category.id)
+              setDraggedCategoryId(category.id)
+              setDragData(event.dataTransfer, 'application/x-flowtime-category-id', category.id)
             }}
             onDrop={(event) => {
               event.preventDefault()
-              const draggedId = event.dataTransfer.getData('application/x-flowtime-category-id')
+              const draggedId =
+                draggedCategoryId ??
+                getDragData(event.dataTransfer, 'application/x-flowtime-category-id')
               if (!draggedId) return
-              if (!dropTarget || dropTarget.id !== category.id) return
-              void handleDrop(draggedId, category.id, dropTarget.placement)
+
+              const rect = event.currentTarget.getBoundingClientRect()
+              const fallbackPlacement: DropPlacement =
+                event.clientX < rect.left + rect.width / 2 ? 'before' : 'after'
+              const placement =
+                dropTarget?.id === category.id ? dropTarget.placement : fallbackPlacement
+
+              void handleDrop(draggedId, category.id, placement)
             }}
             style={{
               borderBottomColor: activeTab === category.id ? category.color : 'transparent',

@@ -1,5 +1,7 @@
 export type DropPlacement = 'before' | 'after'
 
+const DRAG_DATA_FALLBACK_TYPE = 'text/plain'
+
 export function requireUserId(userId?: string): string {
   if (!userId) {
     throw new Error('User is not authenticated')
@@ -60,4 +62,24 @@ export function getDropInsertPosition<T extends { id: string; position: number }
   if (!previous && next) return next.position - 1
   if (previous && !next) return previous.position + 1
   return (previous.position + next.position) / 2
+}
+
+export function setDragData(dataTransfer: DataTransfer, type: string, id: string) {
+  dataTransfer.effectAllowed = 'move'
+  dataTransfer.setData(type, id)
+  dataTransfer.setData(DRAG_DATA_FALLBACK_TYPE, id)
+}
+
+export function getDragData(dataTransfer: DataTransfer, type: string) {
+  const customValue = dataTransfer.getData(type).trim()
+  if (customValue.length > 0) {
+    return customValue
+  }
+
+  const fallbackValue = dataTransfer.getData(DRAG_DATA_FALLBACK_TYPE).trim()
+  if (fallbackValue.length > 0) {
+    return fallbackValue
+  }
+
+  return null
 }
