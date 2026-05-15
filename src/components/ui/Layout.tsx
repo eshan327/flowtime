@@ -91,7 +91,7 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-surface-base text-ink-primary">
       <div className="mx-auto flex min-h-screen max-w-7xl md:flex-row">
-        <aside className="hidden border-r border-surface-border px-5 py-6 md:flex md:w-72 md:shrink-0 md:flex-col">
+        <aside className="hidden border-r border-surface-border px-5 py-6 md:sticky md:top-0 md:flex md:h-screen md:w-72 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
           <p className="text-xs uppercase tracking-[0.14em] text-ink-tertiary">Flowtime</p>
 
           <nav className="mt-5 grid gap-1">
@@ -109,7 +109,7 @@ export function Layout({ children }: { children: ReactNode }) {
             </NavLink>
           </nav>
 
-          <div className="mt-auto pt-8">
+          <div className="mt-8 border-t border-surface-border/70 pt-6">
             <div className="mb-3 flex items-center gap-3 rounded-lg border border-surface-border bg-surface-raised px-3 py-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-full border border-surface-border bg-surface-overlay text-sm font-medium text-ink-primary">
                 {initials}

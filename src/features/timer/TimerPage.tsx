@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Settings2, X } from 'lucide-react'
-import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import {
@@ -411,14 +410,9 @@ export function TimerPage() {
           tasks={selectableTasks}
         />
 
-        {selectedTask ? (
-          <div className="mt-4">
-            <Badge color={selectedTaskColor} label={selectedTask.name} />
-          </div>
-        ) : null}
-
         <div className="mt-8 flex flex-col items-center">
           <TimerClock
+            accentColor={selectedTaskColor}
             breakEndAt={breakEndAt}
             breakTotal={breakTotal}
             phase={phase}

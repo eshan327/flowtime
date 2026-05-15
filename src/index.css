@@ -55,77 +55,77 @@
 
   @keyframes focus-blob-main {
     0% {
-      transform: translate3d(-3%, -2%, 0) scale(0.95) rotate(0deg);
+      transform: translate3d(-8%, -6%, 0) scale(0.92) rotate(-3deg);
       border-radius: 42% 58% 60% 40% / 45% 42% 58% 55%;
-      opacity: 0.52;
-    }
-
-    35% {
-      transform: translate3d(4%, -1%, 0) scale(1.03) rotate(8deg);
-      border-radius: 57% 43% 46% 54% / 54% 45% 55% 46%;
-      opacity: 0.64;
-    }
-
-    70% {
-      transform: translate3d(-1%, 4%, 0) scale(0.98) rotate(-6deg);
-      border-radius: 47% 53% 39% 61% / 42% 57% 43% 58%;
       opacity: 0.56;
     }
 
+    35% {
+      transform: translate3d(7%, -4%, 0) scale(1.08) rotate(11deg);
+      border-radius: 61% 39% 44% 56% / 56% 42% 58% 44%;
+      opacity: 0.72;
+    }
+
+    70% {
+      transform: translate3d(-5%, 7%, 0) scale(0.96) rotate(-10deg);
+      border-radius: 44% 56% 36% 64% / 38% 61% 39% 62%;
+      opacity: 0.62;
+    }
+
     100% {
-      transform: translate3d(-3%, -2%, 0) scale(0.95) rotate(0deg);
+      transform: translate3d(-8%, -6%, 0) scale(0.92) rotate(-3deg);
       border-radius: 42% 58% 60% 40% / 45% 42% 58% 55%;
-      opacity: 0.52;
+      opacity: 0.56;
     }
   }
 
   @keyframes focus-blob-accent {
     0% {
-      transform: translate3d(2%, 3%, 0) scale(0.96) rotate(0deg);
+      transform: translate3d(4%, 5%, 0) scale(0.93) rotate(2deg);
       border-radius: 58% 42% 41% 59% / 61% 48% 52% 39%;
-      opacity: 0.36;
+      opacity: 0.42;
     }
 
     45% {
-      transform: translate3d(-2%, -3%, 0) scale(1.02) rotate(-10deg);
-      border-radius: 39% 61% 58% 42% / 45% 62% 38% 55%;
-      opacity: 0.48;
+      transform: translate3d(-5%, -6%, 0) scale(1.08) rotate(-14deg);
+      border-radius: 34% 66% 60% 40% / 43% 64% 36% 57%;
+      opacity: 0.56;
     }
 
     100% {
-      transform: translate3d(2%, 3%, 0) scale(0.96) rotate(0deg);
+      transform: translate3d(4%, 5%, 0) scale(0.93) rotate(2deg);
       border-radius: 58% 42% 41% 59% / 61% 48% 52% 39%;
-      opacity: 0.36;
+      opacity: 0.42;
     }
   }
 
   .animate-focus-blob-main {
-    animation: focus-blob-main 12s ease-in-out infinite;
+    animation: focus-blob-main 9.2s ease-in-out infinite;
   }
 
   .animate-focus-blob-accent {
-    animation: focus-blob-accent 15s ease-in-out infinite;
+    animation: focus-blob-accent 11.4s ease-in-out infinite;
   }
 
   @keyframes focus-blob-halo {
     0% {
-      transform: scale(0.94);
-      opacity: 0.26;
+      transform: scale(0.9);
+      opacity: 0.22;
     }
 
     50% {
-      transform: scale(1.06);
-      opacity: 0.42;
+      transform: scale(1.12);
+      opacity: 0.44;
     }
 
     100% {
-      transform: scale(0.94);
-      opacity: 0.26;
+      transform: scale(0.9);
+      opacity: 0.22;
     }
   }
 
   .animate-focus-blob-halo {
-    animation: focus-blob-halo 8.8s ease-in-out infinite;
+    animation: focus-blob-halo 6.6s ease-in-out infinite;
   }
 
   @keyframes liquid-wave-terracotta {
