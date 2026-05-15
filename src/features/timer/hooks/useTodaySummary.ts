@@ -21,6 +21,7 @@ export function useTodaySummary() {
         .from('sessions')
         .select('work_seconds')
         .eq('user_id', user!.id)
+        .is('deleted_at', null)
         .gte('started_at', startOfToday.toISOString())
 
       if (error) throw error

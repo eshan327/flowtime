@@ -6,6 +6,11 @@ import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/utils/supabase'
 import type { Task, TaskWithCategory } from '@/types'
 
+interface ReorderTaskContext {
+  previous: TaskWithCategory[]
+  userId: string
+}
+
 export function tasksQueryKey(userId?: string) {
   return queryKeys.tasks(userId)
 }
@@ -33,10 +38,9 @@ export function useTasks() {
       const { data, error } = await supabase
         .from('tasks')
         .select(
-          'id, user_id, category_id, name, color, position, completed_at, created_at, categories(name, color)'
+          'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at)'
         )
         .eq('user_id', user!.id)
-        .is('completed_at', null)
         .order('position', { ascending: true })
         .order('created_at', { ascending: true })
 
@@ -62,7 +66,7 @@ export function useTasks() {
           color: categoryId ? null : DEFAULT_TASK_COLOR,
         })
         .select(
-          'id, user_id, category_id, name, color, position, completed_at, created_at, categories(name, color)'
+          'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at)'
         )
         .single()
 
@@ -130,6 +134,23 @@ export function useTasks() {
     },
   })
 
+  const restoreTask = useMutation({
+    mutationFn: async (id: string) => {
+      const userId = requireUserId(user?.id)
+      const { error } = await supabase
+        .from('tasks')
+        .update({ completed_at: null })
+        .eq('id', id)
+        .eq('user_id', userId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tasksQueryKey(user?.id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtasksRoot() })
+    },
+  })
+
   const moveTask = useMutation({
     mutationFn: async ({ id, categoryId }: { id: string; categoryId: string | null }) => {
       const userId = requireUserId(user?.id)
@@ -178,7 +199,17 @@ export function useTasks() {
       if (error) throw error
 
       const cached = queryClient.getQueryData<TaskWithCategory[]>(tasksQueryKey(userId)) ?? []
-      const reordered = cached
+      const movedTask = cached.find((task) => task.id === id)
+      if (!movedTask) return
+
+      const bucket = cached.filter(
+        (task) =>
+          task.completed_at === null &&
+          task.category_id === movedTask.category_id &&
+          task.user_id === movedTask.user_id
+      )
+
+      const reordered = bucket
         .map((task) => (task.id === id ? { ...task, position: newPosition } : task))
         .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
 
@@ -191,18 +222,47 @@ export function useTasks() {
 
       if (renormalizeError) throw renormalizeError
     },
-    onSuccess: () => {
+    onMutate: async ({ id, newPosition }): Promise<ReorderTaskContext> => {
+      const userId = requireUserId(user?.id)
+      await queryClient.cancelQueries({ queryKey: tasksQueryKey(userId) })
+
+      const previous = queryClient.getQueryData<TaskWithCategory[]>(tasksQueryKey(userId)) ?? []
+      const optimistic = previous
+        .map((task) => (task.id === id ? { ...task, position: newPosition } : task))
+        .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
+
+      queryClient.setQueryData(tasksQueryKey(userId), optimistic)
+      return { previous, userId }
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return
+      queryClient.setQueryData(tasksQueryKey(context.userId), context.previous)
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: tasksQueryKey(user?.id) })
     },
   })
 
+  const allTasks = tasksQuery.data ?? []
+  const activeTasks = allTasks.filter((task) => task.completed_at === null)
+  const completedTasks = allTasks
+    .filter((task) => task.completed_at !== null)
+    .sort((a, b) => {
+      const aValue = a.completed_at ?? a.created_at
+      const bValue = b.completed_at ?? b.created_at
+      return bValue.localeCompare(aValue)
+    })
+
   return {
-    tasks: tasksQuery.data ?? [],
+    tasks: activeTasks,
+    activeTasks,
+    completedTasks,
     isLoading: tasksQuery.isLoading,
     error: tasksQuery.error,
     addTask,
     updateTask,
     completeTask,
+    restoreTask,
     deleteTask,
     moveTask,
     reorderTask,

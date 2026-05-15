@@ -30,8 +30,9 @@ export function useStats(range: TimeRange, anchorDate: Date) {
 
       const { data, error } = await supabase
         .from('sessions')
-        .select('*, tasks(id, name, color, category_id, categories(name, color))')
+        .select('*, tasks(id, name, color, category_id, categories(id, name, color, archived_at))')
         .eq('user_id', userId)
+        .is('deleted_at', null)
         .gte('started_at', fromDate.toISOString())
         .lte('started_at', toDate.toISOString())
         .order('started_at', { ascending: true })
@@ -55,8 +56,9 @@ export function useStats(range: TimeRange, anchorDate: Date) {
       const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
       const { data, error } = await supabase
         .from('sessions')
-        .select('*, tasks(id, name, color, category_id, categories(name, color))')
+        .select('*, tasks(id, name, color, category_id, categories(id, name, color, archived_at))')
         .eq('user_id', userId!)
+        .is('deleted_at', null)
         .gte('started_at', yearAgo.toISOString())
         .order('started_at', { ascending: true })
 
@@ -103,6 +105,7 @@ export function useStats(range: TimeRange, anchorDate: Date) {
         .from('sessions')
         .select('id, started_at, work_seconds')
         .eq('user_id', userId!)
+        .is('deleted_at', null)
         .order('started_at', { ascending: true })
 
       if (error) throw error

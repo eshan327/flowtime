@@ -41,28 +41,52 @@ export type Database = {
       sessions: {
         Row: {
           break_seconds: number
+          category_color_snapshot: string | null
+          category_id_snapshot: string | null
+          category_name_snapshot: string | null
+          deleted_at: string | null
+          edited_at: string | null
           ended_at: string
           id: string
           started_at: string
+          task_color_snapshot: string | null
           task_id: string | null
+          task_id_snapshot: string | null
+          task_name_snapshot: string | null
           user_id: string
           work_seconds: number
         }
         Insert: {
           break_seconds?: number
+          category_color_snapshot?: string | null
+          category_id_snapshot?: string | null
+          category_name_snapshot?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
           ended_at?: string
           id?: string
           started_at: string
+          task_color_snapshot?: string | null
           task_id?: string | null
+          task_id_snapshot?: string | null
+          task_name_snapshot?: string | null
           user_id: string
           work_seconds: number
         }
         Update: {
           break_seconds?: number
+          category_color_snapshot?: string | null
+          category_id_snapshot?: string | null
+          category_name_snapshot?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
           ended_at?: string
           id?: string
           started_at?: string
+          task_color_snapshot?: string | null
           task_id?: string | null
+          task_id_snapshot?: string | null
+          task_name_snapshot?: string | null
           user_id?: string
           work_seconds?: number
         }

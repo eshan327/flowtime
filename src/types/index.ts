@@ -7,15 +7,16 @@ export type Session = Database['public']['Tables']['sessions']['Row']
 
 export type TimeRange = 'day' | 'week' | 'month' | 'year'
 
+export type TaskCategorySummary = Pick<Category, 'id' | 'name' | 'color' | 'archived_at'>
+
 export interface TaskWithCategory extends Task {
-  categories: Pick<Category, 'name' | 'color'> | null
+  categories: TaskCategorySummary | null
 }
 
 export type SessionWithTask = Session & {
   tasks:
-    | (Pick<Task, 'name' | 'color' | 'category_id'> & {
-        id: string
-        categories: Pick<Category, 'name' | 'color'> | null
+    | (Pick<Task, 'id' | 'name' | 'color' | 'category_id'> & {
+        categories: TaskCategorySummary | null
       })
     | null
 }

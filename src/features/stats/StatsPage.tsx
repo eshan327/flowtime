@@ -1,17 +1,24 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { CategoryBreakdown } from '@/features/stats/components/CategoryBreakdown'
 import { DailyBarChart } from '@/features/stats/components/DailyBarChart'
 import { HeatmapGrid } from '@/features/stats/components/HeatmapGrid'
+import {
+  SessionEditModal,
+  type SessionEditValues,
+} from '@/features/stats/components/SessionEditModal'
+import { SessionLog } from '@/features/stats/components/SessionLog'
 import { SummaryCards } from '@/features/stats/components/SummaryCards'
 import { TaskBreakdown } from '@/features/stats/components/TaskBreakdown'
 import { TimeRangeSelector } from '@/features/stats/components/TimeRangeSelector'
 import { useStats } from '@/features/stats/hooks/useStats'
+import { useSessionMutations } from '@/features/stats/hooks/useSessionMutations'
+import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/utils'
 import { useUser } from '@/hooks/useUser'
-import type { TimeRange } from '@/types'
+import type { SessionWithTask, TimeRange } from '@/types'
 
 function getHistoryLowerBound(createdAt: string | null | undefined) {
   const januaryFallback = new Date(2026, 0, 1)
@@ -59,9 +66,15 @@ function formatRangeWindow(range: TimeRange, from: Date, to: Date) {
 
 export function StatsPage() {
   const { user } = useUser()
+  const { activeTasks } = useTasks()
+  const { updateSession, softDeleteSession, restoreSession } = useSessionMutations()
 
   const [range, setRange] = useState<TimeRange>('week')
   const [anchorDate, setAnchorDate] = useState<Date>(() => new Date())
+  const [editingSession, setEditingSession] = useState<SessionWithTask | null>(null)
+  const [recentlyDeletedSession, setRecentlyDeletedSession] = useState<SessionWithTask | null>(null)
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
+  const undoTimeoutRef = useRef<number | null>(null)
 
   const stats = useStats(range, anchorDate)
 
@@ -80,6 +93,90 @@ export function StatsPage() {
   const isCurrentWindow = selectedWindow.from.getTime() === currentWindow.from.getTime()
   const canGoPrevious = previousWindow.to.getTime() >= lowerBound.getTime()
   const canGoNext = selectedWindow.from.getTime() < currentWindow.from.getTime()
+
+  useEffect(() => {
+    return () => {
+      if (undoTimeoutRef.current !== null) {
+        window.clearTimeout(undoTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const handleSaveSessionEdit = async (values: SessionEditValues) => {
+    if (!editingSession) return
+
+    const selectedTask = values.taskId
+      ? activeTasks.find((task) => task.id === values.taskId)
+      : null
+
+    const fallbackTaskName = editingSession.task_name_snapshot ?? editingSession.tasks?.name ?? null
+    const fallbackTaskColor =
+      editingSession.task_color_snapshot ?? editingSession.tasks?.color ?? null
+    const fallbackCategoryId =
+      editingSession.category_id_snapshot ?? editingSession.tasks?.category_id ?? null
+    const fallbackCategoryName =
+      editingSession.category_name_snapshot ?? editingSession.tasks?.categories?.name ?? null
+    const fallbackCategoryColor =
+      editingSession.category_color_snapshot ?? editingSession.tasks?.categories?.color ?? null
+
+    const snapshot = values.taskId
+      ? selectedTask
+        ? {
+            taskIdSnapshot: selectedTask.id,
+            taskNameSnapshot: selectedTask.name,
+            taskColorSnapshot: selectedTask.color,
+            categoryIdSnapshot: selectedTask.category_id,
+            categoryNameSnapshot: selectedTask.categories?.name ?? null,
+            categoryColorSnapshot: selectedTask.categories?.color ?? null,
+          }
+        : {
+            taskIdSnapshot: values.taskId,
+            taskNameSnapshot: fallbackTaskName,
+            taskColorSnapshot: fallbackTaskColor,
+            categoryIdSnapshot: fallbackCategoryId,
+            categoryNameSnapshot: fallbackCategoryName,
+            categoryColorSnapshot: fallbackCategoryColor,
+          }
+      : {
+          taskIdSnapshot: null,
+          taskNameSnapshot: null,
+          taskColorSnapshot: null,
+          categoryIdSnapshot: null,
+          categoryNameSnapshot: null,
+          categoryColorSnapshot: null,
+        }
+
+    await updateSession.mutateAsync({
+      id: values.id,
+      taskId: values.taskId,
+      workSeconds: values.workSeconds,
+      breakSeconds: values.breakSeconds,
+      startedAt: values.startedAt,
+      endedAt: values.endedAt,
+      snapshot,
+    })
+
+    setEditingSession(null)
+  }
+
+  const handleDeleteSession = async (session: SessionWithTask) => {
+    setDeletingSessionId(session.id)
+
+    try {
+      await softDeleteSession.mutateAsync(session.id)
+      setRecentlyDeletedSession(session)
+
+      if (undoTimeoutRef.current !== null) {
+        window.clearTimeout(undoTimeoutRef.current)
+      }
+
+      undoTimeoutRef.current = window.setTimeout(() => {
+        setRecentlyDeletedSession(null)
+      }, 7000)
+    } finally {
+      setDeletingSessionId(null)
+    }
+  }
 
   if (stats.isLoading) {
     return (
@@ -185,6 +282,37 @@ export function StatsPage() {
       </section>
 
       <section>
+        <h2 className="mb-2 text-sm text-ink-secondary">Session log</h2>
+        <SessionLog
+          deletingSessionId={deletingSessionId}
+          onDelete={(session) => {
+            void handleDeleteSession(session)
+          }}
+          onEdit={(session) => {
+            setEditingSession(session)
+          }}
+          sessions={stats.sessions}
+        />
+
+        {recentlyDeletedSession ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-700/40 bg-amber-900/20 px-3 py-2">
+            <p className="text-sm text-amber-200">Session deleted. Undo if this was accidental.</p>
+            <Button
+              onClick={() => {
+                void restoreSession.mutateAsync(recentlyDeletedSession.id).then(() => {
+                  setRecentlyDeletedSession(null)
+                })
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              Undo
+            </Button>
+          </div>
+        ) : null}
+      </section>
+
+      <section>
         <h2 className="mb-2 text-sm text-ink-secondary">Time by category</h2>
         <CategoryBreakdown data={stats.byCategory} />
       </section>
@@ -193,6 +321,16 @@ export function StatsPage() {
         <h2 className="mb-2 text-sm text-ink-secondary">Time by task</h2>
         <TaskBreakdown data={stats.byTask} />
       </section>
+
+      <SessionEditModal
+        error={updateSession.error instanceof Error ? updateSession.error.message : null}
+        isOpen={!!editingSession}
+        isSaving={updateSession.isPending}
+        onClose={() => setEditingSession(null)}
+        onSave={handleSaveSessionEdit}
+        session={editingSession}
+        tasks={activeTasks}
+      />
     </section>
   )
 }

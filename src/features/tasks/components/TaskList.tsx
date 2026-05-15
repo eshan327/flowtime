@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { ListTodo } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { AddTaskForm } from '@/features/tasks/components/AddTaskForm'
 import { TaskItem } from '@/features/tasks/components/TaskItem'
@@ -9,12 +11,15 @@ import type { Category, TaskWithCategory } from '@/types'
 interface TaskListProps {
   tasks: TaskWithCategory[]
   categories: Category[]
+  archivedCategories: Category[]
   activeTab: string
   onAddTask: (payload: { name: string; categoryId: string | null }) => Promise<void> | void
   onUpdateTask: (payload: { id: string; name?: string; color?: string }) => Promise<void> | void
   onCompleteTask: (taskId: string) => Promise<void> | void
   onDeleteTask: (taskId: string) => Promise<void> | void
   onMoveTask: (payload: { id: string; categoryId: string | null }) => Promise<void> | void
+  onMoveArchivedTasks: (taskIds: string[], targetCategoryId: string | null) => Promise<void> | void
+  onRestoreCategory: (categoryId: string) => Promise<void> | void
   onReorderTask: (payload: { id: string; newPosition: number }) => Promise<void> | void
 }
 
@@ -115,16 +120,20 @@ function buildSections(
 export function TaskList({
   tasks,
   categories,
+  archivedCategories,
   activeTab,
   onAddTask,
   onUpdateTask,
   onCompleteTask,
   onDeleteTask,
   onMoveTask,
+  onMoveArchivedTasks,
+  onRestoreCategory,
   onReorderTask,
 }: TaskListProps) {
   const sections = buildSections(tasks, categories, activeTab)
   const hasAnyTasks = tasks.length > 0
+  const [archivedMoveTargets, setArchivedMoveTargets] = useState<Record<string, string>>({})
 
   return (
     <div className="space-y-5">
@@ -159,9 +168,60 @@ export function TaskList({
           </div>
 
           {section.isArchivedCategory ? (
-            <p className="text-xs text-ink-tertiary">
-              This category is archived. Move tasks to an active category to keep using them.
-            </p>
+            <div className="space-y-2 rounded-lg border border-surface-border/70 bg-surface-base/40 p-3">
+              <p className="text-xs text-ink-tertiary">
+                This category is archived. Restore it or move its active tasks elsewhere.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {section.categoryId &&
+                archivedCategories.some((category) => category.id === section.categoryId) ? (
+                  <Button
+                    onClick={() => {
+                      if (!section.categoryId) return
+                      void onRestoreCategory(section.categoryId)
+                    }}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    Restore category
+                  </Button>
+                ) : null}
+
+                <select
+                  className="h-8 rounded-lg border border-surface-border bg-surface-overlay px-2 text-sm text-ink-primary"
+                  onChange={(event) => {
+                    setArchivedMoveTargets((current) => ({
+                      ...current,
+                      [section.key]: event.target.value,
+                    }))
+                  }}
+                  value={archivedMoveTargets[section.key] ?? '__uncategorized__'}
+                >
+                  <option value="__uncategorized__">Move all to uncategorized</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      Move all to {category.name}
+                    </option>
+                  ))}
+                </select>
+
+                <Button
+                  onClick={() => {
+                    const target = archivedMoveTargets[section.key] ?? '__uncategorized__'
+                    const targetCategoryId = target === '__uncategorized__' ? null : target
+                    void onMoveArchivedTasks(
+                      section.tasks.map((task) => task.id),
+                      targetCategoryId
+                    )
+                  }}
+                  size="sm"
+                  variant="outlined"
+                >
+                  Move all tasks
+                </Button>
+              </div>
+            </div>
           ) : (
             <AddTaskForm
               label="Add task"

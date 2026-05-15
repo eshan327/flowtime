@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import type { TaskWithCategory } from '@/types'
@@ -9,6 +10,7 @@ interface TaskSelectorProps {
   tasks: TaskWithCategory[]
   selectedTaskId: string | null
   onSelectTask: (taskId: string | null) => void
+  onQuickAddTask?: (name: string) => Promise<string | null> | string | null
   disabled?: boolean
   isLoading?: boolean
 }
@@ -23,10 +25,13 @@ export function TaskSelector({
   tasks,
   selectedTaskId,
   onSelectTask,
+  onQuickAddTask,
   disabled = false,
   isLoading = false,
 }: TaskSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [quickAddValue, setQuickAddValue] = useState('')
+  const [isQuickAdding, setIsQuickAdding] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null
@@ -78,13 +83,69 @@ export function TaskSelector({
             Loading tasks...
           </span>
         ) : (
-          <span className="truncate">{selectedTask ? selectedTask.name : 'No task'}</span>
+          <span className="truncate">{selectedTask ? selectedTask.name : 'Select a task'}</span>
         )}
         <ChevronDown className="h-4 w-4 text-ink-tertiary" />
       </Button>
 
       {isOpen && !disabled ? (
         <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-lg border border-surface-border bg-surface-overlay p-1 shadow-xl">
+          {onQuickAddTask ? (
+            <div className="mb-2 flex items-center gap-2 border-b border-surface-border px-2 pb-2">
+              <Input
+                className="h-8"
+                onChange={(event) => setQuickAddValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return
+                  event.preventDefault()
+
+                  const trimmed = quickAddValue.trim()
+                  if (!trimmed || isQuickAdding) return
+
+                  setIsQuickAdding(true)
+                  Promise.resolve(onQuickAddTask(trimmed))
+                    .then((taskId) => {
+                      if (taskId) {
+                        onSelectTask(taskId)
+                        setIsOpen(false)
+                      }
+                      setQuickAddValue('')
+                    })
+                    .finally(() => {
+                      setIsQuickAdding(false)
+                    })
+                }}
+                placeholder="Quick add task"
+                value={quickAddValue}
+              />
+
+              <Button
+                disabled={isQuickAdding || quickAddValue.trim().length === 0}
+                onClick={() => {
+                  const trimmed = quickAddValue.trim()
+                  if (!trimmed || isQuickAdding) return
+
+                  setIsQuickAdding(true)
+                  Promise.resolve(onQuickAddTask(trimmed))
+                    .then((taskId) => {
+                      if (taskId) {
+                        onSelectTask(taskId)
+                        setIsOpen(false)
+                      }
+                      setQuickAddValue('')
+                    })
+                    .finally(() => {
+                      setIsQuickAdding(false)
+                    })
+                }}
+                size="sm"
+                variant="filled"
+              >
+                {isQuickAdding ? 'Adding...' : 'Add'}
+              </Button>
+            </div>
+          ) : null}
+
           <Button
             className={`flex w-full items-center justify-start gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
               selectedTaskId === null

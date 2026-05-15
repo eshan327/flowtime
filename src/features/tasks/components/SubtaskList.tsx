@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, GripVertical, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, GripVertical, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { AddTaskForm } from '@/features/tasks/components/AddTaskForm'
 import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
-import { getDragData, getDropInsertPosition, setDragData, type DropPlacement } from '@/lib/ordering'
+import {
+  getDragData,
+  getDropInsertPosition,
+  getStepMovePosition,
+  setDragData,
+  type DropPlacement,
+} from '@/lib/ordering'
 
 interface SubtaskListProps {
   taskId: string
@@ -26,6 +32,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
   const [draftName, setDraftName] = useState('')
   const [completingSubtaskId, setCompletingSubtaskId] = useState<string | null>(null)
   const [draggedSubtaskId, setDraggedSubtaskId] = useState<string | null>(null)
+  const [reorderError, setReorderError] = useState<string | null>(null)
 
   const [dropTarget, setDropTarget] = useState<{ id: string; placement: DropPlacement } | null>(
     null
@@ -89,8 +96,30 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
       return
     }
 
-    await reorderSubtask.mutateAsync({ id: draggedSubtaskId, newPosition })
-    clearDragState()
+    try {
+      await reorderSubtask.mutateAsync({ id: draggedSubtaskId, newPosition })
+      setReorderError(null)
+      clearDragState()
+    } catch (error) {
+      setReorderError(
+        error instanceof Error ? error.message : 'Unable to reorder subtask right now.'
+      )
+      clearDragState()
+    }
+  }
+
+  const moveSubtaskByStep = async (subtaskId: string, direction: -1 | 1) => {
+    const newPosition = getStepMovePosition(subtasks, subtaskId, direction)
+    if (newPosition === null) return
+
+    try {
+      await reorderSubtask.mutateAsync({ id: subtaskId, newPosition })
+      setReorderError(null)
+    } catch (error) {
+      setReorderError(
+        error instanceof Error ? error.message : 'Unable to reorder subtask right now.'
+      )
+    }
   }
 
   return (
@@ -178,6 +207,32 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                 </Button>
 
                 <Button
+                  aria-label={`Move ${subtask.name} up`}
+                  className="p-0 text-ink-tertiary transition hover:text-ink-secondary"
+                  disabled={getStepMovePosition(subtasks, subtask.id, -1) === null}
+                  onClick={() => {
+                    void moveSubtaskByStep(subtask.id, -1)
+                  }}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </Button>
+
+                <Button
+                  aria-label={`Move ${subtask.name} down`}
+                  className="p-0 text-ink-tertiary transition hover:text-ink-secondary"
+                  disabled={getStepMovePosition(subtasks, subtask.id, 1) === null}
+                  onClick={() => {
+                    void moveSubtaskByStep(subtask.id, 1)
+                  }}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </Button>
+
+                <Button
                   aria-label={`Complete ${subtask.name}`}
                   className="h-5 w-5 rounded-full p-0 text-ink-tertiary transition hover:text-ink-primary"
                   onClick={() => {
@@ -255,6 +310,8 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
           await addSubtask.mutateAsync(name)
         }}
       />
+
+      {reorderError ? <p className="text-xs text-red-300">{reorderError}</p> : null}
     </div>
   )
 }

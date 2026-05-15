@@ -64,6 +64,23 @@ export function getDropInsertPosition<T extends { id: string; position: number }
   return (previous.position + next.position) / 2
 }
 
+export function getStepMovePosition<T extends { id: string; position: number }>(
+  items: T[],
+  itemId: string,
+  direction: -1 | 1
+) {
+  const ordered = [...items].sort((a, b) => a.position - b.position)
+  const currentIndex = ordered.findIndex((item) => item.id === itemId)
+  if (currentIndex === -1) return null
+
+  const targetIndex = currentIndex + direction
+  if (targetIndex < 0 || targetIndex >= ordered.length) return null
+
+  const target = ordered[targetIndex]
+  const placement: DropPlacement = direction < 0 ? 'before' : 'after'
+  return getDropInsertPosition(ordered, itemId, target.id, placement)
+}
+
 export function setDragData(dataTransfer: DataTransfer, type: string, id: string) {
   dataTransfer.effectAllowed = 'move'
   dataTransfer.setData(type, id)

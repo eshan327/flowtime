@@ -46,16 +46,33 @@ function toEndOfDay(date: Date) {
 }
 
 function getSessionColor(session: SessionWithTask) {
-  if (!session.tasks) return DEFAULT_COLOR
-  return session.tasks.categories?.color ?? session.tasks.color ?? DEFAULT_COLOR
+  return (
+    session.category_color_snapshot ??
+    session.task_color_snapshot ??
+    session.tasks?.categories?.color ??
+    session.tasks?.color ??
+    DEFAULT_COLOR
+  )
 }
 
 function getSessionCategoryId(session: SessionWithTask) {
-  return session.tasks?.category_id ?? null
+  return session.category_id_snapshot ?? session.tasks?.category_id ?? null
 }
 
 function getSessionCategoryName(session: SessionWithTask) {
-  return session.tasks?.categories?.name ?? 'Uncategorized'
+  return session.category_name_snapshot ?? session.tasks?.categories?.name ?? 'Uncategorized'
+}
+
+function getSessionTaskId(session: SessionWithTask) {
+  return session.task_id_snapshot ?? session.task_id ?? null
+}
+
+function getSessionTaskName(session: SessionWithTask) {
+  return session.task_name_snapshot ?? session.tasks?.name ?? null
+}
+
+function getSessionTaskColor(session: SessionWithTask) {
+  return session.task_color_snapshot ?? session.tasks?.color ?? getSessionColor(session)
 }
 
 function addSessionToCategoryBuckets(
@@ -321,23 +338,24 @@ export function aggregateByTask(sessions: SessionWithTask[]): TaskSummary[] {
   >()
 
   for (const session of sessions) {
-    if (!session.tasks) continue
+    const taskName = getSessionTaskName(session)
+    if (!taskName) continue
 
-    const taskId = session.task_id
-    if (!taskId) continue
+    const taskId = getSessionTaskId(session)
+    const mapKey = taskId ?? `snapshot:${taskName}`
 
-    const existing = map.get(taskId)
+    const existing = map.get(mapKey)
     if (existing) {
       existing.totalSeconds += session.work_seconds
       existing.sessionCount += 1
       continue
     }
 
-    map.set(taskId, {
+    map.set(mapKey, {
       taskId,
-      taskName: session.tasks.name,
-      categoryName: session.tasks.categories?.name ?? null,
-      color: getSessionColor(session),
+      taskName,
+      categoryName: session.category_name_snapshot ?? session.tasks?.categories?.name ?? null,
+      color: getSessionTaskColor(session),
       totalSeconds: session.work_seconds,
       sessionCount: 1,
     })

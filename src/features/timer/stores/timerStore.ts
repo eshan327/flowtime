@@ -14,12 +14,22 @@ interface TimerState {
   selectedTaskId: string | null
   selectedTaskName: string | null
   selectedTaskColor: string | null
+  selectedCategoryId: string | null
+  selectedCategoryName: string | null
+  selectedCategoryColor: string | null
+  lastSessionId: string | null
   lastSessionTaskName: string | null
   lastSessionTaskColor: string | null
   runawayDetected: boolean
   startWork: () => void
   stopWork: (options?: {
-    sessionTask?: { name: string | null; color: string | null } | null
+    sessionTask?: {
+      name: string | null
+      color: string | null
+      categoryId: string | null
+      categoryName: string | null
+      categoryColor: string | null
+    } | null
     breakDivisor?: number
   }) => void
   setWorkSeconds: (seconds: number) => void
@@ -27,7 +37,16 @@ interface TimerState {
   skipBreak: () => void
   reset: () => void
   setSelectedTask: (taskId: string | null) => void
-  setSelectedTaskSnapshot: (task: { name: string; color: string } | null) => void
+  setSelectedTaskSnapshot: (
+    task: {
+      name: string
+      color: string
+      categoryId: string | null
+      categoryName: string | null
+      categoryColor: string | null
+    } | null
+  ) => void
+  setLastSessionId: (sessionId: string | null) => void
   triggerRunaway: (options?: { breakDivisor?: number }) => void
   dismissRunaway: () => void
 }
@@ -41,6 +60,10 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   selectedTaskId: null,
   selectedTaskName: null,
   selectedTaskColor: null,
+  selectedCategoryId: null,
+  selectedCategoryName: null,
+  selectedCategoryColor: null,
+  lastSessionId: null,
   lastSessionTaskName: null,
   lastSessionTaskColor: null,
   runawayDetected: false,
@@ -57,6 +80,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       breakEndAt: null,
       breakTotal: 0,
       startedAt: new Date(),
+      lastSessionId: null,
       lastSessionTaskName: null,
       lastSessionTaskColor: null,
       runawayDetected: false,
@@ -64,7 +88,14 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   },
 
   stopWork: (options) => {
-    const { workSeconds, selectedTaskName, selectedTaskColor } = get()
+    const {
+      workSeconds,
+      selectedTaskName,
+      selectedTaskColor,
+      selectedCategoryId,
+      selectedCategoryName,
+      selectedCategoryColor,
+    } = get()
     const breakDuration = getBreakSeconds(
       workSeconds,
       options?.breakDivisor ?? DEFAULT_BREAK_DIVISOR
@@ -77,6 +108,9 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       breakTotal: breakDuration,
       lastSessionTaskName: options?.sessionTask?.name ?? selectedTaskName,
       lastSessionTaskColor: options?.sessionTask?.color ?? selectedTaskColor,
+      selectedCategoryId: options?.sessionTask?.categoryId ?? selectedCategoryId,
+      selectedCategoryName: options?.sessionTask?.categoryName ?? selectedCategoryName,
+      selectedCategoryColor: options?.sessionTask?.categoryColor ?? selectedCategoryColor,
     })
   },
 
@@ -91,6 +125,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       breakTotal: 0,
       workSeconds: 0,
       startedAt: null,
+      lastSessionId: null,
       lastSessionTaskName: null,
       lastSessionTaskColor: null,
     }),
@@ -102,6 +137,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       breakEndAt: null,
       breakTotal: 0,
       startedAt: null,
+      lastSessionId: null,
       lastSessionTaskName: null,
       lastSessionTaskColor: null,
       runawayDetected: false,
@@ -112,13 +148,21 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       selectedTaskId: taskId,
       selectedTaskName: taskId !== state.selectedTaskId ? null : state.selectedTaskName,
       selectedTaskColor: taskId !== state.selectedTaskId ? null : state.selectedTaskColor,
+      selectedCategoryId: taskId !== state.selectedTaskId ? null : state.selectedCategoryId,
+      selectedCategoryName: taskId !== state.selectedTaskId ? null : state.selectedCategoryName,
+      selectedCategoryColor: taskId !== state.selectedTaskId ? null : state.selectedCategoryColor,
     })),
 
   setSelectedTaskSnapshot: (task) =>
     set({
       selectedTaskName: task?.name ?? null,
       selectedTaskColor: task?.color ?? null,
+      selectedCategoryId: task?.categoryId ?? null,
+      selectedCategoryName: task?.categoryName ?? null,
+      selectedCategoryColor: task?.categoryColor ?? null,
     }),
+
+  setLastSessionId: (sessionId) => set({ lastSessionId: sessionId }),
 
   triggerRunaway: (options) => {
     const { selectedTaskName, selectedTaskColor } = get()

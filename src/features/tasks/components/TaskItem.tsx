@@ -13,7 +13,13 @@ import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
 import { SubtaskList } from '@/features/tasks/components/SubtaskList'
 import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
-import { getDragData, getDropInsertPosition, setDragData, type DropPlacement } from '@/lib/ordering'
+import {
+  getDragData,
+  getDropInsertPosition,
+  getStepMovePosition,
+  setDragData,
+  type DropPlacement,
+} from '@/lib/ordering'
 import type { Category, TaskWithCategory } from '@/types'
 
 interface TaskItemProps {
@@ -51,6 +57,7 @@ export function TaskItem({
   const [showColorPicker, setShowColorPicker] = useState(false)
 
   const [dropPlacement, setDropPlacement] = useState<DropPlacement | null>(null)
+  const [reorderError, setReorderError] = useState<string | null>(null)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -116,8 +123,28 @@ export function TaskItem({
       return
     }
 
-    await onReorderTask({ id: draggedTaskId, newPosition })
-    setDropPlacement(null)
+    try {
+      await onReorderTask({ id: draggedTaskId, newPosition })
+      setReorderError(null)
+      setDropPlacement(null)
+    } catch (error) {
+      setReorderError(error instanceof Error ? error.message : 'Unable to reorder task right now.')
+      setDropPlacement(null)
+    }
+  }
+
+  const moveTaskByStep = async (direction: -1 | 1) => {
+    const newPosition = getStepMovePosition(tasksInGroup, task.id, direction)
+    if (newPosition === null) {
+      return
+    }
+
+    try {
+      await onReorderTask({ id: task.id, newPosition })
+      setReorderError(null)
+    } catch (error) {
+      setReorderError(error instanceof Error ? error.message : 'Unable to reorder task right now.')
+    }
   }
 
   const showSubtaskToggle = subtasks.length > 0 || isExpanded
@@ -310,6 +337,32 @@ export function TaskItem({
 
                 <Button
                   className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                  disabled={getStepMovePosition(tasksInGroup, task.id, -1) === null}
+                  onClick={() => {
+                    void moveTaskByStep(-1)
+                    closeMenu()
+                  }}
+                  size="sm"
+                  variant="ghost"
+                >
+                  Move up
+                </Button>
+
+                <Button
+                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                  disabled={getStepMovePosition(tasksInGroup, task.id, 1) === null}
+                  onClick={() => {
+                    void moveTaskByStep(1)
+                    closeMenu()
+                  }}
+                  size="sm"
+                  variant="ghost"
+                >
+                  Move down
+                </Button>
+
+                <Button
+                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
                   onClick={() => {
                     setShowMoveMenu((current) => !current)
                     setShowColorPicker(false)
@@ -413,6 +466,8 @@ export function TaskItem({
       {dropPlacement === 'after' ? (
         <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-ink-primary" />
       ) : null}
+
+      {reorderError ? <p className="mt-2 text-xs text-red-300">{reorderError}</p> : null}
     </div>
   )
 }

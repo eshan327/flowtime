@@ -2,7 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { GripVertical, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
-import { getDragData, getDropInsertPosition, setDragData, type DropPlacement } from '@/lib/ordering'
+import {
+  getDragData,
+  getDropInsertPosition,
+  getStepMovePosition,
+  setDragData,
+  type DropPlacement,
+} from '@/lib/ordering'
 import type { Category } from '@/types'
 
 interface CategoryTabsProps {
@@ -46,6 +52,7 @@ export function CategoryTabs({
   const [showColorPickerForCategoryId, setShowColorPickerForCategoryId] = useState<string | null>(
     null
   )
+  const [reorderError, setReorderError] = useState<string | null>(null)
 
   const menuRef = useRef<HTMLDivElement>(null)
   const dragIntentCategoryIdRef = useRef<string | null>(null)
@@ -123,8 +130,29 @@ export function CategoryTabs({
       return
     }
 
-    await onReorderCategory(draggedCategoryId, newPosition)
+    try {
+      await onReorderCategory(draggedCategoryId, newPosition)
+      setReorderError(null)
+    } catch (error) {
+      setReorderError(
+        error instanceof Error ? error.message : 'Unable to reorder category. Please try again.'
+      )
+    }
     clearDragState()
+  }
+
+  const moveCategory = async (categoryId: string, direction: -1 | 1) => {
+    const newPosition = getStepMovePosition(orderedCategories, categoryId, direction)
+    if (newPosition === null) return
+
+    try {
+      await onReorderCategory(categoryId, newPosition)
+      setReorderError(null)
+    } catch (error) {
+      setReorderError(
+        error instanceof Error ? error.message : 'Unable to reorder category. Please try again.'
+      )
+    }
   }
 
   return (
@@ -280,6 +308,32 @@ export function CategoryTabs({
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <Button
+            className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary disabled:opacity-50"
+            disabled={getStepMovePosition(orderedCategories, contextMenu.category.id, -1) === null}
+            onClick={() => {
+              void moveCategory(contextMenu.category.id, -1)
+              setContextMenu(null)
+            }}
+            size="sm"
+            variant="ghost"
+          >
+            Move earlier
+          </Button>
+
+          <Button
+            className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary disabled:opacity-50"
+            disabled={getStepMovePosition(orderedCategories, contextMenu.category.id, 1) === null}
+            onClick={() => {
+              void moveCategory(contextMenu.category.id, 1)
+              setContextMenu(null)
+            }}
+            size="sm"
+            variant="ghost"
+          >
+            Move later
+          </Button>
+
+          <Button
             className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
             onClick={() => {
               const nextName = window.prompt('Rename category', contextMenu.category.name)
@@ -346,6 +400,8 @@ export function CategoryTabs({
           </Button>
         </div>
       ) : null}
+
+      {reorderError ? <p className="mt-2 text-xs text-red-300">{reorderError}</p> : null}
     </>
   )
 }

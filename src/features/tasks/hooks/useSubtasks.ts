@@ -11,6 +11,11 @@ import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/utils/supabase'
 import type { Subtask } from '@/types'
 
+interface ReorderSubtaskContext {
+  previous: Subtask[]
+  safeTaskId: string
+}
+
 export function subtasksQueryKey(taskId?: string) {
   return queryKeys.subtasks(taskId)
 }
@@ -137,7 +142,23 @@ export function useSubtasks(taskId: string | null) {
 
       if (renormalizeError) throw renormalizeError
     },
-    onSuccess: () => {
+    onMutate: async ({ id, newPosition }): Promise<ReorderSubtaskContext> => {
+      const safeTaskId = requireTaskId(taskId ?? undefined)
+      await queryClient.cancelQueries({ queryKey: subtasksQueryKey(safeTaskId) })
+
+      const previous = queryClient.getQueryData<Subtask[]>(subtasksQueryKey(safeTaskId)) ?? []
+      const optimistic = previous
+        .map((subtask) => (subtask.id === id ? { ...subtask, position: newPosition } : subtask))
+        .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
+
+      queryClient.setQueryData(subtasksQueryKey(safeTaskId), optimistic)
+      return { previous, safeTaskId }
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return
+      queryClient.setQueryData(subtasksQueryKey(context.safeTaskId), context.previous)
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: subtasksQueryKey(taskId ?? undefined) })
     },
   })

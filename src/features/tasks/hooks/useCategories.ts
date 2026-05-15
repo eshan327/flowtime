@@ -6,6 +6,11 @@ import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/utils/supabase'
 import type { Category } from '@/types'
 
+interface ReorderCategoryContext {
+  previous: Category[]
+  userId: string
+}
+
 export function categoriesQueryKey(userId?: string) {
   return queryKeys.categories(userId)
 }
@@ -119,7 +124,9 @@ export function useCategories() {
       if (error) throw error
 
       const cached = queryClient.getQueryData<Category[]>(categoriesQueryKey(userId)) ?? []
-      const reordered = cached
+      const activeCategories = cached.filter((category) => category.archived_at === null)
+
+      const reordered = activeCategories
         .map((category) => (category.id === id ? { ...category, position: newPosition } : category))
         .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
 
@@ -136,7 +143,24 @@ export function useCategories() {
 
       if (renormalizeError) throw renormalizeError
     },
-    onSuccess: () => {
+    onMutate: async ({ id, newPosition }): Promise<ReorderCategoryContext> => {
+      const userId = requireUserId(user?.id)
+      await queryClient.cancelQueries({ queryKey: categoriesQueryKey(userId) })
+
+      const previous = queryClient.getQueryData<Category[]>(categoriesQueryKey(userId)) ?? []
+      const optimistic = previous
+        .map((category) => (category.id === id ? { ...category, position: newPosition } : category))
+        .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
+
+      queryClient.setQueryData(categoriesQueryKey(userId), optimistic)
+
+      return { previous, userId }
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return
+      queryClient.setQueryData(categoriesQueryKey(context.userId), context.previous)
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: categoriesQueryKey(user?.id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
     },
@@ -148,6 +172,23 @@ export function useCategories() {
       const { error } = await supabase
         .from('categories')
         .update({ archived_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', userId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: categoriesQueryKey(user?.id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
+    },
+  })
+
+  const unarchiveCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const userId = requireUserId(user?.id)
+      const { error } = await supabase
+        .from('categories')
+        .update({ archived_at: null })
         .eq('id', id)
         .eq('user_id', userId)
 
@@ -172,6 +213,7 @@ export function useCategories() {
     renameCategory,
     recolorCategory,
     archiveCategory,
+    unarchiveCategory,
     deleteCategory,
     reorderCategory,
   }

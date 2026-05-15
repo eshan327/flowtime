@@ -7,32 +7,36 @@ Flowtime is a production-ready focus timer app built around the Flowtime (Flowmo
 
 Live app: https://flowtimeboard.vercel.app
 
-Specification source: [FLOWTIME_SPEC.md](FLOWTIME_SPEC.md)
-
 ## Project Status
 
-- All spec phases (1-9) are implemented.
-- UI and data-layer refactors are complete (shared primitives, centralized query keys, shared ordering logic).
-- Local quality gates pass (`pnpm lint`, `pnpm build`, `pnpm exec tsc --noEmit`).
-- Production deploy is active on Vercel.
+- Production app is deployed on Vercel.
+- Local quality gates: `pnpm lint` and `pnpm build`.
+- Data model now supports immutable historical attribution plus explicit session correction.
 
 ## Core Features
 
 - Google OAuth authentication via Supabase.
 - Task management with:
 	- Categories and uncategorized tasks.
+	- Category archive lifecycle (archive, restore, archived views).
+	- Active/completed task split with a completed archive toggle.
 	- Subtasks with completion and reorder support.
-	- Drag-and-drop ordering for categories, tasks, and subtasks.
+	- Reordering via drag-and-drop plus move up/down fallback controls.
 - Timer workflow:
-	- Start work on a selected task (or no task).
+	- Start work only after selecting a task.
+	- Quick-add task directly from task selector.
 	- Stop anytime and automatically compute earned break.
 	- Run break, skip break, and resume next session.
+	- Visual timer progress cues (break countdown ring + work progress bar).
 	- Session persistence to Supabase.
+	- Quick correction actions on completed sessions (edit/delete last session).
 - Stats dashboard:
 	- Range views (day/week/month/year).
 	- Streak tracking.
 	- Category/task aggregation.
 	- Heatmap-style historical activity.
+	- Session Log with edit and soft-delete + undo.
+	- Historical attribution uses session snapshots so task/category drift does not rewrite old stats.
 - Responsive shell for desktop and mobile navigation.
 
 ## Tech Stack
@@ -88,6 +92,13 @@ Optional fallback:
 - `pnpm preview` - preview production bundle locally
 - `pnpm update-types` - regenerate Supabase types in [src/types/supabase.ts](src/types/supabase.ts)
 
+## Data Integrity Rules
+
+- Session rows store task/category snapshot fields at save-time.
+- Renaming, recoloring, archiving, or deleting tasks/categories does not retroactively change old stats attribution.
+- Editing a session is an explicit correction action and intentionally updates historical aggregates.
+- Deleting a session in-app is soft-delete (`deleted_at`) so it can be undone in the UI window.
+
 ## Deployment Notes
 
 - Vercel config for SPA rewrites is in [vercel.json](vercel.json).
@@ -96,5 +107,4 @@ Optional fallback:
 
 ## Notes
 
-- The spec for this project does not require an automated test suite.
-- Keep implementation changes aligned with [FLOWTIME_SPEC.md](FLOWTIME_SPEC.md) unless intentionally revising product scope.
+- The project does not currently include an automated test suite.
