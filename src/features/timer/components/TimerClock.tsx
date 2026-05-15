@@ -9,54 +9,7 @@ interface TimerClockProps {
   breakEndAt: Date | null
 }
 
-type RestVisualPreset = 'ultra-subtle' | 'juicy'
-
-const REST_VISUAL_PRESET: RestVisualPreset = 'ultra-subtle'
-
-const REST_VISUAL_CONFIG: Record<
-  RestVisualPreset,
-  {
-    textClass: string
-    containerClass: string
-    overlayClass: string
-    topShadeClass: string
-    fillClass: string
-    primaryWaveClass: string
-    secondaryWaveClass: string
-    fillRiseMs: number
-  }
-> = {
-  'ultra-subtle': {
-    textClass: 'text-[#f0d2bc]',
-    containerClass:
-      'pointer-events-none absolute left-1/2 top-1/2 -z-10 h-56 w-[min(92vw,23rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-[#c8804f44] bg-[#241a15]/55 shadow-[0_0_56px_rgba(184,104,58,0.12)]',
-    overlayClass:
-      'absolute inset-0 bg-gradient-to-b from-[#f7dfcc0d] via-[#7c4b2b26] to-[#9f5e3833]',
-    topShadeClass:
-      'absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-[#120e0c8c] to-transparent',
-    fillClass: 'absolute inset-0 bg-gradient-to-t from-[#7d3f22a1] via-[#a45c3491] to-[#d38a5a54]',
-    primaryWaveClass:
-      'absolute -left-[18%] right-[-18%] top-[-16px] h-9 animate-liquid-wave-terracotta-subtle rounded-[45%] bg-[#e2a37e8f]',
-    secondaryWaveClass:
-      'absolute -left-[12%] right-[-12%] top-[-12px] h-7 animate-liquid-wave-terracotta-subtle-reverse rounded-[50%] bg-[#f3c29a5e]',
-    fillRiseMs: 900,
-  },
-  juicy: {
-    textClass: 'text-[#ffd7ba]',
-    containerClass:
-      'pointer-events-none absolute left-1/2 top-1/2 -z-10 h-56 w-[min(92vw,23rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-[#dd8f5e66] bg-[#2a1b13]/60 shadow-[0_0_72px_rgba(205,116,62,0.2)]',
-    overlayClass:
-      'absolute inset-0 bg-gradient-to-b from-[#fce6d81a] via-[#a35f362e] to-[#c270423b]',
-    topShadeClass:
-      'absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-[#140d0994] to-transparent',
-    fillClass: 'absolute inset-0 bg-gradient-to-t from-[#8f4524bd] via-[#bf6635a8] to-[#e09a6b7d]',
-    primaryWaveClass:
-      'absolute -left-[22%] right-[-22%] top-[-19px] h-11 animate-liquid-wave-terracotta-juicy rounded-[40%] bg-[#eba97caa]',
-    secondaryWaveClass:
-      'absolute -left-[16%] right-[-16%] top-[-14px] h-8 animate-liquid-wave-terracotta-juicy-reverse rounded-[46%] bg-[#f7c39a78]',
-    fillRiseMs: 700,
-  },
-}
+const REST_FILL_RISE_MS = 780
 
 export function TimerClock({ phase, workSeconds, breakTotal, breakEndAt }: TimerClockProps) {
   const [now, setNow] = useState(0)
@@ -87,62 +40,71 @@ export function TimerClock({ phase, workSeconds, breakTotal, breakEndAt }: Timer
 
   const isWorking = phase === 'working'
   const isBreaking = phase === 'breaking'
-  const restVisual = REST_VISUAL_CONFIG[REST_VISUAL_PRESET]
 
-  const colorClass = isBreaking ? restVisual.textClass : 'text-ink-primary'
+  const colorClass = isBreaking ? 'text-[#f4d2b8]' : 'text-ink-primary'
   const breakProgress =
     isBreaking && breakTotal > 0 ? Math.min(1, Math.max(0, 1 - seconds / breakTotal)) : 0
   const breakProgressPercent = Math.round(breakProgress * 100)
 
   return (
-    <div className="relative flex w-full flex-col items-center">
+    <div className="relative isolate flex w-full flex-col items-center">
       {isWorking ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-52 w-52 -translate-x-1/2 -translate-y-1/2"
+          className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-64 w-64 -translate-x-1/2 -translate-y-1/2"
         >
           <span
-            className="absolute inset-0 animate-focus-blob-main blur-2xl"
+            className="absolute inset-[-8%] animate-focus-blob-main blur-[34px]"
             style={{
               borderRadius: '42% 58% 60% 40% / 45% 42% 58% 55%',
               background:
-                'radial-gradient(circle at 35% 25%, rgba(108, 136, 196, 0.42), rgba(59, 86, 138, 0.3) 54%, rgba(22, 34, 59, 0) 100%)',
+                'radial-gradient(circle at 36% 24%, rgba(120, 154, 223, 0.66), rgba(70, 103, 173, 0.46) 56%, rgba(27, 43, 74, 0) 100%)',
             }}
           />
           <span
-            className="absolute inset-5 animate-focus-blob-accent border border-[#6f8abf33] bg-[#304a7d22] blur-xl"
+            className="absolute inset-9 animate-focus-blob-accent border border-[#7ea3f055] bg-[#3d5f9e4f] blur-[14px]"
             style={{ borderRadius: '58% 42% 41% 59% / 61% 48% 52% 39%' }}
+          />
+          <span
+            className="absolute inset-[-24%] animate-focus-blob-halo rounded-full blur-3xl"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(107, 141, 214, 0.42) 0%, rgba(64, 92, 154, 0.2) 46%, rgba(17, 24, 40, 0) 78%)',
+            }}
           />
         </div>
       ) : null}
 
       {isBreaking ? (
-        <div aria-hidden="true" className={restVisual.containerClass}>
-          <div className={restVisual.overlayClass} />
-          <div className={restVisual.topShadeClass} />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-56 w-[min(92vw,23rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-[#d78a5961] bg-[#2a1b13]/58 shadow-[0_0_64px_rgba(196,111,61,0.16)]"
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-[#fbe3d314] via-[#8d522f30] to-[#ba6f413d]" />
+          <div className="absolute inset-x-0 top-0 h-[42%] bg-gradient-to-b from-[#140d0991] to-transparent" />
 
           <div
             className="absolute inset-x-0 bottom-0 transition-[height] ease-linear"
             style={{
               height: `${breakProgressPercent}%`,
-              transitionDuration: `${restVisual.fillRiseMs}ms`,
+              transitionDuration: `${REST_FILL_RISE_MS}ms`,
             }}
           >
-            <div className={restVisual.fillClass} />
-            <div className={restVisual.primaryWaveClass} />
-            <div className={restVisual.secondaryWaveClass} />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#874323b8] via-[#b86134a0] to-[#e39a6c73]" />
+            <div className="absolute -left-[20%] right-[-20%] top-[-17px] h-10 animate-liquid-wave-terracotta rounded-[44%] bg-[#e8a97f9f]" />
+            <div className="absolute -left-[14%] right-[-14%] top-[-13px] h-8 animate-liquid-wave-terracotta-reverse rounded-[49%] bg-[#f4c59d6e]" />
           </div>
         </div>
       ) : null}
 
       <p
-        className={`text-7xl font-light tracking-tight transition-colors duration-400 md:text-8xl ${colorClass} ${isBreaking ? 'drop-shadow-[0_3px_14px_rgba(28,16,11,0.58)]' : ''}`}
+        className={`relative z-10 text-7xl font-light tracking-tight transition-colors duration-400 md:text-8xl ${colorClass} ${isBreaking ? 'drop-shadow-[0_3px_14px_rgba(28,16,11,0.58)]' : ''}`}
       >
         {formatClock(seconds)}
       </p>
 
       {isWorking ? (
-        <span className="absolute -right-4 top-1/2 h-2 w-2 -translate-y-1/2 animate-pulse rounded-full bg-[#6f8abf]/75" />
+        <span className="absolute -right-4 top-1/2 z-10 h-2 w-2 -translate-y-1/2 animate-pulse rounded-full bg-[#6f8abf]/75" />
       ) : null}
     </div>
   )

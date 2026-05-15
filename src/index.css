@@ -107,85 +107,69 @@
     animation: focus-blob-accent 15s ease-in-out infinite;
   }
 
-  @keyframes liquid-wave-terracotta-subtle {
+  @keyframes focus-blob-halo {
     0% {
-      transform: translateX(-4%) translateY(0) scaleX(1.01);
+      transform: scale(0.94);
+      opacity: 0.26;
     }
 
     50% {
-      transform: translateX(4%) translateY(-2px) scaleX(1.03);
+      transform: scale(1.06);
+      opacity: 0.42;
     }
 
     100% {
-      transform: translateX(-4%) translateY(0) scaleX(1.01);
+      transform: scale(0.94);
+      opacity: 0.26;
     }
   }
 
-  @keyframes liquid-wave-terracotta-subtle-reverse {
+  .animate-focus-blob-halo {
+    animation: focus-blob-halo 8.8s ease-in-out infinite;
+  }
+
+  @keyframes liquid-wave-terracotta {
     0% {
-      transform: translateX(3%) translateY(0) scaleX(0.99);
+      transform: translateX(-6%) translateY(0) scaleX(1.02);
     }
 
     50% {
-      transform: translateX(-3%) translateY(1px) scaleX(1.02);
+      transform: translateX(5%) translateY(-2px) scaleX(1.05);
     }
 
     100% {
-      transform: translateX(3%) translateY(0) scaleX(0.99);
+      transform: translateX(-6%) translateY(0) scaleX(1.02);
     }
   }
 
-  .animate-liquid-wave-terracotta-subtle {
-    animation: liquid-wave-terracotta-subtle 7.4s ease-in-out infinite;
-  }
-
-  .animate-liquid-wave-terracotta-subtle-reverse {
-    animation: liquid-wave-terracotta-subtle-reverse 9.1s ease-in-out infinite;
-  }
-
-  @keyframes liquid-wave-terracotta-juicy {
+  @keyframes liquid-wave-terracotta-reverse {
     0% {
-      transform: translateX(-8%) translateY(0) scaleX(1.02);
+      transform: translateX(4%) translateY(0) scaleX(0.99);
     }
 
     50% {
-      transform: translateX(6%) translateY(-3px) scaleX(1.08);
+      transform: translateX(-4%) translateY(1px) scaleX(1.04);
     }
 
     100% {
-      transform: translateX(-8%) translateY(0) scaleX(1.02);
+      transform: translateX(4%) translateY(0) scaleX(0.99);
     }
   }
 
-  @keyframes liquid-wave-terracotta-juicy-reverse {
-    0% {
-      transform: translateX(5%) translateY(0) scaleX(0.98);
-    }
-
-    50% {
-      transform: translateX(-5%) translateY(2px) scaleX(1.05);
-    }
-
-    100% {
-      transform: translateX(5%) translateY(0) scaleX(0.98);
-    }
+  .animate-liquid-wave-terracotta {
+    animation: liquid-wave-terracotta 6.2s ease-in-out infinite;
   }
 
-  .animate-liquid-wave-terracotta-juicy {
-    animation: liquid-wave-terracotta-juicy 5.2s ease-in-out infinite;
-  }
-
-  .animate-liquid-wave-terracotta-juicy-reverse {
-    animation: liquid-wave-terracotta-juicy-reverse 6.8s ease-in-out infinite;
+  .animate-liquid-wave-terracotta-reverse {
+    animation: liquid-wave-terracotta-reverse 7.8s ease-in-out infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
     .animate-focus-blob-main,
     .animate-focus-blob-accent,
-    .animate-liquid-wave-terracotta-subtle,
-    .animate-liquid-wave-terracotta-subtle-reverse,
-    .animate-liquid-wave-terracotta-juicy,
-    .animate-liquid-wave-terracotta-juicy-reverse {
+    .animate-focus-blob-halo,
+    .animate-liquid-wave-terracotta,
+    .animate-liquid-wave-terracotta-reverse {
       animation: none;
     }
   }
