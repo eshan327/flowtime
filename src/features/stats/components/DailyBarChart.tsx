@@ -92,7 +92,7 @@ function CustomTooltip({ active, payload, label }: DailyTooltipProps) {
           .filter((item) => Number(item.value) > 0)
           .map((item) => (
             <p key={String(item.name)}>
-              {item.name}: {formatDuration(Math.round(Number(item.value) * 3600))}
+              {item.name}: {formatDuration(Math.round(Number(item.value)))}
             </p>
           ))}
       </div>
@@ -112,7 +112,7 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
 
       for (const bucket of day.byCategory) {
         const key = bucket.categoryId ?? 'uncategorized'
-        row[key] = bucket.seconds / 3600
+        row[key] = bucket.seconds
         categoryMap.set(key, {
           key,
           name: bucket.categoryName,
@@ -163,8 +163,10 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
           />
           <YAxis
             tick={{ fill: '#9e9a94', fontSize: 11 }}
-            tickFormatter={(value) => `${value}h`}
+            tickFormatter={(value) => formatDuration(Math.round(Number(value)))}
             type="number"
+            allowDecimals={false}
+            width={56}
           />
           <Tooltip content={<CustomTooltip />} />
 
