@@ -41,7 +41,7 @@ export function TimerClock({ phase, workSeconds, breakTotal, breakEndAt }: Timer
   const isWorking = phase === 'working'
   const isBreaking = phase === 'breaking'
 
-  const colorClass = isBreaking ? 'text-[#f4d2b8]' : 'text-ink-primary'
+  const colorClass = isBreaking ? 'text-[#eadfcf]' : 'text-ink-primary'
   const breakProgress =
     isBreaking && breakTotal > 0 ? Math.min(1, Math.max(0, 1 - seconds / breakTotal)) : 0
   const breakProgressPercent = Math.round(breakProgress * 100)
@@ -78,10 +78,12 @@ export function TimerClock({ phase, workSeconds, breakTotal, breakEndAt }: Timer
       {isBreaking ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-56 w-[min(92vw,23rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-[#d78a5961] bg-[#2a1b13]/58 shadow-[0_0_64px_rgba(196,111,61,0.16)]"
+          className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-56 w-[min(92vw,23rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-[#494038cc] bg-[#1e1b18]/78 shadow-[0_0_56px_rgba(121,98,83,0.12)]"
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-[#fbe3d314] via-[#8d522f30] to-[#ba6f413d]" />
-          <div className="absolute inset-x-0 top-0 h-[42%] bg-gradient-to-b from-[#140d0991] to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#f2e2d310] via-[#6f5d4f33] to-[#3f352f66]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_36%,rgba(241,228,214,0.08),rgba(44,37,32,0.44)_56%,rgba(24,20,17,0.72)_100%)]" />
+          <div className="absolute inset-x-0 top-0 h-[40%] bg-gradient-to-b from-[#16120faa] to-transparent" />
+          <div className="absolute left-1/2 top-1/2 h-36 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#15131196] blur-[16px]" />
 
           <div
             className="absolute inset-x-0 bottom-0 transition-[height] ease-linear"
@@ -90,15 +92,16 @@ export function TimerClock({ phase, workSeconds, breakTotal, breakEndAt }: Timer
               transitionDuration: `${REST_FILL_RISE_MS}ms`,
             }}
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-[#874323b8] via-[#b86134a0] to-[#e39a6c73]" />
-            <div className="absolute -left-[20%] right-[-20%] top-[-17px] h-10 animate-liquid-wave-terracotta rounded-[44%] bg-[#e8a97f9f]" />
-            <div className="absolute -left-[14%] right-[-14%] top-[-13px] h-8 animate-liquid-wave-terracotta-reverse rounded-[49%] bg-[#f4c59d6e]" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#4e4035cf] via-[#7967598a] to-[#b7a1904f]" />
+            <div className="absolute inset-x-0 top-0 h-[55%] bg-gradient-to-b from-[#d8c0ac1f] to-transparent" />
+            <div className="absolute -left-[20%] right-[-20%] top-[-17px] h-10 animate-liquid-wave-terracotta rounded-[44%] bg-[#c7af9a80]" />
+            <div className="absolute -left-[14%] right-[-14%] top-[-13px] h-8 animate-liquid-wave-terracotta-reverse rounded-[49%] bg-[#e3d0bd57]" />
           </div>
         </div>
       ) : null}
 
       <p
-        className={`relative z-10 text-7xl font-light tracking-tight transition-colors duration-400 md:text-8xl ${colorClass} ${isBreaking ? 'drop-shadow-[0_3px_14px_rgba(28,16,11,0.58)]' : ''}`}
+        className={`relative z-10 text-7xl font-light tracking-tight transition-colors duration-400 md:text-8xl ${colorClass} ${isBreaking ? 'drop-shadow-[0_4px_16px_rgba(20,16,13,0.72)]' : ''}`}
       >
         {formatClock(seconds)}
       </p>

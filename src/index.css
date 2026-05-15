@@ -130,38 +130,38 @@
 
   @keyframes liquid-wave-terracotta {
     0% {
-      transform: translateX(-6%) translateY(0) scaleX(1.02);
+      transform: translateX(-4%) translateY(0) scaleX(1.01);
     }
 
     50% {
-      transform: translateX(5%) translateY(-2px) scaleX(1.05);
+      transform: translateX(4%) translateY(-1px) scaleX(1.03);
     }
 
     100% {
-      transform: translateX(-6%) translateY(0) scaleX(1.02);
+      transform: translateX(-4%) translateY(0) scaleX(1.01);
     }
   }
 
   @keyframes liquid-wave-terracotta-reverse {
     0% {
-      transform: translateX(4%) translateY(0) scaleX(0.99);
+      transform: translateX(3%) translateY(0) scaleX(0.99);
     }
 
     50% {
-      transform: translateX(-4%) translateY(1px) scaleX(1.04);
+      transform: translateX(-3%) translateY(1px) scaleX(1.02);
     }
 
     100% {
-      transform: translateX(4%) translateY(0) scaleX(0.99);
+      transform: translateX(3%) translateY(0) scaleX(0.99);
     }
   }
 
   .animate-liquid-wave-terracotta {
-    animation: liquid-wave-terracotta 6.2s ease-in-out infinite;
+    animation: liquid-wave-terracotta 7.4s ease-in-out infinite;
   }
 
   .animate-liquid-wave-terracotta-reverse {
-    animation: liquid-wave-terracotta-reverse 7.8s ease-in-out infinite;
+    animation: liquid-wave-terracotta-reverse 9.2s ease-in-out infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
