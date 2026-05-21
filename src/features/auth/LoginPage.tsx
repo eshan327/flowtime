@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { getErrorMessage } from '@/lib/errorMessages'
 import { supabase } from '@/lib/supabaseClient'
 
 function GoogleIcon() {
@@ -46,7 +47,7 @@ export function LoginPage() {
         setIsSubmitting(false)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to start Google sign in.')
+      setError(getErrorMessage(err, 'Unable to start Google sign in.'))
       setIsSubmitting(false)
     }
   }

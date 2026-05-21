@@ -48,7 +48,7 @@ function buildSections(
   const activeCategoryIds = new Set(sortedCategories.map((category) => category.id))
 
   if (activeTab !== 'all') {
-    const activeCategory = sortedCategories.find((category) => category.id === activeTab) ?? null
+    const activeCategory = sortedCategories.find((category) => category.id === activeTab)
     const categoryId = activeCategory?.id ?? null
 
     return [

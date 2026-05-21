@@ -145,12 +145,12 @@ export function useTimerCommandHandlers({
       if (!lastSavedSession) return
 
       const selectedEditTask = values.taskId
-        ? selectableTasks.find((task) => task.id === values.taskId)
+        ? (selectableTasks.find((task) => task.id === values.taskId) ?? null)
         : null
 
       const snapshot = createSessionSnapshotForTaskId(
         values.taskId,
-        selectedEditTask ?? null,
+        selectedEditTask,
         lastSavedSession
       )
 

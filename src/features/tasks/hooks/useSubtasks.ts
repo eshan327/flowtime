@@ -25,20 +25,34 @@ export function useSubtasks(taskId: string | null) {
   const queryClient = useQueryClient()
   const { user } = useUser()
 
+  const requireCurrentUserId = () => requireUserId(user?.id)
+  const requireSafeTaskId = () => requireTaskId(taskId ?? undefined)
+
   const updateSubtasksCache = (safeTaskId: string, updater: (current: Subtask[]) => Subtask[]) => {
     queryClient.setQueryData<Subtask[]>(subtasksQueryKey(safeTaskId), (current) =>
       updater(current ?? [])
     )
   }
 
+  const patchSubtaskInCache = (
+    safeTaskId: string,
+    subtaskId: string,
+    updater: (subtask: Subtask) => Subtask
+  ) => {
+    updateSubtasksCache(safeTaskId, (current) =>
+      current.map((subtask) => (subtask.id === subtaskId ? updater(subtask) : subtask))
+    )
+  }
+
   const subtasksQuery = useQuery({
     queryKey: subtasksQueryKey(taskId ?? undefined),
     queryFn: async () => {
-      const safeTaskId = requireTaskId(taskId ?? undefined)
+      const userId = requireCurrentUserId()
+      const safeTaskId = requireSafeTaskId()
       const { data, error } = await supabase
         .from('subtasks')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', userId)
         .eq('task_id', safeTaskId)
         .order('position', { ascending: true })
         .order('created_at', { ascending: true })
@@ -51,8 +65,8 @@ export function useSubtasks(taskId: string | null) {
 
   const addSubtask = useMutation({
     mutationFn: async (name: string) => {
-      const userId = requireUserId(user?.id)
-      const safeTaskId = requireTaskId(taskId ?? undefined)
+      const userId = requireCurrentUserId()
+      const safeTaskId = requireSafeTaskId()
       const existing = queryClient.getQueryData<Subtask[]>(subtasksQueryKey(safeTaskId)) ?? []
 
       const { data, error } = await supabase
@@ -70,14 +84,14 @@ export function useSubtasks(taskId: string | null) {
       return data as Subtask
     },
     onSuccess: (createdSubtask) => {
-      const safeTaskId = requireTaskId(taskId ?? undefined)
+      const safeTaskId = requireSafeTaskId()
       updateSubtasksCache(safeTaskId, (current) => [...current, createdSubtask])
     },
   })
 
   const renameSubtask = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const { error } = await supabase
         .from('subtasks')
         .update({ name: name.trim() })
@@ -87,18 +101,17 @@ export function useSubtasks(taskId: string | null) {
       if (error) throw error
     },
     onSuccess: (_result, variables) => {
-      const safeTaskId = requireTaskId(taskId ?? undefined)
-      updateSubtasksCache(safeTaskId, (current) =>
-        current.map((subtask) =>
-          subtask.id === variables.id ? { ...subtask, name: variables.name.trim() } : subtask
-        )
-      )
+      const safeTaskId = requireSafeTaskId()
+      patchSubtaskInCache(safeTaskId, variables.id, (subtask) => ({
+        ...subtask,
+        name: variables.name.trim(),
+      }))
     },
   })
 
   const completeSubtask = useMutation({
     mutationFn: async (id: string) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const completedAt = new Date().toISOString()
       const { error } = await supabase
         .from('subtasks')
@@ -110,32 +123,31 @@ export function useSubtasks(taskId: string | null) {
       return { id, completedAt }
     },
     onSuccess: ({ id, completedAt }) => {
-      const safeTaskId = requireTaskId(taskId ?? undefined)
-      updateSubtasksCache(safeTaskId, (current) =>
-        current.map((subtask) =>
-          subtask.id === id ? { ...subtask, completed_at: completedAt } : subtask
-        )
-      )
+      const safeTaskId = requireSafeTaskId()
+      patchSubtaskInCache(safeTaskId, id, (subtask) => ({
+        ...subtask,
+        completed_at: completedAt,
+      }))
     },
   })
 
   const deleteSubtask = useMutation({
     mutationFn: async (id: string) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const { error } = await supabase.from('subtasks').delete().eq('id', id).eq('user_id', userId)
 
       if (error) throw error
     },
     onSuccess: (_result, id) => {
-      const safeTaskId = requireTaskId(taskId ?? undefined)
+      const safeTaskId = requireSafeTaskId()
       updateSubtasksCache(safeTaskId, (current) => current.filter((subtask) => subtask.id !== id))
     },
   })
 
   const reorderSubtask = useMutation({
     mutationFn: async ({ id, newPosition }: { id: string; newPosition: number }) => {
-      const userId = requireUserId(user?.id)
-      const safeTaskId = requireTaskId(taskId ?? undefined)
+      const userId = requireCurrentUserId()
+      const safeTaskId = requireSafeTaskId()
 
       const { error } = await supabase
         .from('subtasks')
@@ -162,7 +174,7 @@ export function useSubtasks(taskId: string | null) {
       if (renormalizeError) throw renormalizeError
     },
     onMutate: async ({ id, newPosition }): Promise<ReorderSubtaskContext> => {
-      const safeTaskId = requireTaskId(taskId ?? undefined)
+      const safeTaskId = requireSafeTaskId()
       await queryClient.cancelQueries({ queryKey: subtasksQueryKey(safeTaskId) })
 
       const previous = queryClient.getQueryData<Subtask[]>(subtasksQueryKey(safeTaskId)) ?? []
@@ -180,11 +192,12 @@ export function useSubtasks(taskId: string | null) {
     },
   })
 
+  const allSubtasks = subtasksQuery.data ?? []
+
   return {
-    subtasks: (subtasksQuery.data ?? []).filter((subtask) => subtask.completed_at === null),
-    totalCount: (subtasksQuery.data ?? []).length,
-    completedCount: (subtasksQuery.data ?? []).filter((subtask) => subtask.completed_at !== null)
-      .length,
+    subtasks: allSubtasks.filter((subtask) => subtask.completed_at === null),
+    totalCount: allSubtasks.length,
+    completedCount: allSubtasks.filter((subtask) => subtask.completed_at !== null).length,
     isLoading: subtasksQuery.isLoading,
     error: subtasksQuery.error,
     addSubtask,

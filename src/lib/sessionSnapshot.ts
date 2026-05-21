@@ -19,47 +19,56 @@ export const EMPTY_SESSION_SNAPSHOT: SessionSnapshotInput = {
   categoryColorSnapshot: null,
 }
 
-export interface SessionSelectionFallback {
-  taskId: string | null
-  taskName: string | null
-  taskColor: string | null
-  categoryId: string | null
-  categoryName: string | null
-  categoryColor: string | null
+function pickFirst<T>(...values: Array<T | null | undefined>): T | null {
+  for (const value of values) {
+    if (value !== null && value !== undefined) {
+      return value
+    }
+  }
+
+  return null
+}
+
+function pickFirstOr<T>(fallback: T, ...values: Array<T | null | undefined>): T {
+  return pickFirst(...values) ?? fallback
 }
 
 export function getSessionColor(session: SessionWithTask) {
-  return (
-    session.category_color_snapshot ??
-    session.task_color_snapshot ??
-    session.tasks?.categories?.color ??
-    session.tasks?.color ??
-    DEFAULT_NEUTRAL_COLOR
+  return pickFirstOr(
+    DEFAULT_NEUTRAL_COLOR,
+    session.category_color_snapshot,
+    session.task_color_snapshot,
+    session.tasks?.categories?.color,
+    session.tasks?.color
   )
 }
 
 export function getSessionCategoryId(session: SessionWithTask) {
-  return session.category_id_snapshot ?? session.tasks?.category_id ?? null
+  return pickFirst(session.category_id_snapshot, session.tasks?.category_id)
 }
 
 export function getSessionCategoryName(session: SessionWithTask) {
-  return session.category_name_snapshot ?? session.tasks?.categories?.name ?? 'Uncategorized'
+  return pickFirstOr(
+    'Uncategorized',
+    session.category_name_snapshot,
+    session.tasks?.categories?.name
+  )
 }
 
 export function getSessionCategoryColor(session: SessionWithTask) {
-  return session.category_color_snapshot ?? session.tasks?.categories?.color ?? null
+  return pickFirst(session.category_color_snapshot, session.tasks?.categories?.color)
 }
 
 export function getSessionTaskId(session: SessionWithTask) {
-  return session.task_id_snapshot ?? session.task_id ?? null
+  return pickFirst(session.task_id_snapshot, session.task_id)
 }
 
 export function getSessionTaskName(session: SessionWithTask) {
-  return session.task_name_snapshot ?? session.tasks?.name ?? null
+  return pickFirst(session.task_name_snapshot, session.tasks?.name)
 }
 
 export function getSessionTaskColor(session: SessionWithTask) {
-  return session.task_color_snapshot ?? session.tasks?.color ?? getSessionColor(session)
+  return pickFirst(session.task_color_snapshot, session.tasks?.color) ?? getSessionColor(session)
 }
 
 export function createSessionSnapshotFromTask(task: TaskWithCategory): SessionSnapshotInput {
@@ -75,7 +84,14 @@ export function createSessionSnapshotFromTask(task: TaskWithCategory): SessionSn
 
 export function createSessionSnapshotFromSelection(
   selectedTask: TaskWithCategory | null,
-  fallback: SessionSelectionFallback
+  fallback: {
+    taskId: string | null
+    taskName: string | null
+    taskColor: string | null
+    categoryId: string | null
+    categoryName: string | null
+    categoryColor: string | null
+  }
 ): SessionSnapshotInput {
   if (selectedTask) {
     return createSessionSnapshotFromTask(selectedTask)
@@ -93,13 +109,15 @@ export function createSessionSnapshotFromSelection(
 
 export function createSessionSnapshotFromSession(session: SessionWithTask): SessionSnapshotInput {
   return {
-    taskIdSnapshot: session.task_id_snapshot ?? session.task_id ?? null,
-    taskNameSnapshot: session.task_name_snapshot ?? session.tasks?.name ?? null,
-    taskColorSnapshot: session.task_color_snapshot ?? session.tasks?.color ?? null,
-    categoryIdSnapshot: session.category_id_snapshot ?? session.tasks?.category_id ?? null,
-    categoryNameSnapshot: session.category_name_snapshot ?? session.tasks?.categories?.name ?? null,
-    categoryColorSnapshot:
-      session.category_color_snapshot ?? session.tasks?.categories?.color ?? null,
+    taskIdSnapshot: getSessionTaskId(session),
+    taskNameSnapshot: getSessionTaskName(session),
+    taskColorSnapshot: pickFirst(session.task_color_snapshot, session.tasks?.color),
+    categoryIdSnapshot: getSessionCategoryId(session),
+    categoryNameSnapshot: pickFirst(
+      session.category_name_snapshot,
+      session.tasks?.categories?.name
+    ),
+    categoryColorSnapshot: getSessionCategoryColor(session),
   }
 }
 

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { COLOR_PRESETS } from '@/features/tasks/constants'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
+import { getErrorMessage } from '@/lib/errorMessages'
 
 interface AddCategoryFormProps {
   isOpen: boolean
@@ -72,7 +73,7 @@ export function AddCategoryForm({ isOpen, onClose, onCreate }: AddCategoryFormPr
       await onCreate({ name: trimmed, color, breakDivisor: parsedBreakDivisor })
       handleClose()
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Unable to create category.')
+      setError(getErrorMessage(submitError, 'Unable to create category.'))
       setIsSubmitting(false)
     }
   }

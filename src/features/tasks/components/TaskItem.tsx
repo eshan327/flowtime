@@ -27,6 +27,7 @@ import {
   setDragData,
   type DropPlacement,
 } from '@/lib/ordering'
+import { getErrorMessage } from '@/lib/errorMessages'
 import type { Category, TaskWithCategory } from '@/types'
 
 interface TaskItemProps {
@@ -101,6 +102,10 @@ export function TaskItem({
     setShowColorPicker(false)
   }
 
+  const setTaskReorderError = (error: unknown) => {
+    setReorderError(getErrorMessage(error, 'Unable to reorder task right now.'))
+  }
+
   const handleSaveName = async () => {
     const trimmed = draftName.trim()
     if (!trimmed || trimmed === task.name) {
@@ -135,7 +140,7 @@ export function TaskItem({
       setReorderError(null)
       setDropPlacement(null)
     } catch (error) {
-      setReorderError(error instanceof Error ? error.message : 'Unable to reorder task right now.')
+      setTaskReorderError(error)
       setDropPlacement(null)
     }
   }
@@ -150,7 +155,7 @@ export function TaskItem({
       await onReorderTask({ id: task.id, newPosition })
       setReorderError(null)
     } catch (error) {
-      setReorderError(error instanceof Error ? error.message : 'Unable to reorder task right now.')
+      setTaskReorderError(error)
     }
   }
 

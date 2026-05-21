@@ -14,6 +14,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const setSessionUser = (session: { user: User } | null) => {
+    setUser(session?.user ?? null)
+    setLoading(false)
+  }
+
   useEffect(() => {
     let isActive = true
 
@@ -21,20 +26,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
       .getSession()
       .then(({ data }) => {
         if (!isActive) return
-        setUser(data.session?.user ?? null)
-        setLoading(false)
+        setSessionUser(data.session)
       })
       .catch(() => {
         if (!isActive) return
-        setUser(null)
-        setLoading(false)
+        setSessionUser(null)
       })
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
+      setSessionUser(session)
     })
 
     return () => {

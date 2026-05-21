@@ -12,10 +12,9 @@ import {
   computeStreak,
 } from '@/lib/utils'
 import { getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
+import type { SessionExportScope } from '@/features/stats/lib/sessionExport'
 import type { Session, SessionWithTask, TimeRange } from '@/types'
 import { supabase } from '@/lib/supabaseClient'
-
-export type SessionExportScope = 'range' | 'history'
 
 const SESSION_WITH_CATEGORY_SELECT =
   '*, tasks(id, name, color, category_id, categories(id, name, color, archived_at, break_divisor))'
@@ -26,42 +25,43 @@ export function useStats(range: TimeRange, anchorDate: Date) {
   const queryClient = useQueryClient()
   const { from, to } = useMemo(() => getRangeDatesForAnchor(range, anchorDate), [range, anchorDate])
 
-  const fetchRangeSessions = useCallback(
-    async (fromDate: Date, toDate: Date) => {
+  const fetchSessions = useCallback(
+    async ({ fromDate, toDate }: { fromDate?: Date; toDate?: Date } = {}) => {
       if (!userId) {
         throw new Error('User not authenticated')
       }
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('sessions')
         .select(SESSION_WITH_CATEGORY_SELECT)
         .eq('user_id', userId)
         .is('deleted_at', null)
-        .gte('started_at', fromDate.toISOString())
-        .lte('started_at', toDate.toISOString())
-        .order('started_at', { ascending: true })
 
+      if (fromDate) {
+        query = query.gte('started_at', fromDate.toISOString())
+      }
+
+      if (toDate) {
+        query = query.lte('started_at', toDate.toISOString())
+      }
+
+      const { data, error } = await query.order('started_at', { ascending: true })
       if (error) throw error
       return data as SessionWithTask[]
     },
     [userId]
   )
 
+  const fetchRangeSessions = useCallback(
+    async (fromDate: Date, toDate: Date) => {
+      return fetchSessions({ fromDate, toDate })
+    },
+    [fetchSessions]
+  )
+
   const fetchAllSessions = useCallback(async () => {
-    if (!userId) {
-      throw new Error('User not authenticated')
-    }
-
-    const { data, error } = await supabase
-      .from('sessions')
-      .select(SESSION_WITH_CATEGORY_SELECT)
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-      .order('started_at', { ascending: true })
-
-    if (error) throw error
-    return data as SessionWithTask[]
-  }, [userId])
+    return fetchSessions()
+  }, [fetchSessions])
 
   const rangeQuery = useQuery({
     queryKey: queryKeys.sessionsStatsRange(userId, range, from.toISOString(), to.toISOString()),
@@ -74,16 +74,7 @@ export function useStats(range: TimeRange, anchorDate: Date) {
     queryKey: queryKeys.sessionsHeatmap(userId),
     queryFn: async () => {
       const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-      const { data, error } = await supabase
-        .from('sessions')
-        .select(SESSION_WITH_CATEGORY_SELECT)
-        .eq('user_id', userId!)
-        .is('deleted_at', null)
-        .gte('started_at', yearAgo.toISOString())
-        .order('started_at', { ascending: true })
-
-      if (error) throw error
-      return data as SessionWithTask[]
+      return fetchSessions({ fromDate: yearAgo })
     },
     enabled: !!userId,
   })

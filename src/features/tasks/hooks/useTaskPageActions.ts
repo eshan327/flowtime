@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import type { Category } from '@/types'
 
 interface AsyncMutation<TVariables, TResult = unknown> {
@@ -52,41 +51,26 @@ export function useTaskPageActions({
       ? 'all'
       : activeTab
 
-  const mutationError = useMemo(
-    () =>
-      addCategory.error ??
-      renameCategory.error ??
-      recolorCategory.error ??
-      setCategoryBreakDivisor.error ??
-      archiveCategory.error ??
-      unarchiveCategory.error ??
-      deleteCategory.error ??
-      reorderCategory.error ??
-      addTask.error ??
-      updateTask.error ??
-      completeTask.error ??
-      restoreTask.error ??
-      deleteTask.error ??
-      moveTask.error ??
-      reorderTask.error,
-    [
-      addCategory.error,
-      renameCategory.error,
-      recolorCategory.error,
-      setCategoryBreakDivisor.error,
-      archiveCategory.error,
-      unarchiveCategory.error,
-      deleteCategory.error,
-      reorderCategory.error,
-      addTask.error,
-      updateTask.error,
-      completeTask.error,
-      restoreTask.error,
-      deleteTask.error,
-      moveTask.error,
-      reorderTask.error,
-    ]
-  )
+  const mutationError =
+    addCategory.error ??
+    renameCategory.error ??
+    recolorCategory.error ??
+    setCategoryBreakDivisor.error ??
+    archiveCategory.error ??
+    unarchiveCategory.error ??
+    deleteCategory.error ??
+    reorderCategory.error ??
+    addTask.error ??
+    updateTask.error ??
+    completeTask.error ??
+    restoreTask.error ??
+    deleteTask.error ??
+    moveTask.error ??
+    reorderTask.error
+
+  const runMutation = async <TVars>(mutation: AsyncMutation<TVars>, variables: TVars) => {
+    await mutation.mutateAsync(variables)
+  }
 
   return {
     resolvedActiveTab,
@@ -120,38 +104,23 @@ export function useTaskPageActions({
         await moveTask.mutateAsync({ id: taskId, categoryId: targetCategoryId })
       }
     },
-    handleAddTask: async (payload: { name: string; categoryId: string | null }) => {
-      await addTask.mutateAsync(payload)
-    },
-    handleUpdateTask: async (payload: { id: string; name?: string; color?: string }) => {
-      await updateTask.mutateAsync(payload)
-    },
-    handleCompleteTask: async (taskId: string) => {
-      await completeTask.mutateAsync(taskId)
-    },
-    handleRestoreTask: async (taskId: string) => {
-      await restoreTask.mutateAsync(taskId)
-    },
-    handleDeleteTask: async (taskId: string) => {
-      await deleteTask.mutateAsync(taskId)
-    },
-    handleMoveTask: async (payload: { id: string; categoryId: string | null }) => {
-      await moveTask.mutateAsync(payload)
-    },
-    handleReorderTask: async (payload: { id: string; newPosition: number }) => {
-      await reorderTask.mutateAsync(payload)
-    },
-    handleRenameCategory: async (id: string, name: string) => {
-      await renameCategory.mutateAsync({ id, name })
-    },
-    handleRecolorCategory: async (id: string, color: string) => {
-      await recolorCategory.mutateAsync({ id, color })
-    },
-    handleSetCategoryBreakDivisor: async (id: string, breakDivisor: number | null) => {
-      await setCategoryBreakDivisor.mutateAsync({ id, breakDivisor })
-    },
-    handleReorderCategory: async (id: string, newPosition: number) => {
-      await reorderCategory.mutateAsync({ id, newPosition })
-    },
+    handleAddTask: (payload: { name: string; categoryId: string | null }) =>
+      runMutation(addTask, payload),
+    handleUpdateTask: (payload: { id: string; name?: string; color?: string }) =>
+      runMutation(updateTask, payload),
+    handleCompleteTask: (taskId: string) => runMutation(completeTask, taskId),
+    handleRestoreTask: (taskId: string) => runMutation(restoreTask, taskId),
+    handleDeleteTask: (taskId: string) => runMutation(deleteTask, taskId),
+    handleMoveTask: (payload: { id: string; categoryId: string | null }) =>
+      runMutation(moveTask, payload),
+    handleReorderTask: (payload: { id: string; newPosition: number }) =>
+      runMutation(reorderTask, payload),
+    handleRenameCategory: (id: string, name: string) => runMutation(renameCategory, { id, name }),
+    handleRecolorCategory: (id: string, color: string) =>
+      runMutation(recolorCategory, { id, color }),
+    handleSetCategoryBreakDivisor: (id: string, breakDivisor: number | null) =>
+      runMutation(setCategoryBreakDivisor, { id, breakDivisor }),
+    handleReorderCategory: (id: string, newPosition: number) =>
+      runMutation(reorderCategory, { id, newPosition }),
   }
 }

@@ -52,7 +52,7 @@ export function TaskSelector({
   const [isQuickAdding, setIsQuickAdding] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null
+  const selectedTask = tasks.find((task) => task.id === selectedTaskId)
 
   const groupedTasks = useMemo<GroupedTasks[]>(() => {
     const groups = new Map<string, GroupedTasks>()
@@ -109,6 +109,30 @@ export function TaskSelector({
     }
   }, [disabled, shortcutsBlocked, shortcutsEnabled])
 
+  const submitQuickAdd = async () => {
+    if (!onQuickAddTask) return
+
+    const trimmed = quickAddValue.trim()
+    if (!trimmed || isQuickAdding) return
+
+    setIsQuickAdding(true)
+    try {
+      const taskId = await Promise.resolve(onQuickAddTask(trimmed))
+      if (taskId) {
+        onSelectTask(taskId)
+        setIsOpen(false)
+      }
+      setQuickAddValue('')
+    } finally {
+      setIsQuickAdding(false)
+    }
+  }
+
+  const selectAndClose = (taskId: string | null) => {
+    onSelectTask(taskId)
+    setIsOpen(false)
+  }
+
   return (
     <div className="relative w-full max-w-md" ref={containerRef}>
       <Button
@@ -123,7 +147,7 @@ export function TaskSelector({
             Loading tasks...
           </span>
         ) : (
-          <span className="truncate">{selectedTask ? selectedTask.name : 'Select a task'}</span>
+          <span className="truncate">{selectedTask?.name ?? 'Select a task'}</span>
         )}
         <ChevronDown className="h-4 w-4 text-ink-tertiary" />
       </Button>
@@ -138,22 +162,7 @@ export function TaskSelector({
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter') return
                   event.preventDefault()
-
-                  const trimmed = quickAddValue.trim()
-                  if (!trimmed || isQuickAdding) return
-
-                  setIsQuickAdding(true)
-                  Promise.resolve(onQuickAddTask(trimmed))
-                    .then((taskId) => {
-                      if (taskId) {
-                        onSelectTask(taskId)
-                        setIsOpen(false)
-                      }
-                      setQuickAddValue('')
-                    })
-                    .finally(() => {
-                      setIsQuickAdding(false)
-                    })
+                  void submitQuickAdd()
                 }}
                 placeholder="Quick add task"
                 value={quickAddValue}
@@ -162,21 +171,7 @@ export function TaskSelector({
               <Button
                 disabled={isQuickAdding || quickAddValue.trim().length === 0}
                 onClick={() => {
-                  const trimmed = quickAddValue.trim()
-                  if (!trimmed || isQuickAdding) return
-
-                  setIsQuickAdding(true)
-                  Promise.resolve(onQuickAddTask(trimmed))
-                    .then((taskId) => {
-                      if (taskId) {
-                        onSelectTask(taskId)
-                        setIsOpen(false)
-                      }
-                      setQuickAddValue('')
-                    })
-                    .finally(() => {
-                      setIsQuickAdding(false)
-                    })
+                  void submitQuickAdd()
                 }}
                 size="sm"
                 variant="filled"
@@ -192,10 +187,7 @@ export function TaskSelector({
                 ? 'bg-surface-raised text-ink-primary'
                 : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
             }`}
-            onClick={() => {
-              onSelectTask(null)
-              setIsOpen(false)
-            }}
+            onClick={() => selectAndClose(null)}
             size="sm"
             variant="ghost"
           >
@@ -220,10 +212,7 @@ export function TaskSelector({
                         : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
                     }`}
                     key={task.id}
-                    onClick={() => {
-                      onSelectTask(task.id)
-                      setIsOpen(false)
-                    }}
+                    onClick={() => selectAndClose(task.id)}
                     size="sm"
                     variant="ghost"
                   >

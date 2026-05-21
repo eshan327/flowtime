@@ -16,6 +16,7 @@ import {
   setDragData,
   type DropPlacement,
 } from '@/lib/ordering'
+import { getErrorMessage } from '@/lib/errorMessages'
 import type { Category } from '@/types'
 
 const MIN_BREAK_DIVISOR = 2
@@ -120,6 +121,10 @@ export function CategoryTabs({
     setDropTarget(null)
   }
 
+  const setCategoryReorderError = (error: unknown) => {
+    setReorderError(getErrorMessage(error, 'Unable to reorder category. Please try again.'))
+  }
+
   const handleDrop = async (
     draggedCategoryId: string,
     targetCategoryId: string,
@@ -146,9 +151,7 @@ export function CategoryTabs({
       await onReorderCategory(draggedCategoryId, newPosition)
       setReorderError(null)
     } catch (error) {
-      setReorderError(
-        error instanceof Error ? error.message : 'Unable to reorder category. Please try again.'
-      )
+      setCategoryReorderError(error)
     }
     clearDragState()
   }
@@ -161,9 +164,7 @@ export function CategoryTabs({
       await onReorderCategory(categoryId, newPosition)
       setReorderError(null)
     } catch (error) {
-      setReorderError(
-        error instanceof Error ? error.message : 'Unable to reorder category. Please try again.'
-      )
+      setCategoryReorderError(error)
     }
   }
 
@@ -391,11 +392,7 @@ export function CategoryTabs({
                     setContextMenu(null)
                   })
                   .catch((error) => {
-                    setReorderError(
-                      error instanceof Error
-                        ? error.message
-                        : 'Unable to update category break rule.'
-                    )
+                    setReorderError(getErrorMessage(error, 'Unable to update category break rule.'))
                   })
                 return
               }
@@ -418,9 +415,7 @@ export function CategoryTabs({
                   setContextMenu(null)
                 })
                 .catch((error) => {
-                  setReorderError(
-                    error instanceof Error ? error.message : 'Unable to update category break rule.'
-                  )
+                  setReorderError(getErrorMessage(error, 'Unable to update category break rule.'))
                 })
             }}
             size="sm"

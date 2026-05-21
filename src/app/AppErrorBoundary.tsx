@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { Component, type ReactNode } from 'react'
 
 interface AppErrorBoundaryProps {
   children: ReactNode
@@ -16,10 +16,6 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
 
   static getDerivedStateFromError(): AppErrorBoundaryState {
     return { hasError: true }
-  }
-
-  componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {
-    // Intentionally left blank. Rendering a safe fallback is enough here.
   }
 
   render() {

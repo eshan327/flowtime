@@ -18,6 +18,7 @@ import {
   setDragData,
   type DropPlacement,
 } from '@/lib/ordering'
+import { getErrorMessage } from '@/lib/errorMessages'
 
 interface SubtaskListProps {
   taskId: string
@@ -59,6 +60,10 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
     clearDragIntentId(dragIntentSubtaskIdRef)
     setDraggedSubtaskId(null)
     setDropTarget(null)
+  }
+
+  const setSubtaskReorderError = (error: unknown) => {
+    setReorderError(getErrorMessage(error, 'Unable to reorder subtask right now.'))
   }
 
   const handleSaveEdit = async (subtaskId: string) => {
@@ -108,9 +113,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
       setReorderError(null)
       clearDragState()
     } catch (error) {
-      setReorderError(
-        error instanceof Error ? error.message : 'Unable to reorder subtask right now.'
-      )
+      setSubtaskReorderError(error)
       clearDragState()
     }
   }
@@ -123,9 +126,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
       await reorderSubtask.mutateAsync({ id: subtaskId, newPosition })
       setReorderError(null)
     } catch (error) {
-      setReorderError(
-        error instanceof Error ? error.message : 'Unable to reorder subtask right now.'
-      )
+      setSubtaskReorderError(error)
     }
   }
 

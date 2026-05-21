@@ -43,6 +43,47 @@ function toSortedCategoryBuckets(buckets: Map<string, CategorySeconds>) {
   return Array.from(buckets.values()).sort((a, b) => b.seconds - a.seconds)
 }
 
+interface AggregateEntry {
+  date: string
+  totalSeconds: number
+  byCategory: Map<string, CategorySeconds>
+}
+
+function createAggregateMap(keys: string[]) {
+  const map = new Map<string, AggregateEntry>()
+  for (const key of keys) {
+    map.set(key, {
+      date: key,
+      totalSeconds: 0,
+      byCategory: new Map(),
+    })
+  }
+
+  return map
+}
+
+function aggregateSessionsByKeys(
+  sessions: SessionWithTask[],
+  keys: string[],
+  getSessionKey: (session: SessionWithTask) => string
+) {
+  const map = createAggregateMap(keys)
+
+  for (const session of sessions) {
+    const entry = map.get(getSessionKey(session))
+    if (!entry) continue
+
+    entry.totalSeconds += session.work_seconds
+    addSessionToCategoryBuckets(entry.byCategory, session)
+  }
+
+  return Array.from(map.values()).map((entry) => ({
+    date: entry.date,
+    totalSeconds: entry.totalSeconds,
+    byCategory: toSortedCategoryBuckets(entry.byCategory),
+  }))
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -91,41 +132,15 @@ export function computeStreak(sessions: { started_at: string }[]) {
 
 export function aggregateByHour(sessions: SessionWithTask[], anchorDate: Date): DaySummary[] {
   const dayStart = toStartOfDay(anchorDate)
-
-  const dayMap = new Map<
-    string,
-    {
-      date: string
-      totalSeconds: number
-      byCategory: Map<string, CategorySeconds>
-    }
-  >()
-
-  for (let hour = 0; hour < 24; hour += 1) {
+  const keys = Array.from({ length: 24 }, (_value, hour) => {
     const keyDate = new Date(dayStart)
     keyDate.setHours(hour, 0, 0, 0)
-    const key = toHourKey(keyDate)
-    dayMap.set(key, {
-      date: key,
-      totalSeconds: 0,
-      byCategory: new Map(),
-    })
-  }
+    return toHourKey(keyDate)
+  })
 
-  for (const session of sessions) {
-    const key = toHourKey(new Date(session.started_at))
-    const entry = dayMap.get(key)
-    if (!entry) continue
-
-    entry.totalSeconds += session.work_seconds
-    addSessionToCategoryBuckets(entry.byCategory, session)
-  }
-
-  return Array.from(dayMap.values()).map((entry) => ({
-    date: entry.date,
-    totalSeconds: entry.totalSeconds,
-    byCategory: toSortedCategoryBuckets(entry.byCategory),
-  }))
+  return aggregateSessionsByKeys(sessions, keys, (session) =>
+    toHourKey(new Date(session.started_at))
+  )
 }
 
 export function aggregateByDay(sessions: SessionWithTask[], from: Date, to: Date): DaySummary[] {
@@ -134,74 +149,32 @@ export function aggregateByDay(sessions: SessionWithTask[], from: Date, to: Date
 
   const end = new Date(to)
   end.setHours(0, 0, 0, 0)
-
-  const map = new Map<
-    string,
-    {
-      date: string
-      totalSeconds: number
-      byCategory: Map<string, CategorySeconds>
-    }
-  >()
-
+  const keys: string[] = []
   for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
-    const key = toLocalDateKey(cursor)
-    map.set(key, { date: key, totalSeconds: 0, byCategory: new Map() })
+    keys.push(toLocalDateKey(cursor))
   }
 
-  for (const session of sessions) {
-    const key = toLocalDateKey(new Date(session.started_at))
-    const day = map.get(key)
-    if (!day) continue
-
-    day.totalSeconds += session.work_seconds
-    addSessionToCategoryBuckets(day.byCategory, session)
-  }
-
-  return Array.from(map.values()).map((entry) => ({
-    date: entry.date,
-    totalSeconds: entry.totalSeconds,
-    byCategory: toSortedCategoryBuckets(entry.byCategory),
-  }))
+  return aggregateSessionsByKeys(sessions, keys, (session) =>
+    toLocalDateKey(new Date(session.started_at))
+  )
 }
 
 export function aggregateByWeek(sessions: SessionWithTask[], from: Date, to: Date): DaySummary[] {
   const firstWeekStart = toWeekStart(from)
   const end = toStartOfDay(to)
-
-  const map = new Map<
-    string,
-    {
-      date: string
-      totalSeconds: number
-      byCategory: Map<string, CategorySeconds>
-    }
-  >()
-
+  const keys: string[] = []
   for (
     const cursor = new Date(firstWeekStart);
     cursor <= end;
     cursor.setDate(cursor.getDate() + 7)
   ) {
     const weekStart = new Date(cursor)
-    const key = toLocalDateKey(weekStart)
-    map.set(key, { date: key, totalSeconds: 0, byCategory: new Map() })
+    keys.push(toLocalDateKey(weekStart))
   }
 
-  for (const session of sessions) {
-    const weekKey = toLocalDateKey(toWeekStart(new Date(session.started_at)))
-    const week = map.get(weekKey)
-    if (!week) continue
-
-    week.totalSeconds += session.work_seconds
-    addSessionToCategoryBuckets(week.byCategory, session)
-  }
-
-  return Array.from(map.values()).map((entry) => ({
-    date: entry.date,
-    totalSeconds: entry.totalSeconds,
-    byCategory: toSortedCategoryBuckets(entry.byCategory),
-  }))
+  return aggregateSessionsByKeys(sessions, keys, (session) =>
+    toLocalDateKey(toWeekStart(new Date(session.started_at)))
+  )
 }
 
 export function aggregateByCategory(sessions: SessionWithTask[]): CategorySummary[] {

@@ -25,6 +25,8 @@ export function useCategories() {
   const queryClient = useQueryClient()
   const { user } = useUser()
 
+  const requireCurrentUserId = () => requireUserId(user?.id)
+
   const updateCategoriesCache = (userId: string, updater: (current: Category[]) => Category[]) => {
     queryClient.setQueryData<Category[]>(categoriesQueryKey(userId), (current) =>
       updater(current ?? [])
@@ -38,6 +40,16 @@ export function useCategories() {
   ) => {
     queryClient.setQueryData<TaskWithCategory[]>(queryKeys.tasks(userId), (current) =>
       (current ?? []).map((task) => (task.category_id === categoryId ? updater(task) : task))
+    )
+  }
+
+  const patchCategoryInCache = (
+    userId: string,
+    categoryId: string,
+    updater: (category: Category) => Category
+  ) => {
+    updateCategoriesCache(userId, (current) =>
+      current.map((category) => (category.id === categoryId ? updater(category) : category))
     )
   }
 
@@ -67,7 +79,7 @@ export function useCategories() {
       color: string
       breakDivisor: number | null
     }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const existing = queryClient.getQueryData<Category[]>(categoriesQueryKey(userId)) ?? []
 
       const { data, error } = await supabase
@@ -86,7 +98,7 @@ export function useCategories() {
       return data as Category
     },
     onSuccess: (createdCategory) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       updateCategoriesCache(userId, (current) =>
         sortByPositionAndCreatedAt([...current, createdCategory])
       )
@@ -95,7 +107,7 @@ export function useCategories() {
 
   const renameCategory = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const { error } = await supabase
         .from('categories')
         .update({ name: name.trim() })
@@ -105,13 +117,12 @@ export function useCategories() {
       if (error) throw error
     },
     onSuccess: (_result, variables) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
 
-      updateCategoriesCache(userId, (current) =>
-        current.map((category) =>
-          category.id === variables.id ? { ...category, name: variables.name.trim() } : category
-        )
-      )
+      patchCategoryInCache(userId, variables.id, (category) => ({
+        ...category,
+        name: variables.name.trim(),
+      }))
 
       updateTasksForCategory(userId, variables.id, (task) => ({
         ...task,
@@ -127,7 +138,7 @@ export function useCategories() {
 
   const recolorCategory = useMutation({
     mutationFn: async ({ id, color }: { id: string; color: string }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const { error } = await supabase
         .from('categories')
         .update({ color })
@@ -137,13 +148,12 @@ export function useCategories() {
       if (error) throw error
     },
     onSuccess: (_result, variables) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
 
-      updateCategoriesCache(userId, (current) =>
-        current.map((category) =>
-          category.id === variables.id ? { ...category, color: variables.color } : category
-        )
-      )
+      patchCategoryInCache(userId, variables.id, (category) => ({
+        ...category,
+        color: variables.color,
+      }))
 
       updateTasksForCategory(userId, variables.id, (task) => ({
         ...task,
@@ -159,7 +169,7 @@ export function useCategories() {
 
   const setCategoryBreakDivisor = useMutation({
     mutationFn: async ({ id, breakDivisor }: { id: string; breakDivisor: number | null }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const { error } = await supabase
         .from('categories')
         .update({ break_divisor: breakDivisor })
@@ -169,15 +179,12 @@ export function useCategories() {
       if (error) throw error
     },
     onSuccess: (_result, variables) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
 
-      updateCategoriesCache(userId, (current) =>
-        current.map((category) =>
-          category.id === variables.id
-            ? { ...category, break_divisor: variables.breakDivisor }
-            : category
-        )
-      )
+      patchCategoryInCache(userId, variables.id, (category) => ({
+        ...category,
+        break_divisor: variables.breakDivisor,
+      }))
 
       updateTasksForCategory(userId, variables.id, (task) => ({
         ...task,
@@ -193,7 +200,7 @@ export function useCategories() {
 
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const { error } = await supabase
         .from('categories')
         .delete()
@@ -203,7 +210,7 @@ export function useCategories() {
       if (error) throw error
     },
     onSuccess: (_result, id) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
 
       updateCategoriesCache(userId, (current) => current.filter((category) => category.id !== id))
 
@@ -217,7 +224,7 @@ export function useCategories() {
 
   const reorderCategory = useMutation({
     mutationFn: async ({ id, newPosition }: { id: string; newPosition: number }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
 
       const { error } = await supabase
         .from('categories')
@@ -246,7 +253,7 @@ export function useCategories() {
       if (renormalizeError) throw renormalizeError
     },
     onMutate: async ({ id, newPosition }): Promise<ReorderCategoryContext> => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       await queryClient.cancelQueries({ queryKey: categoriesQueryKey(userId) })
 
       const previous = queryClient.getQueryData<Category[]>(categoriesQueryKey(userId)) ?? []
@@ -269,7 +276,7 @@ export function useCategories() {
 
   const archiveCategory = useMutation({
     mutationFn: async (id: string) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const archivedAt = new Date().toISOString()
       const { error } = await supabase
         .from('categories')
@@ -281,13 +288,9 @@ export function useCategories() {
       return { id, archivedAt }
     },
     onSuccess: ({ id, archivedAt }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
 
-      updateCategoriesCache(userId, (current) =>
-        current.map((category) =>
-          category.id === id ? { ...category, archived_at: archivedAt } : category
-        )
-      )
+      patchCategoryInCache(userId, id, (category) => ({ ...category, archived_at: archivedAt }))
 
       updateTasksForCategory(userId, id, (task) => ({
         ...task,
@@ -303,7 +306,7 @@ export function useCategories() {
 
   const unarchiveCategory = useMutation({
     mutationFn: async (id: string) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const { error } = await supabase
         .from('categories')
         .update({ archived_at: null })
@@ -313,13 +316,9 @@ export function useCategories() {
       if (error) throw error
     },
     onSuccess: (_result, id) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
 
-      updateCategoriesCache(userId, (current) =>
-        current.map((category) =>
-          category.id === id ? { ...category, archived_at: null } : category
-        )
-      )
+      patchCategoryInCache(userId, id, (category) => ({ ...category, archived_at: null }))
 
       updateTasksForCategory(userId, id, (task) => ({
         ...task,

@@ -8,6 +8,7 @@ import { TaskList } from '@/features/tasks/components/TaskList'
 import { useCategories } from '@/features/tasks/hooks/useCategories'
 import { useTaskPageActions } from '@/features/tasks/hooks/useTaskPageActions'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
+import { getErrorMessage } from '@/lib/errorMessages'
 
 export function TasksPage() {
   const [activeTab, setActiveTab] = useState('all')
@@ -99,7 +100,7 @@ export function TasksPage() {
     return (
       <section className="mx-auto max-w-3xl rounded-xl border border-surface-border bg-surface-raised p-6">
         <p className="text-sm text-red-300">
-          {error instanceof Error ? error.message : 'Unable to load tasks right now.'}
+          {getErrorMessage(error, 'Unable to load tasks right now.')}
         </p>
       </section>
     )
@@ -158,7 +159,7 @@ export function TasksPage() {
 
       {mutationError ? (
         <p className="text-sm text-red-300">
-          {mutationError instanceof Error ? mutationError.message : 'Task action failed.'}
+          {getErrorMessage(mutationError, 'Task action failed.')}
         </p>
       ) : null}
 

@@ -14,6 +14,5 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     )
   }
 
-  if (!user) return <LoginPage />
-  return <>{children}</>
+  return user ? <>{children}</> : <LoginPage />
 }

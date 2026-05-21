@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Settings2, X } from 'lucide-react'
+import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { SessionEditModal } from '@/features/stats/components/SessionEditModal'
@@ -20,6 +21,7 @@ import { useTimerStore } from '@/features/timer/stores/timerStore'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
+import { getErrorMessage } from '@/lib/errorMessages'
 import { formatClock, formatDuration } from '@/lib/formatting'
 import { createSessionSnapshotFromSelection } from '@/lib/sessionSnapshot'
 import type { SessionWithTask } from '@/types'
@@ -33,42 +35,80 @@ export function TimerPage() {
   const { tasks, addTask, isLoading: tasksLoading, error: tasksError } = useTasks()
   const { updateSession, softDeleteSession } = useSessionMutations()
 
-  const breakDivisor = useTimerSettingsStore((state) => state.breakDivisor)
-  const notificationsEnabled = useTimerSettingsStore((state) => state.notificationsEnabled)
-  const chimeEnabled = useTimerSettingsStore((state) => state.chimeEnabled)
-  const chimeId = useTimerSettingsStore((state) => state.chimeId)
-  const focusModeLock = useTimerSettingsStore((state) => state.focusModeLock)
-  const shortcutsEnabled = useTimerSettingsStore((state) => state.shortcutsEnabled)
+  const {
+    breakDivisor,
+    notificationsEnabled,
+    chimeEnabled,
+    chimeId,
+    focusModeLock,
+    shortcutsEnabled,
+  } = useTimerSettingsStore(
+    useShallow((state) => ({
+      breakDivisor: state.breakDivisor,
+      notificationsEnabled: state.notificationsEnabled,
+      chimeEnabled: state.chimeEnabled,
+      chimeId: state.chimeId,
+      focusModeLock: state.focusModeLock,
+      shortcutsEnabled: state.shortcutsEnabled,
+    }))
+  )
 
-  const phase = useTimerStore((state) => state.phase)
-  const workSeconds = useTimerStore((state) => state.workSeconds)
-  const breakEndAt = useTimerStore((state) => state.breakEndAt)
-  const breakTotal = useTimerStore((state) => state.breakTotal)
-  const startedAt = useTimerStore((state) => state.startedAt)
-  const selectedTaskId = useTimerStore((state) => state.selectedTaskId)
-  const selectedTaskName = useTimerStore((state) => state.selectedTaskName)
-  const selectedTaskColorSnapshot = useTimerStore((state) => state.selectedTaskColor)
-  const selectedCategoryId = useTimerStore((state) => state.selectedCategoryId)
-  const selectedCategoryName = useTimerStore((state) => state.selectedCategoryName)
-  const selectedCategoryColor = useTimerStore((state) => state.selectedCategoryColor)
-  const lastSessionId = useTimerStore((state) => state.lastSessionId)
-  const lastSessionTaskName = useTimerStore((state) => state.lastSessionTaskName)
-  const lastSessionTaskColor = useTimerStore((state) => state.lastSessionTaskColor)
-  const runawayDetected = useTimerStore((state) => state.runawayDetected)
-  const dismissRunaway = useTimerStore((state) => state.dismissRunaway)
-  const startWork = useTimerStore((state) => state.startWork)
-  const stopWork = useTimerStore((state) => state.stopWork)
-  const skipBreak = useTimerStore((state) => state.skipBreak)
-  const setSelectedTask = useTimerStore((state) => state.setSelectedTask)
-  const setSelectedTaskSnapshot = useTimerStore((state) => state.setSelectedTaskSnapshot)
-  const setLastSessionId = useTimerStore((state) => state.setLastSessionId)
+  const {
+    phase,
+    workSeconds,
+    breakEndAt,
+    breakTotal,
+    startedAt,
+    selectedTaskId,
+    selectedTaskName,
+    selectedTaskColorSnapshot,
+    selectedCategoryId,
+    selectedCategoryName,
+    selectedCategoryColor,
+    lastSessionId,
+    lastSessionTaskName,
+    lastSessionTaskColor,
+    runawayDetected,
+    dismissRunaway,
+    startWork,
+    stopWork,
+    skipBreak,
+    setSelectedTask,
+    setSelectedTaskSnapshot,
+    setLastSessionId,
+  } = useTimerStore(
+    useShallow((state) => ({
+      phase: state.phase,
+      workSeconds: state.workSeconds,
+      breakEndAt: state.breakEndAt,
+      breakTotal: state.breakTotal,
+      startedAt: state.startedAt,
+      selectedTaskId: state.selectedTaskId,
+      selectedTaskName: state.selectedTaskName,
+      selectedTaskColorSnapshot: state.selectedTaskColor,
+      selectedCategoryId: state.selectedCategoryId,
+      selectedCategoryName: state.selectedCategoryName,
+      selectedCategoryColor: state.selectedCategoryColor,
+      lastSessionId: state.lastSessionId,
+      lastSessionTaskName: state.lastSessionTaskName,
+      lastSessionTaskColor: state.lastSessionTaskColor,
+      runawayDetected: state.runawayDetected,
+      dismissRunaway: state.dismissRunaway,
+      startWork: state.startWork,
+      stopWork: state.stopWork,
+      skipBreak: state.skipBreak,
+      setSelectedTask: state.setSelectedTask,
+      setSelectedTaskSnapshot: state.setSelectedTaskSnapshot,
+      setLastSessionId: state.setLastSessionId,
+    }))
+  )
 
   const { saveSession, saveTimerSession, isSavingSession } = useTimerSessionPipeline({
     setLastSessionId,
     setLastSavedSession,
   })
 
-  const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null
+  const selectedTask = tasks.find((task) => task.id === selectedTaskId)
   const selectedTaskIsSelectable = selectedTask
     ? selectedTask.category_id === null || selectedTask.categories?.archived_at === null
     : false
@@ -76,7 +116,7 @@ export function TimerPage() {
     selectedTask?.categories?.color ?? selectedTask?.color ?? DEFAULT_TASK_COLOR
   const selectedCategoryBreakDivisor = selectedTask?.categories?.break_divisor ?? null
   const effectiveBreakDivisor = selectedCategoryBreakDivisor ?? breakDivisor
-  const canStartWork = !!selectedTask && selectedTaskIsSelectable
+  const canStartWork = Boolean(selectedTask && selectedTaskIsSelectable)
 
   useTimer({
     breakDivisor: effectiveBreakDivisor,
@@ -97,7 +137,7 @@ export function TimerPage() {
 
   const buildSessionSnapshot = useCallback(
     () =>
-      createSessionSnapshotFromSelection(selectedTask, {
+      createSessionSnapshotFromSelection(selectedTask ?? null, {
         taskId: selectedTaskId,
         taskName: selectedTaskName,
         taskColor: selectedTaskColorSnapshot,
@@ -152,7 +192,7 @@ export function TimerPage() {
           : 'Break complete - ready for the next session'
 
   const replayTask = useMemo(() => {
-    const replayTaskId = lastSavedSession?.task_id_snapshot ?? lastSavedSession?.task_id ?? null
+    const replayTaskId = lastSavedSession?.task_id_snapshot ?? lastSavedSession?.task_id
     if (!replayTaskId) return null
     return selectableTasks.find((task) => task.id === replayTaskId) ?? null
   }, [lastSavedSession, selectableTasks])
@@ -245,7 +285,8 @@ export function TimerPage() {
 
         {tasksError ? (
           <p className="mb-3 rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
-            Unable to load tasks right now. Pick a task before starting a timer session.
+            {getErrorMessage(tasksError, 'Unable to load tasks right now.')} Pick a task before
+            starting a timer session.
           </p>
         ) : null}
 
@@ -340,7 +381,11 @@ export function TimerPage() {
       <TimerSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       <SessionEditModal
-        error={updateSession.error instanceof Error ? updateSession.error.message : null}
+        error={
+          updateSession.error
+            ? getErrorMessage(updateSession.error, 'Unable to update session right now.')
+            : null
+        }
         isOpen={isSessionEditOpen && !!lastSavedSession}
         isSaving={updateSession.isPending}
         onClose={() => setIsSessionEditOpen(false)}

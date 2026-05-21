@@ -23,6 +23,7 @@ import { useStats } from '@/features/stats/hooks/useStats'
 import { useSessionMutations } from '@/features/stats/hooks/useSessionMutations'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
+import { getErrorMessage } from '@/lib/errorMessages'
 import { useUser } from '@/hooks/useUser'
 import { createSessionSnapshotForTaskId } from '@/lib/sessionSnapshot'
 import type { SessionWithTask, TimeRange } from '@/types'
@@ -31,11 +32,8 @@ function getHistoryLowerBound(createdAt: string | null | undefined) {
   const januaryFallback = new Date(2026, 0, 1)
   januaryFallback.setHours(0, 0, 0, 0)
 
-  if (!createdAt) {
-    return januaryFallback
-  }
-
-  const parsedCreatedAt = new Date(createdAt)
+  const parsedCreatedAt = createdAt ? new Date(createdAt) : null
+  if (!parsedCreatedAt) return januaryFallback
   if (Number.isNaN(parsedCreatedAt.getTime())) {
     return januaryFallback
   }
@@ -178,13 +176,28 @@ export function StatsPage() {
 
       downloadSessionExportFile(payload)
     } catch (error) {
-      setExportError(
-        error instanceof Error ? error.message : 'Unable to export sessions right now.'
-      )
+      setExportError(getErrorMessage(error, 'Unable to export sessions right now.'))
     } finally {
       setActiveExport(null)
     }
   }
+
+  const exportPanels: Array<{
+    scope: SessionExportScope
+    title: string
+    subtitle: string
+  }> = [
+    {
+      scope: 'range',
+      title: 'Current range',
+      subtitle: `Scope: ${selectedWindowLabel}`,
+    },
+    {
+      scope: 'history',
+      title: 'Full history',
+      subtitle: 'Scope: all sessions for this account.',
+    },
+  ]
 
   if (stats.isLoading) {
     return (
@@ -198,7 +211,7 @@ export function StatsPage() {
     return (
       <section className="mx-auto max-w-5xl rounded-xl border border-surface-border bg-surface-raised p-6">
         <p className="text-sm text-red-300">
-          {stats.error instanceof Error ? stats.error.message : 'Unable to load stats right now.'}
+          {getErrorMessage(stats.error, 'Unable to load stats right now.')}
         </p>
       </section>
     )
@@ -228,59 +241,30 @@ export function StatsPage() {
         </div>
 
         <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <div className="rounded-lg border border-surface-border bg-surface-overlay/70 p-3">
-            <p className="text-xs uppercase tracking-[0.1em] text-ink-tertiary">Current range</p>
-            <p className="mt-1 text-xs text-ink-secondary">Scope: {selectedWindowLabel}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                loading={activeExport?.scope === 'range' && activeExport.format === 'csv'}
-                onClick={() => {
-                  void handleExport('range', 'csv')
-                }}
-                size="sm"
-                variant="outlined"
-              >
-                Export CSV
-              </Button>
-              <Button
-                loading={activeExport?.scope === 'range' && activeExport.format === 'json'}
-                onClick={() => {
-                  void handleExport('range', 'json')
-                }}
-                size="sm"
-                variant="ghost"
-              >
-                Export JSON
-              </Button>
+          {exportPanels.map((panel) => (
+            <div
+              className="rounded-lg border border-surface-border bg-surface-overlay/70 p-3"
+              key={panel.scope}
+            >
+              <p className="text-xs uppercase tracking-[0.1em] text-ink-tertiary">{panel.title}</p>
+              <p className="mt-1 text-xs text-ink-secondary">{panel.subtitle}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(['csv', 'json'] as const).map((format) => (
+                  <Button
+                    key={format}
+                    loading={activeExport?.scope === panel.scope && activeExport.format === format}
+                    onClick={() => {
+                      void handleExport(panel.scope, format)
+                    }}
+                    size="sm"
+                    variant={format === 'csv' ? 'outlined' : 'ghost'}
+                  >
+                    Export {format.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div className="rounded-lg border border-surface-border bg-surface-overlay/70 p-3">
-            <p className="text-xs uppercase tracking-[0.1em] text-ink-tertiary">Full history</p>
-            <p className="mt-1 text-xs text-ink-secondary">Scope: all sessions for this account.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                loading={activeExport?.scope === 'history' && activeExport.format === 'csv'}
-                onClick={() => {
-                  void handleExport('history', 'csv')
-                }}
-                size="sm"
-                variant="outlined"
-              >
-                Export CSV
-              </Button>
-              <Button
-                loading={activeExport?.scope === 'history' && activeExport.format === 'json'}
-                onClick={() => {
-                  void handleExport('history', 'json')
-                }}
-                size="sm"
-                variant="ghost"
-              >
-                Export JSON
-              </Button>
-            </div>
-          </div>
+          ))}
         </div>
 
         {exportError ? <p className="mt-3 text-sm text-red-300">{exportError}</p> : null}
@@ -289,21 +273,13 @@ export function StatsPage() {
       <section>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm text-ink-secondary">
-            Focus time by{' '}
-            <TimeRangeSelector
-              onChange={(nextRange) => {
-                setRange(nextRange)
-              }}
-              value={range}
-            />
+            Focus time by <TimeRangeSelector onChange={setRange} value={range} />
           </h2>
 
           <div className="flex items-center gap-2">
             <Button
               disabled={isCurrentWindow}
-              onClick={() => {
-                setAnchorDate(new Date())
-              }}
+              onClick={() => setAnchorDate(new Date())}
               size="sm"
               variant="ghost"
             >
@@ -318,9 +294,7 @@ export function StatsPage() {
                   : 'border border-surface-border/40 bg-transparent text-ink-tertiary/40 disabled:opacity-100'
               }
               disabled={!canGoPrevious}
-              onClick={() => {
-                setAnchorDate((current) => shiftRangeAnchor(range, current, -1))
-              }}
+              onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, -1))}
               size="icon"
               variant="ghost"
             >
@@ -339,9 +313,7 @@ export function StatsPage() {
                   : 'border border-surface-border/40 bg-transparent text-ink-tertiary/40 disabled:opacity-100'
               }
               disabled={!canGoNext}
-              onClick={() => {
-                setAnchorDate((current) => shiftRangeAnchor(range, current, 1))
-              }}
+              onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, 1))}
               size="icon"
               variant="ghost"
             >
@@ -365,9 +337,7 @@ export function StatsPage() {
           onDelete={(session) => {
             void handleDeleteSession(session)
           }}
-          onEdit={(session) => {
-            setEditingSession(session)
-          }}
+          onEdit={setEditingSession}
           sessions={stats.sessions}
         />
 
@@ -400,7 +370,11 @@ export function StatsPage() {
       </section>
 
       <SessionEditModal
-        error={updateSession.error instanceof Error ? updateSession.error.message : null}
+        error={
+          updateSession.error
+            ? getErrorMessage(updateSession.error, 'Unable to update session right now.')
+            : null
+        }
         isOpen={!!editingSession}
         isSaving={updateSession.isPending}
         onClose={() => setEditingSession(null)}

@@ -17,6 +17,9 @@ interface ReorderTaskContext {
   userId: string
 }
 
+const TASK_WITH_CATEGORY_SELECT =
+  'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at, break_divisor)'
+
 export function tasksQueryKey(userId?: string) {
   return queryKeys.tasks(userId)
 }
@@ -48,6 +51,8 @@ export function useTasks() {
   const queryClient = useQueryClient()
   const { user } = useUser()
 
+  const requireCurrentUserId = () => requireUserId(user?.id)
+
   const updateTasksCache = (
     userId: string,
     updater: (current: TaskWithCategory[]) => TaskWithCategory[]
@@ -57,14 +62,26 @@ export function useTasks() {
     )
   }
 
+  const patchTaskInCache = (
+    userId: string,
+    taskId: string,
+    updater: (task: TaskWithCategory) => TaskWithCategory
+  ) => {
+    updateTasksCache(userId, (current) =>
+      current.map((task) => (task.id === taskId ? updater(task) : task))
+    )
+  }
+
+  const removeTaskFromCache = (userId: string, taskId: string) => {
+    updateTasksCache(userId, (current) => current.filter((task) => task.id !== taskId))
+  }
+
   const tasksQuery = useQuery({
     queryKey: tasksQueryKey(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tasks')
-        .select(
-          'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at, break_divisor)'
-        )
+        .select(TASK_WITH_CATEGORY_SELECT)
         .eq('user_id', user!.id)
         .order('position', { ascending: true })
         .order('created_at', { ascending: true })
@@ -77,7 +94,7 @@ export function useTasks() {
 
   const addTask = useMutation({
     mutationFn: async ({ name, categoryId }: { name: string; categoryId: string | null }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const existing = queryClient.getQueryData<TaskWithCategory[]>(tasksQueryKey(userId)) ?? []
       const tasksInCategory = existing.filter((task) => task.category_id === categoryId)
 
@@ -90,23 +107,21 @@ export function useTasks() {
           position: getNextPosition(tasksInCategory),
           color: categoryId ? null : DEFAULT_TASK_COLOR,
         })
-        .select(
-          'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at, break_divisor)'
-        )
+        .select(TASK_WITH_CATEGORY_SELECT)
         .single()
 
       if (error) throw error
       return data as TaskWithCategory
     },
     onSuccess: (createdTask) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       updateTasksCache(userId, (current) => sortByPositionAndCreatedAt([...current, createdTask]))
     },
   })
 
   const updateTask = useMutation({
     mutationFn: async ({ id, name, color }: { id: string; name?: string; color?: string }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const updates: Partial<Pick<Task, 'name' | 'color'>> = {}
 
       if (name !== undefined) {
@@ -126,24 +141,18 @@ export function useTasks() {
       if (error) throw error
     },
     onSuccess: (_result, variables) => {
-      const userId = requireUserId(user?.id)
-      updateTasksCache(userId, (current) =>
-        current.map((task) => {
-          if (task.id !== variables.id) return task
-
-          return {
-            ...task,
-            name: variables.name !== undefined ? variables.name.trim() : task.name,
-            color: variables.color !== undefined ? variables.color : task.color,
-          }
-        })
-      )
+      const userId = requireCurrentUserId()
+      patchTaskInCache(userId, variables.id, (task) => ({
+        ...task,
+        name: variables.name !== undefined ? variables.name.trim() : task.name,
+        color: variables.color !== undefined ? variables.color : task.color,
+      }))
     },
   })
 
   const completeTask = useMutation({
     mutationFn: async (id: string) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const completedAt = new Date().toISOString()
       const { error } = await supabase
         .from('tasks')
@@ -155,31 +164,29 @@ export function useTasks() {
       return { id, completedAt }
     },
     onSuccess: ({ id, completedAt }) => {
-      const userId = requireUserId(user?.id)
-      updateTasksCache(userId, (current) =>
-        current.map((task) => (task.id === id ? { ...task, completed_at: completedAt } : task))
-      )
+      const userId = requireCurrentUserId()
+      patchTaskInCache(userId, id, (task) => ({ ...task, completed_at: completedAt }))
       queryClient.removeQueries({ queryKey: queryKeys.subtasks(id) })
     },
   })
 
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const { error } = await supabase.from('tasks').delete().eq('id', id).eq('user_id', userId)
 
       if (error) throw error
     },
     onSuccess: (_result, id) => {
-      const userId = requireUserId(user?.id)
-      updateTasksCache(userId, (current) => current.filter((task) => task.id !== id))
+      const userId = requireCurrentUserId()
+      removeTaskFromCache(userId, id)
       queryClient.removeQueries({ queryKey: queryKeys.subtasks(id) })
     },
   })
 
   const restoreTask = useMutation({
     mutationFn: async (id: string) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const { error } = await supabase
         .from('tasks')
         .update({ completed_at: null })
@@ -189,16 +196,14 @@ export function useTasks() {
       if (error) throw error
     },
     onSuccess: (_result, id) => {
-      const userId = requireUserId(user?.id)
-      updateTasksCache(userId, (current) =>
-        current.map((task) => (task.id === id ? { ...task, completed_at: null } : task))
-      )
+      const userId = requireCurrentUserId()
+      patchTaskInCache(userId, id, (task) => ({ ...task, completed_at: null }))
     },
   })
 
   const moveTask = useMutation({
     mutationFn: async ({ id, categoryId }: { id: string; categoryId: string | null }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const existing = queryClient.getQueryData<TaskWithCategory[]>(tasksQueryKey(userId)) ?? []
       const currentTask = existing.find((task) => task.id === id)
       const tasksInTargetCategory = existing.filter(
@@ -235,41 +240,37 @@ export function useTasks() {
       }
     },
     onSuccess: (payload) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       const categories = queryClient.getQueryData<Category[]>(queryKeys.categories(userId)) ?? []
       const targetCategory = payload.categoryId
         ? (categories.find((category) => category.id === payload.categoryId) ?? null)
         : null
 
-      updateTasksCache(userId, (current) =>
-        current.map((task) => {
-          if (task.id !== payload.id) return task
-
-          if (payload.categoryId === null) {
-            return {
-              ...task,
-              category_id: null,
-              categories: null,
-              position: payload.position,
-              color: payload.color,
-            }
-          }
-
+      patchTaskInCache(userId, payload.id, (task) => {
+        if (payload.categoryId === null) {
           return {
             ...task,
-            category_id: payload.categoryId,
-            categories: targetCategory ? toTaskCategorySummary(targetCategory) : task.categories,
+            category_id: null,
+            categories: null,
             position: payload.position,
             color: payload.color,
           }
-        })
-      )
+        }
+
+        return {
+          ...task,
+          category_id: payload.categoryId,
+          categories: targetCategory ? toTaskCategorySummary(targetCategory) : task.categories,
+          position: payload.position,
+          color: payload.color,
+        }
+      })
     },
   })
 
   const reorderTask = useMutation({
     mutationFn: async ({ id, newPosition }: { id: string; newPosition: number }) => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
 
       const { error } = await supabase
         .from('tasks')
@@ -302,7 +303,7 @@ export function useTasks() {
       if (renormalizeError) throw renormalizeError
     },
     onMutate: async ({ id, newPosition }): Promise<ReorderTaskContext> => {
-      const userId = requireUserId(user?.id)
+      const userId = requireCurrentUserId()
       await queryClient.cancelQueries({ queryKey: tasksQueryKey(userId) })
 
       const previous = queryClient.getQueryData<TaskWithCategory[]>(tasksQueryKey(userId)) ?? []
