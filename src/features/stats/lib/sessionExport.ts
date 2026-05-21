@@ -10,6 +10,7 @@ import type { SessionWithTask, TimeRange } from '@/types'
 
 export type SessionExportScope = 'range' | 'history'
 export type SessionExportFormat = 'csv' | 'json'
+export type SessionExportRange = TimeRange | 'all-time' | 'custom'
 
 export interface SessionExportRecord {
   id: string
@@ -39,7 +40,7 @@ export interface SessionExportPayload {
 interface SessionExportMetadata {
   exportedAt: string
   scope: SessionExportScope
-  range: TimeRange
+  range: SessionExportRange
   from: string
   to: string
   sessionCount: number
@@ -49,7 +50,7 @@ interface CreateSessionExportPayloadInput {
   sessions: SessionWithTask[]
   format: SessionExportFormat
   scope: SessionExportScope
-  range: TimeRange
+  range: SessionExportRange
   from?: Date
   to?: Date
 }
@@ -117,7 +118,7 @@ function toCsvCell(value: unknown) {
 function buildSessionExportFileName(
   format: SessionExportFormat,
   scope: SessionExportScope,
-  range: TimeRange,
+  range: SessionExportRange,
   from: Date,
   to: Date
 ) {

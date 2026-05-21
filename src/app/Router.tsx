@@ -13,6 +13,9 @@ const TasksPage = lazy(() =>
 const StatsPage = lazy(() =>
   import('@/features/stats/StatsPage').then((mod) => ({ default: mod.StatsPage }))
 )
+const HistoryPage = lazy(() =>
+  import('@/features/history/HistoryPage').then((mod) => ({ default: mod.HistoryPage }))
+)
 
 export function Router() {
   return (
@@ -30,6 +33,7 @@ export function Router() {
               <Route element={<TimerPage />} path="/" />
               <Route element={<TasksPage />} path="/tasks" />
               <Route element={<StatsPage />} path="/stats" />
+              <Route element={<HistoryPage />} path="/history" />
               <Route element={<Navigate replace to="/" />} path="*" />
             </Routes>
           </Suspense>

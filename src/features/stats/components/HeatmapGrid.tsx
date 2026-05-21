@@ -4,6 +4,8 @@ import type { HeatmapDay } from '@/types'
 
 interface HeatmapGridProps {
   data: HeatmapDay[]
+  selectedDate?: string | null
+  onSelectDay?: (day: HeatmapDay) => void
 }
 
 interface HeatmapCell extends HeatmapDay {
@@ -54,7 +56,7 @@ function getHeatmapColor(day: HeatmapDay) {
   return day.dominantColor
 }
 
-export function HeatmapGrid({ data }: HeatmapGridProps) {
+export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapGridProps) {
   const [tooltip, setTooltip] = useState<HeatmapTooltipState | null>(null)
   const [hoveredMonthRange, setHoveredMonthRange] = useState<MonthRange | null>(null)
 
@@ -226,9 +228,16 @@ export function HeatmapGrid({ data }: HeatmapGridProps) {
                       weekIndex <= hoveredMonthRange.endIndex
                         ? 'ring-1 ring-ink-secondary/30 shadow-[0_0_8px_rgba(240,237,232,0.2)]'
                         : ''
+                    } ${
+                      selectedDate === day.date
+                        ? 'ring-1 ring-ink-primary shadow-[0_0_10px_rgba(240,237,232,0.3)]'
+                        : ''
                     }`}
                     key={day.date}
                     onBlur={() => setTooltip(null)}
+                    onClick={() => {
+                      onSelectDay?.(day)
+                    }}
                     onFocus={(event) => setTooltipFromEvent(event, day)}
                     onMouseEnter={(event) => setTooltipFromEvent(event, day)}
                     onMouseLeave={() => setTooltip(null)}

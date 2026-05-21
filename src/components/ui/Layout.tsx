@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { BarChart3, CheckSquare, Home, LogOut } from 'lucide-react'
+import { Archive, BarChart3, CheckSquare, Home, LogOut } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useUser } from '@/hooks/useUser'
@@ -107,6 +107,10 @@ export function Layout({ children }: { children: ReactNode }) {
               <BarChart3 className="h-4 w-4" />
               Stats
             </NavLink>
+            <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/history">
+              <Archive className="h-4 w-4" />
+              History
+            </NavLink>
           </nav>
 
           <div className="mt-8 border-t border-surface-border/70 pt-6">
@@ -174,7 +178,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-border bg-surface-raised/95 backdrop-blur md:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-3">
+        <div className="mx-auto grid max-w-md grid-cols-4">
           <NavLink
             aria-label="Timer"
             className={({ isActive }) => mobileNavClassName(isActive)}
@@ -200,6 +204,15 @@ export function Layout({ children }: { children: ReactNode }) {
           >
             <BarChart3 className="h-5 w-5" />
             <span className="sr-only">Stats</span>
+          </NavLink>
+
+          <NavLink
+            aria-label="History"
+            className={({ isActive }) => mobileNavClassName(isActive)}
+            to="/history"
+          >
+            <Archive className="h-5 w-5" />
+            <span className="sr-only">History</span>
           </NavLink>
         </div>
       </nav>

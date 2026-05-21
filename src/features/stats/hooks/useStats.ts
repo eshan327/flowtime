@@ -12,7 +12,6 @@ import {
   computeStreak,
 } from '@/lib/utils'
 import { getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
-import type { SessionExportScope } from '@/features/stats/lib/sessionExport'
 import type { Session, SessionWithTask, TimeRange } from '@/types'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -58,10 +57,6 @@ export function useStats(range: TimeRange, anchorDate: Date) {
     },
     [fetchSessions]
   )
-
-  const fetchAllSessions = useCallback(async () => {
-    return fetchSessions()
-  }, [fetchSessions])
 
   const rangeQuery = useQuery({
     queryKey: queryKeys.sessionsStatsRange(userId, range, from.toISOString(), to.toISOString()),
@@ -130,25 +125,6 @@ export function useStats(range: TimeRange, anchorDate: Date) {
   const streakSessions = useMemo(() => streakQuery.data ?? [], [streakQuery.data])
   const streak = computeStreak(streakSessions)
 
-  const getSessionsForExport = useCallback(
-    async (scope: SessionExportScope) => {
-      if (scope === 'range') {
-        return sessions
-      }
-
-      if (!userId) {
-        throw new Error('User not authenticated')
-      }
-
-      return queryClient.fetchQuery({
-        queryKey: queryKeys.sessionsExportAll(userId),
-        queryFn: fetchAllSessions,
-        staleTime: 60_000,
-      })
-    },
-    [fetchAllSessions, queryClient, sessions, userId]
-  )
-
   const isLoading =
     (rangeQuery.isLoading && !rangeQuery.data) ||
     (heatmapQuery.isLoading && !heatmapQuery.data) ||
@@ -171,6 +147,6 @@ export function useStats(range: TimeRange, anchorDate: Date) {
     byCategory: aggregateByCategory(sessions),
     byTask: aggregateByTask(sessions),
     allDays: buildHeatmapData(allSessions),
-    getSessionsForExport,
+    heatmapSessions: allSessions,
   }
 }

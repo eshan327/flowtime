@@ -6,8 +6,8 @@ import type { SessionWithTask } from '@/types'
 
 interface SessionLogProps {
   sessions: SessionWithTask[]
-  onEdit: (session: SessionWithTask) => void
-  onDelete: (session: SessionWithTask) => void
+  onEdit?: (session: SessionWithTask) => void
+  onDelete?: (session: SessionWithTask) => void
   deletingSessionId?: string | null
   pageSize?: number
 }
@@ -93,29 +93,35 @@ export function SessionLog({
                   ) : null}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => {
-                      onEdit(session)
-                    }}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    Edit
-                  </Button>
+                {onEdit || onDelete ? (
+                  <div className="flex items-center gap-2">
+                    {onEdit ? (
+                      <Button
+                        onClick={() => {
+                          onEdit(session)
+                        }}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        Edit
+                      </Button>
+                    ) : null}
 
-                  <Button
-                    className="text-red-300 hover:text-red-200"
-                    loading={deletingSessionId === session.id}
-                    onClick={() => {
-                      onDelete(session)
-                    }}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    Delete
-                  </Button>
-                </div>
+                    {onDelete ? (
+                      <Button
+                        className="text-red-300 hover:text-red-200"
+                        loading={deletingSessionId === session.id}
+                        onClick={() => {
+                          onDelete(session)
+                        }}
+                        size="sm"
+                        variant="ghost"
+                      >
+                        Delete
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

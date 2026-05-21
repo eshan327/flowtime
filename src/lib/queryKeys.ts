@@ -24,6 +24,11 @@ export const queryKeys = {
     fromIso: string,
     toIso: string
   ) => ['sessions', userId, { range, from: fromIso, to: toIso }] as const,
+  sessionsHistoryRange: (
+    userId: string | undefined,
+    fromIso: string | null,
+    toIso: string | null
+  ) => ['sessions', userId, 'history', { from: fromIso ?? 'all', to: toIso ?? 'all' }] as const,
   sessionsHeatmap: (userId?: string) => ['sessions', userId, 'heatmap'] as const,
   sessionsStreak: (userId?: string) => ['sessions', userId, 'streak'] as const,
   sessionsExportAll: (userId?: string) => ['sessions', userId, 'export', 'all'] as const,

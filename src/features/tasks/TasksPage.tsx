@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { Spinner } from '@/components/ui/Spinner'
 import { AddCategoryForm } from '@/features/tasks/components/AddCategoryForm'
-import { ArchivedCategoriesSection } from '@/features/tasks/components/ArchivedCategoriesSection'
 import { CategoryTabs } from '@/features/tasks/components/CategoryTabs'
-import { CompletedTasksSection } from '@/features/tasks/components/CompletedTasksSection'
 import { TaskList } from '@/features/tasks/components/TaskList'
 import { useCategories } from '@/features/tasks/hooks/useCategories'
 import { useTaskPageActions } from '@/features/tasks/hooks/useTaskPageActions'
@@ -13,8 +11,6 @@ import { getErrorMessage } from '@/lib/errorMessages'
 export function TasksPage() {
   const [activeTab, setActiveTab] = useState('all')
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false)
-  const [showArchivedCategories, setShowArchivedCategories] = useState(false)
-  const [showCompletedTasks, setShowCompletedTasks] = useState(false)
 
   const {
     categories,
@@ -33,7 +29,6 @@ export function TasksPage() {
 
   const {
     activeTasks,
-    completedTasks,
     isLoading: tasksLoading,
     error: tasksError,
     addTask,
@@ -56,7 +51,6 @@ export function TasksPage() {
     handleAddTask,
     handleUpdateTask,
     handleCompleteTask,
-    handleRestoreTask,
     handleDeleteTask,
     handleMoveTask,
     handleReorderTask,
@@ -126,14 +120,6 @@ export function TasksPage() {
         onReorderCategory={handleReorderCategory}
       />
 
-      <ArchivedCategoriesSection
-        categories={archivedCategories}
-        isExpanded={showArchivedCategories}
-        onDeleteCategory={handleDeleteCategory}
-        onRestoreCategory={handleRestoreArchivedCategory}
-        onToggle={() => setShowArchivedCategories((current) => !current)}
-      />
-
       <TaskList
         activeTab={resolvedActiveTab}
         archivedCategories={archivedCategories}
@@ -147,14 +133,6 @@ export function TasksPage() {
         onReorderTask={handleReorderTask}
         onUpdateTask={handleUpdateTask}
         tasks={activeTasks}
-      />
-
-      <CompletedTasksSection
-        isExpanded={showCompletedTasks}
-        onDeleteTask={handleDeleteTask}
-        onRestoreTask={handleRestoreTask}
-        onToggle={() => setShowCompletedTasks((current) => !current)}
-        tasks={completedTasks}
       />
 
       {mutationError ? (
