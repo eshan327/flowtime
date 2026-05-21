@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { formatClock, formatDuration } from '@/lib/utils'
+import { DEFAULT_NEUTRAL_COLOR } from '@/lib/colors'
+import { formatClock, formatDuration } from '@/lib/formatting'
 
 interface SessionSummaryProps {
   workSeconds: number
@@ -9,6 +10,7 @@ interface SessionSummaryProps {
   taskColor: string | null
   onEditSession?: () => void
   onDeleteSession?: () => void
+  onReplaySession?: () => void
   isDeletingSession?: boolean
 }
 
@@ -19,6 +21,7 @@ export function SessionSummary({
   taskColor,
   onEditSession,
   onDeleteSession,
+  onReplaySession,
   isDeletingSession = false,
 }: SessionSummaryProps) {
   return (
@@ -36,13 +39,19 @@ export function SessionSummary({
         <div className="mt-2">
           <p className="text-sm text-ink-secondary">Task</p>
           <div className="mt-1">
-            <Badge color={taskColor ?? '#a8a8a8'} label={taskName} />
+            <Badge color={taskColor ?? DEFAULT_NEUTRAL_COLOR} label={taskName} />
           </div>
         </div>
       ) : null}
 
-      {onEditSession || onDeleteSession ? (
+      {onReplaySession || onEditSession || onDeleteSession ? (
         <div className="mt-4 flex items-center gap-2">
+          {onReplaySession ? (
+            <Button onClick={onReplaySession} size="sm" variant="outlined">
+              Replay session
+            </Button>
+          ) : null}
+
           {onEditSession ? (
             <Button onClick={onEditSession} size="sm" variant="ghost">
               Edit last session

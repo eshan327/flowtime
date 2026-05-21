@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { POSITION_RENORMALIZE_THRESHOLD } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
 import {
+  applyOptimisticReorder,
   getNextPosition,
   requireTaskId,
   requireUserId,
   shouldRenormalizeById,
 } from '@/lib/ordering'
 import { queryKeys } from '@/lib/queryKeys'
-import { supabase } from '@/utils/supabase'
+import { supabase } from '@/lib/supabaseClient'
 import type { Subtask } from '@/types'
 
 interface ReorderSubtaskContext {
@@ -23,6 +24,12 @@ export function subtasksQueryKey(taskId?: string) {
 export function useSubtasks(taskId: string | null) {
   const queryClient = useQueryClient()
   const { user } = useUser()
+
+  const updateSubtasksCache = (safeTaskId: string, updater: (current: Subtask[]) => Subtask[]) => {
+    queryClient.setQueryData<Subtask[]>(subtasksQueryKey(safeTaskId), (current) =>
+      updater(current ?? [])
+    )
+  }
 
   const subtasksQuery = useQuery({
     queryKey: subtasksQueryKey(taskId ?? undefined),
@@ -62,8 +69,9 @@ export function useSubtasks(taskId: string | null) {
       if (error) throw error
       return data as Subtask
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: subtasksQueryKey(taskId ?? undefined) })
+    onSuccess: (createdSubtask) => {
+      const safeTaskId = requireTaskId(taskId ?? undefined)
+      updateSubtasksCache(safeTaskId, (current) => [...current, createdSubtask])
     },
   })
 
@@ -78,24 +86,36 @@ export function useSubtasks(taskId: string | null) {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: subtasksQueryKey(taskId ?? undefined) })
+    onSuccess: (_result, variables) => {
+      const safeTaskId = requireTaskId(taskId ?? undefined)
+      updateSubtasksCache(safeTaskId, (current) =>
+        current.map((subtask) =>
+          subtask.id === variables.id ? { ...subtask, name: variables.name.trim() } : subtask
+        )
+      )
     },
   })
 
   const completeSubtask = useMutation({
     mutationFn: async (id: string) => {
       const userId = requireUserId(user?.id)
+      const completedAt = new Date().toISOString()
       const { error } = await supabase
         .from('subtasks')
-        .update({ completed_at: new Date().toISOString() })
+        .update({ completed_at: completedAt })
         .eq('id', id)
         .eq('user_id', userId)
 
       if (error) throw error
+      return { id, completedAt }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: subtasksQueryKey(taskId ?? undefined) })
+    onSuccess: ({ id, completedAt }) => {
+      const safeTaskId = requireTaskId(taskId ?? undefined)
+      updateSubtasksCache(safeTaskId, (current) =>
+        current.map((subtask) =>
+          subtask.id === id ? { ...subtask, completed_at: completedAt } : subtask
+        )
+      )
     },
   })
 
@@ -106,8 +126,9 @@ export function useSubtasks(taskId: string | null) {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: subtasksQueryKey(taskId ?? undefined) })
+    onSuccess: (_result, id) => {
+      const safeTaskId = requireTaskId(taskId ?? undefined)
+      updateSubtasksCache(safeTaskId, (current) => current.filter((subtask) => subtask.id !== id))
     },
   })
 
@@ -125,9 +146,7 @@ export function useSubtasks(taskId: string | null) {
       if (error) throw error
 
       const cached = queryClient.getQueryData<Subtask[]>(subtasksQueryKey(safeTaskId)) ?? []
-      const reordered = cached
-        .map((subtask) => (subtask.id === id ? { ...subtask, position: newPosition } : subtask))
-        .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
+      const reordered = applyOptimisticReorder(cached, id, newPosition)
 
       if (!shouldRenormalizeById(reordered, id, POSITION_RENORMALIZE_THRESHOLD)) return
 
@@ -147,9 +166,7 @@ export function useSubtasks(taskId: string | null) {
       await queryClient.cancelQueries({ queryKey: subtasksQueryKey(safeTaskId) })
 
       const previous = queryClient.getQueryData<Subtask[]>(subtasksQueryKey(safeTaskId)) ?? []
-      const optimistic = previous
-        .map((subtask) => (subtask.id === id ? { ...subtask, position: newPosition } : subtask))
-        .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
+      const optimistic = applyOptimisticReorder(previous, id, newPosition)
 
       queryClient.setQueryData(subtasksQueryKey(safeTaskId), optimistic)
       return { previous, safeTaskId }

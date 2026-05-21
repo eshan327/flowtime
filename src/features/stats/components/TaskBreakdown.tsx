@@ -1,7 +1,7 @@
 import { ListTodo } from 'lucide-react'
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { formatDuration } from '@/lib/utils'
+import { formatDuration } from '@/lib/formatting'
 import type { TaskSummary } from '@/types'
 
 interface TaskBreakdownProps {

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useUser } from '@/hooks/useUser'
 import { queryKeys } from '@/lib/queryKeys'
-import { supabase } from '@/utils/supabase'
+import { supabase } from '@/lib/supabaseClient'
 
 interface TodaySummary {
   count: number

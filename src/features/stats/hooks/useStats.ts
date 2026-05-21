@@ -10,11 +10,15 @@ import {
   aggregateByWeek,
   buildHeatmapData,
   computeStreak,
-  getRangeDatesForAnchor,
-  shiftRangeAnchor,
 } from '@/lib/utils'
+import { getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
 import type { Session, SessionWithTask, TimeRange } from '@/types'
-import { supabase } from '@/utils/supabase'
+import { supabase } from '@/lib/supabaseClient'
+
+export type SessionExportScope = 'range' | 'history'
+
+const SESSION_WITH_CATEGORY_SELECT =
+  '*, tasks(id, name, color, category_id, categories(id, name, color, archived_at, break_divisor))'
 
 export function useStats(range: TimeRange, anchorDate: Date) {
   const { user } = useUser()
@@ -30,7 +34,7 @@ export function useStats(range: TimeRange, anchorDate: Date) {
 
       const { data, error } = await supabase
         .from('sessions')
-        .select('*, tasks(id, name, color, category_id, categories(id, name, color, archived_at))')
+        .select(SESSION_WITH_CATEGORY_SELECT)
         .eq('user_id', userId)
         .is('deleted_at', null)
         .gte('started_at', fromDate.toISOString())
@@ -42,6 +46,22 @@ export function useStats(range: TimeRange, anchorDate: Date) {
     },
     [userId]
   )
+
+  const fetchAllSessions = useCallback(async () => {
+    if (!userId) {
+      throw new Error('User not authenticated')
+    }
+
+    const { data, error } = await supabase
+      .from('sessions')
+      .select(SESSION_WITH_CATEGORY_SELECT)
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .order('started_at', { ascending: true })
+
+    if (error) throw error
+    return data as SessionWithTask[]
+  }, [userId])
 
   const rangeQuery = useQuery({
     queryKey: queryKeys.sessionsStatsRange(userId, range, from.toISOString(), to.toISOString()),
@@ -56,7 +76,7 @@ export function useStats(range: TimeRange, anchorDate: Date) {
       const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
       const { data, error } = await supabase
         .from('sessions')
-        .select('*, tasks(id, name, color, category_id, categories(id, name, color, archived_at))')
+        .select(SESSION_WITH_CATEGORY_SELECT)
         .eq('user_id', userId!)
         .is('deleted_at', null)
         .gte('started_at', yearAgo.toISOString())
@@ -114,10 +134,29 @@ export function useStats(range: TimeRange, anchorDate: Date) {
     enabled: !!userId,
   })
 
-  const sessions = rangeQuery.data ?? []
-  const allSessions = heatmapQuery.data ?? []
-  const streakSessions = streakQuery.data ?? []
+  const sessions = useMemo(() => rangeQuery.data ?? [], [rangeQuery.data])
+  const allSessions = useMemo(() => heatmapQuery.data ?? [], [heatmapQuery.data])
+  const streakSessions = useMemo(() => streakQuery.data ?? [], [streakQuery.data])
   const streak = computeStreak(streakSessions)
+
+  const getSessionsForExport = useCallback(
+    async (scope: SessionExportScope) => {
+      if (scope === 'range') {
+        return sessions
+      }
+
+      if (!userId) {
+        throw new Error('User not authenticated')
+      }
+
+      return queryClient.fetchQuery({
+        queryKey: queryKeys.sessionsExportAll(userId),
+        queryFn: fetchAllSessions,
+        staleTime: 60_000,
+      })
+    },
+    [fetchAllSessions, queryClient, sessions, userId]
+  )
 
   const isLoading =
     (rangeQuery.isLoading && !rangeQuery.data) ||
@@ -141,5 +180,6 @@ export function useStats(range: TimeRange, anchorDate: Date) {
     byCategory: aggregateByCategory(sessions),
     byTask: aggregateByTask(sessions),
     allDays: buildHeatmapData(allSessions),
+    getSessionsForExport,
   }
 }

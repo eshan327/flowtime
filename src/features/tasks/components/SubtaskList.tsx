@@ -5,7 +5,14 @@ import { Input } from '@/components/ui/Input'
 import { AddTaskForm } from '@/features/tasks/components/AddTaskForm'
 import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
 import {
-  getDragData,
+  canStartDrag,
+  clearDragIntentId,
+  getVerticalDropPlacement,
+  resolveDraggedId,
+  setDragIntentId,
+  SUBTASK_DRAG_MIME,
+} from '@/features/tasks/lib/dragReorder'
+import {
   getDropInsertPosition,
   getStepMovePosition,
   setDragData,
@@ -49,7 +56,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
   }, [editingSubtaskId])
 
   const clearDragState = () => {
-    dragIntentSubtaskIdRef.current = null
+    clearDragIntentId(dragIntentSubtaskIdRef)
     setDraggedSubtaskId(null)
     setDropTarget(null)
   }
@@ -149,35 +156,28 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
               onDragOver={(event) => {
                 event.preventDefault()
 
-                const activeDraggedId =
-                  draggedSubtaskId ??
-                  getDragData(event.dataTransfer, 'application/x-flowtime-subtask-id')
+                const activeDraggedId = resolveDraggedId(event, SUBTASK_DRAG_MIME, draggedSubtaskId)
                 if (!activeDraggedId || activeDraggedId === subtask.id) return
                 if (!subtasks.some((item) => item.id === activeDraggedId)) return
 
-                const rect = event.currentTarget.getBoundingClientRect()
-                const placement = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+                const placement = getVerticalDropPlacement(event)
                 setDropTarget({ id: subtask.id, placement })
               }}
               onDragStart={(event) => {
-                if (dragIntentSubtaskIdRef.current !== subtask.id) {
+                if (!canStartDrag(dragIntentSubtaskIdRef, subtask.id)) {
                   event.preventDefault()
                   return
                 }
 
                 setDraggedSubtaskId(subtask.id)
-                setDragData(event.dataTransfer, 'application/x-flowtime-subtask-id', subtask.id)
+                setDragData(event.dataTransfer, SUBTASK_DRAG_MIME, subtask.id)
               }}
               onDrop={(event) => {
                 event.preventDefault()
-                const draggedId =
-                  draggedSubtaskId ??
-                  getDragData(event.dataTransfer, 'application/x-flowtime-subtask-id')
+                const draggedId = resolveDraggedId(event, SUBTASK_DRAG_MIME, draggedSubtaskId)
                 if (!draggedId) return
 
-                const rect = event.currentTarget.getBoundingClientRect()
-                const fallbackPlacement: DropPlacement =
-                  event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+                const fallbackPlacement: DropPlacement = getVerticalDropPlacement(event)
                 const placement =
                   dropTarget?.id === subtask.id ? dropTarget.placement : fallbackPlacement
 
@@ -192,13 +192,13 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                   aria-label={`Reorder subtask ${subtask.name}`}
                   className="cursor-grab p-0 text-ink-tertiary transition hover:text-ink-secondary"
                   onPointerCancel={() => {
-                    dragIntentSubtaskIdRef.current = null
+                    clearDragIntentId(dragIntentSubtaskIdRef)
                   }}
                   onPointerDown={() => {
-                    dragIntentSubtaskIdRef.current = subtask.id
+                    setDragIntentId(dragIntentSubtaskIdRef, subtask.id)
                   }}
                   onPointerUp={() => {
-                    dragIntentSubtaskIdRef.current = null
+                    clearDragIntentId(dragIntentSubtaskIdRef)
                   }}
                   size="icon"
                   variant="ghost"

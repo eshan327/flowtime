@@ -4,7 +4,7 @@ import { BarChart3, CheckSquare, Home, LogOut } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useUser } from '@/hooks/useUser'
-import { supabase } from '@/utils/supabase'
+import { supabase } from '@/lib/supabaseClient'
 
 function desktopNavClassName(isActive: boolean) {
   return [

@@ -3,13 +3,23 @@ import { GripVertical, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
 import {
-  getDragData,
+  canStartDrag,
+  CATEGORY_DRAG_MIME,
+  clearDragIntentId,
+  getHorizontalDropPlacement,
+  resolveDraggedId,
+  setDragIntentId,
+} from '@/features/tasks/lib/dragReorder'
+import {
   getDropInsertPosition,
   getStepMovePosition,
   setDragData,
   type DropPlacement,
 } from '@/lib/ordering'
 import type { Category } from '@/types'
+
+const MIN_BREAK_DIVISOR = 2
+const MAX_BREAK_DIVISOR = 10
 
 interface CategoryTabsProps {
   categories: Category[]
@@ -18,6 +28,7 @@ interface CategoryTabsProps {
   onAddCategory: () => void
   onRenameCategory: (id: string, name: string) => Promise<void> | void
   onRecolorCategory: (id: string, color: string) => Promise<void> | void
+  onSetCategoryBreakDivisor: (id: string, breakDivisor: number | null) => Promise<void> | void
   onArchiveCategory: (id: string) => Promise<void> | void
   onDeleteCategory: (id: string) => Promise<void> | void
   onReorderCategory: (id: string, newPosition: number) => Promise<void> | void
@@ -30,6 +41,7 @@ export function CategoryTabs({
   onAddCategory,
   onRenameCategory,
   onRecolorCategory,
+  onSetCategoryBreakDivisor,
   onArchiveCategory,
   onDeleteCategory,
   onReorderCategory,
@@ -103,7 +115,7 @@ export function CategoryTabs({
   }
 
   const clearDragState = () => {
-    dragIntentCategoryIdRef.current = null
+    clearDragIntentId(dragIntentCategoryIdRef)
     setDraggedCategoryId(null)
     setDropTarget(null)
   }
@@ -204,35 +216,28 @@ export function CategoryTabs({
             onDragOver={(event) => {
               event.preventDefault()
 
-              const activeDraggedId =
-                draggedCategoryId ??
-                getDragData(event.dataTransfer, 'application/x-flowtime-category-id')
+              const activeDraggedId = resolveDraggedId(event, CATEGORY_DRAG_MIME, draggedCategoryId)
               if (!activeDraggedId || activeDraggedId === category.id) return
               if (!orderedCategories.some((item) => item.id === activeDraggedId)) return
 
-              const rect = event.currentTarget.getBoundingClientRect()
-              const placement = event.clientX < rect.left + rect.width / 2 ? 'before' : 'after'
+              const placement = getHorizontalDropPlacement(event)
               setDropTarget({ id: category.id, placement })
             }}
             onDragStart={(event) => {
-              if (dragIntentCategoryIdRef.current !== category.id) {
+              if (!canStartDrag(dragIntentCategoryIdRef, category.id)) {
                 event.preventDefault()
                 return
               }
 
               setDraggedCategoryId(category.id)
-              setDragData(event.dataTransfer, 'application/x-flowtime-category-id', category.id)
+              setDragData(event.dataTransfer, CATEGORY_DRAG_MIME, category.id)
             }}
             onDrop={(event) => {
               event.preventDefault()
-              const draggedId =
-                draggedCategoryId ??
-                getDragData(event.dataTransfer, 'application/x-flowtime-category-id')
+              const draggedId = resolveDraggedId(event, CATEGORY_DRAG_MIME, draggedCategoryId)
               if (!draggedId) return
 
-              const rect = event.currentTarget.getBoundingClientRect()
-              const fallbackPlacement: DropPlacement =
-                event.clientX < rect.left + rect.width / 2 ? 'before' : 'after'
+              const fallbackPlacement: DropPlacement = getHorizontalDropPlacement(event)
               const placement =
                 dropTarget?.id === category.id ? dropTarget.placement : fallbackPlacement
 
@@ -274,13 +279,13 @@ export function CategoryTabs({
               aria-label={`Reorder ${category.name}`}
               className="cursor-grab p-0 text-ink-tertiary hover:text-ink-secondary"
               onPointerCancel={() => {
-                dragIntentCategoryIdRef.current = null
+                clearDragIntentId(dragIntentCategoryIdRef)
               }}
               onPointerDown={() => {
-                dragIntentCategoryIdRef.current = category.id
+                setDragIntentId(dragIntentCategoryIdRef, category.id)
               }}
               onPointerUp={() => {
-                dragIntentCategoryIdRef.current = null
+                clearDragIntentId(dragIntentCategoryIdRef)
               }}
               size="icon"
               variant="ghost"
@@ -360,6 +365,68 @@ export function CategoryTabs({
             variant="ghost"
           >
             Change color
+          </Button>
+
+          <Button
+            className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+            onClick={() => {
+              const existingValue =
+                contextMenu.category.break_divisor === null
+                  ? ''
+                  : String(contextMenu.category.break_divisor)
+              const nextValue = window.prompt(
+                `Category break divisor (${MIN_BREAK_DIVISOR}-${MAX_BREAK_DIVISOR}). Leave blank to use global setting.`,
+                existingValue
+              )
+
+              if (nextValue === null) {
+                return
+              }
+
+              const trimmed = nextValue.trim()
+              if (trimmed.length === 0) {
+                Promise.resolve(onSetCategoryBreakDivisor(contextMenu.category.id, null))
+                  .then(() => {
+                    setReorderError(null)
+                    setContextMenu(null)
+                  })
+                  .catch((error) => {
+                    setReorderError(
+                      error instanceof Error
+                        ? error.message
+                        : 'Unable to update category break rule.'
+                    )
+                  })
+                return
+              }
+
+              const parsed = Number(trimmed)
+              if (
+                !Number.isInteger(parsed) ||
+                parsed < MIN_BREAK_DIVISOR ||
+                parsed > MAX_BREAK_DIVISOR
+              ) {
+                setReorderError(
+                  `Break divisor must be an integer between ${MIN_BREAK_DIVISOR} and ${MAX_BREAK_DIVISOR}.`
+                )
+                return
+              }
+
+              Promise.resolve(onSetCategoryBreakDivisor(contextMenu.category.id, parsed))
+                .then(() => {
+                  setReorderError(null)
+                  setContextMenu(null)
+                })
+                .catch((error) => {
+                  setReorderError(
+                    error instanceof Error ? error.message : 'Unable to update category break rule.'
+                  )
+                })
+            }}
+            size="sm"
+            variant="ghost"
+          >
+            Set break rule
           </Button>
 
           <Button

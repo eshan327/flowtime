@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { MAX_SESSION_SECONDS, useTimerStore } from '@/features/timer/stores/timerStore'
 import { playDoneChime, type ChimeOptionId } from '@/lib/audio'
 import { sendNotification } from '@/lib/notifications'
@@ -16,6 +16,7 @@ export function useTimer({
   chimeEnabled,
   chimeId,
 }: UseTimerOptions) {
+  const breakCompletionKeyRef = useRef<string | null>(null)
   const phase = useTimerStore((state) => state.phase)
   const startedAt = useTimerStore((state) => state.startedAt)
   const breakEndAt = useTimerStore((state) => state.breakEndAt)
@@ -24,9 +25,17 @@ export function useTimer({
   const triggerRunaway = useTimerStore((state) => state.triggerRunaway)
 
   useEffect(() => {
-    if (phase !== 'working' && phase !== 'breaking') return
+    if (phase !== 'working' && phase !== 'breaking') {
+      breakCompletionKeyRef.current = null
+      return
+    }
 
-    let breakCompletedTriggered = false
+    if (phase !== 'breaking') {
+      breakCompletionKeyRef.current = null
+    }
+
+    const breakCompletionKey =
+      phase === 'breaking' && breakEndAt ? String(breakEndAt.getTime()) : null
 
     const tick = () => {
       if (phase === 'working' && startedAt) {
@@ -41,9 +50,8 @@ export function useTimer({
       } else if (phase === 'breaking' && breakEndAt) {
         const remaining = Math.ceil((breakEndAt.getTime() - Date.now()) / 1000)
         if (remaining <= 0) {
-          if (!breakCompletedTriggered) {
-            breakCompletedTriggered = true
-
+          if (breakCompletionKey && breakCompletionKeyRef.current !== breakCompletionKey) {
+            breakCompletionKeyRef.current = breakCompletionKey
             if (notificationsEnabled) {
               sendNotification('Break complete', 'Time to focus again.')
             }

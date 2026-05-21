@@ -5,6 +5,8 @@ import { DEFAULT_DONE_CHIME_ID, DONE_CHIME_OPTIONS, type ChimeOptionId } from '@
 export const DEFAULT_BREAK_DIVISOR = 5
 export const MIN_BREAK_DIVISOR = 2
 export const MAX_BREAK_DIVISOR = 10
+export const DEFAULT_FOCUS_MODE_LOCK = true
+export const DEFAULT_SHORTCUTS_ENABLED = true
 
 export function sanitizeBreakDivisor(value: number) {
   if (!Number.isFinite(value)) return DEFAULT_BREAK_DIVISOR
@@ -32,10 +34,14 @@ interface TimerSettingsState {
   notificationsEnabled: boolean
   chimeEnabled: boolean
   chimeId: ChimeOptionId
+  focusModeLock: boolean
+  shortcutsEnabled: boolean
   setBreakDivisor: (value: number) => void
   setNotificationsEnabled: (enabled: boolean) => void
   setChimeEnabled: (enabled: boolean) => void
   setChimeId: (chimeId: ChimeOptionId) => void
+  setFocusModeLock: (enabled: boolean) => void
+  setShortcutsEnabled: (enabled: boolean) => void
   resetSettings: () => void
 }
 
@@ -46,6 +52,8 @@ export const useTimerSettingsStore = create<TimerSettingsState>()(
       notificationsEnabled: true,
       chimeEnabled: true,
       chimeId: DEFAULT_DONE_CHIME_ID,
+      focusModeLock: DEFAULT_FOCUS_MODE_LOCK,
+      shortcutsEnabled: DEFAULT_SHORTCUTS_ENABLED,
 
       setBreakDivisor: (value) =>
         set({
@@ -55,6 +63,8 @@ export const useTimerSettingsStore = create<TimerSettingsState>()(
       setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
       setChimeEnabled: (enabled) => set({ chimeEnabled: enabled }),
       setChimeId: (chimeId) => set({ chimeId: sanitizeChimeId(chimeId) }),
+      setFocusModeLock: (enabled) => set({ focusModeLock: enabled }),
+      setShortcutsEnabled: (enabled) => set({ shortcutsEnabled: enabled }),
 
       resetSettings: () =>
         set({
@@ -62,11 +72,33 @@ export const useTimerSettingsStore = create<TimerSettingsState>()(
           notificationsEnabled: true,
           chimeEnabled: true,
           chimeId: DEFAULT_DONE_CHIME_ID,
+          focusModeLock: DEFAULT_FOCUS_MODE_LOCK,
+          shortcutsEnabled: DEFAULT_SHORTCUTS_ENABLED,
         }),
     }),
     {
       name: 'flowtime-timer-settings',
-      version: 1,
+      version: 2,
+      migrate: (persistedState) => {
+        const state = (persistedState ?? {}) as Partial<TimerSettingsState>
+
+        return {
+          ...state,
+          breakDivisor: sanitizeBreakDivisor(state.breakDivisor ?? DEFAULT_BREAK_DIVISOR),
+          notificationsEnabled:
+            typeof state.notificationsEnabled === 'boolean' ? state.notificationsEnabled : true,
+          chimeEnabled: typeof state.chimeEnabled === 'boolean' ? state.chimeEnabled : true,
+          chimeId: sanitizeChimeId(state.chimeId),
+          focusModeLock:
+            typeof state.focusModeLock === 'boolean'
+              ? state.focusModeLock
+              : DEFAULT_FOCUS_MODE_LOCK,
+          shortcutsEnabled:
+            typeof state.shortcutsEnabled === 'boolean'
+              ? state.shortcutsEnabled
+              : DEFAULT_SHORTCUTS_ENABLED,
+        }
+      },
     }
   )
 )

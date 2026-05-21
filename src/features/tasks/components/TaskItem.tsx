@@ -14,7 +14,14 @@ import { ColorPicker } from '@/features/tasks/components/ColorPicker'
 import { SubtaskList } from '@/features/tasks/components/SubtaskList'
 import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
 import {
-  getDragData,
+  canStartDrag,
+  clearDragIntentId,
+  getVerticalDropPlacement,
+  resolveDraggedId,
+  setDragIntentId,
+  TASK_DRAG_MIME,
+} from '@/features/tasks/lib/dragReorder'
+import {
   getDropInsertPosition,
   getStepMovePosition,
   setDragData,
@@ -61,7 +68,7 @@ export function TaskItem({
 
   const inputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const dragIntentRef = useRef(false)
+  const dragIntentTaskIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!isMenuOpen) return
@@ -163,13 +170,13 @@ export function TaskItem({
         }`}
         draggable
         onDragEnd={() => {
-          dragIntentRef.current = false
+          clearDragIntentId(dragIntentTaskIdRef)
           setDropPlacement(null)
         }}
         onDragOver={(event) => {
           event.preventDefault()
 
-          const draggedId = getDragData(event.dataTransfer, 'application/x-flowtime-task-id')
+          const draggedId = resolveDraggedId(event, TASK_DRAG_MIME, null)
           if (draggedId === task.id) {
             setDropPlacement(null)
             return
@@ -180,29 +187,26 @@ export function TaskItem({
             return
           }
 
-          const rect = event.currentTarget.getBoundingClientRect()
-          const placement = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+          const placement = getVerticalDropPlacement(event)
           setDropPlacement(placement)
         }}
         onDragStart={(event) => {
-          if (!dragIntentRef.current) {
+          if (!canStartDrag(dragIntentTaskIdRef, task.id)) {
             event.preventDefault()
             return
           }
 
-          setDragData(event.dataTransfer, 'application/x-flowtime-task-id', task.id)
+          setDragData(event.dataTransfer, TASK_DRAG_MIME, task.id)
         }}
         onDrop={(event) => {
           event.preventDefault()
-          const draggedId = getDragData(event.dataTransfer, 'application/x-flowtime-task-id')
+          const draggedId = resolveDraggedId(event, TASK_DRAG_MIME, null)
           if (!draggedId) {
             setDropPlacement(null)
             return
           }
 
-          const rect = event.currentTarget.getBoundingClientRect()
-          const fallbackPlacement: DropPlacement =
-            event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+          const fallbackPlacement: DropPlacement = getVerticalDropPlacement(event)
           void handleDrop(draggedId, dropPlacement ?? fallbackPlacement)
         }}
       >
@@ -214,13 +218,13 @@ export function TaskItem({
             aria-label={`Reorder ${task.name}`}
             className="cursor-grab p-0 text-ink-tertiary transition hover:text-ink-secondary"
             onPointerCancel={() => {
-              dragIntentRef.current = false
+              clearDragIntentId(dragIntentTaskIdRef)
             }}
             onPointerDown={() => {
-              dragIntentRef.current = true
+              setDragIntentId(dragIntentTaskIdRef, task.id)
             }}
             onPointerUp={() => {
-              dragIntentRef.current = false
+              clearDragIntentId(dragIntentTaskIdRef)
             }}
             size="icon"
             variant="ghost"

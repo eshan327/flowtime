@@ -13,11 +13,18 @@ import { SessionLog } from '@/features/stats/components/SessionLog'
 import { SummaryCards } from '@/features/stats/components/SummaryCards'
 import { TaskBreakdown } from '@/features/stats/components/TaskBreakdown'
 import { TimeRangeSelector } from '@/features/stats/components/TimeRangeSelector'
+import {
+  createSessionExportPayload,
+  downloadSessionExportFile,
+  type SessionExportFormat,
+  type SessionExportScope,
+} from '@/features/stats/lib/sessionExport'
 import { useStats } from '@/features/stats/hooks/useStats'
 import { useSessionMutations } from '@/features/stats/hooks/useSessionMutations'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
-import { getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/utils'
+import { getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
 import { useUser } from '@/hooks/useUser'
+import { createSessionSnapshotForTaskId } from '@/lib/sessionSnapshot'
 import type { SessionWithTask, TimeRange } from '@/types'
 
 function getHistoryLowerBound(createdAt: string | null | undefined) {
@@ -74,6 +81,11 @@ export function StatsPage() {
   const [editingSession, setEditingSession] = useState<SessionWithTask | null>(null)
   const [recentlyDeletedSession, setRecentlyDeletedSession] = useState<SessionWithTask | null>(null)
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
+  const [exportError, setExportError] = useState<string | null>(null)
+  const [activeExport, setActiveExport] = useState<{
+    scope: SessionExportScope
+    format: SessionExportFormat
+  } | null>(null)
   const undoTimeoutRef = useRef<number | null>(null)
 
   const stats = useStats(range, anchorDate)
@@ -93,6 +105,7 @@ export function StatsPage() {
   const isCurrentWindow = selectedWindow.from.getTime() === currentWindow.from.getTime()
   const canGoPrevious = previousWindow.to.getTime() >= lowerBound.getTime()
   const canGoNext = selectedWindow.from.getTime() < currentWindow.from.getTime()
+  const selectedWindowLabel = formatRangeWindow(range, selectedWindow.from, selectedWindow.to)
 
   useEffect(() => {
     return () => {
@@ -109,42 +122,11 @@ export function StatsPage() {
       ? activeTasks.find((task) => task.id === values.taskId)
       : null
 
-    const fallbackTaskName = editingSession.task_name_snapshot ?? editingSession.tasks?.name ?? null
-    const fallbackTaskColor =
-      editingSession.task_color_snapshot ?? editingSession.tasks?.color ?? null
-    const fallbackCategoryId =
-      editingSession.category_id_snapshot ?? editingSession.tasks?.category_id ?? null
-    const fallbackCategoryName =
-      editingSession.category_name_snapshot ?? editingSession.tasks?.categories?.name ?? null
-    const fallbackCategoryColor =
-      editingSession.category_color_snapshot ?? editingSession.tasks?.categories?.color ?? null
-
-    const snapshot = values.taskId
-      ? selectedTask
-        ? {
-            taskIdSnapshot: selectedTask.id,
-            taskNameSnapshot: selectedTask.name,
-            taskColorSnapshot: selectedTask.color,
-            categoryIdSnapshot: selectedTask.category_id,
-            categoryNameSnapshot: selectedTask.categories?.name ?? null,
-            categoryColorSnapshot: selectedTask.categories?.color ?? null,
-          }
-        : {
-            taskIdSnapshot: values.taskId,
-            taskNameSnapshot: fallbackTaskName,
-            taskColorSnapshot: fallbackTaskColor,
-            categoryIdSnapshot: fallbackCategoryId,
-            categoryNameSnapshot: fallbackCategoryName,
-            categoryColorSnapshot: fallbackCategoryColor,
-          }
-      : {
-          taskIdSnapshot: null,
-          taskNameSnapshot: null,
-          taskColorSnapshot: null,
-          categoryIdSnapshot: null,
-          categoryNameSnapshot: null,
-          categoryColorSnapshot: null,
-        }
+    const snapshot = createSessionSnapshotForTaskId(
+      values.taskId,
+      selectedTask ?? null,
+      editingSession
+    )
 
     await updateSession.mutateAsync({
       id: values.id,
@@ -153,6 +135,7 @@ export function StatsPage() {
       breakSeconds: values.breakSeconds,
       startedAt: values.startedAt,
       endedAt: values.endedAt,
+      notes: values.notes,
       snapshot,
     })
 
@@ -175,6 +158,31 @@ export function StatsPage() {
       }, 7000)
     } finally {
       setDeletingSessionId(null)
+    }
+  }
+
+  const handleExport = async (scope: SessionExportScope, format: SessionExportFormat) => {
+    setActiveExport({ scope, format })
+    setExportError(null)
+
+    try {
+      const sessionsForExport = await stats.getSessionsForExport(scope)
+      const payload = createSessionExportPayload({
+        sessions: sessionsForExport,
+        scope,
+        format,
+        range,
+        from: scope === 'range' ? selectedWindow.from : undefined,
+        to: scope === 'range' ? selectedWindow.to : undefined,
+      })
+
+      downloadSessionExportFile(payload)
+    } catch (error) {
+      setExportError(
+        error instanceof Error ? error.message : 'Unable to export sessions right now.'
+      )
+    } finally {
+      setActiveExport(null)
     }
   }
 
@@ -208,6 +216,75 @@ export function StatsPage() {
         totalSessions={stats.totalSessions}
         totalWorkSeconds={stats.totalWorkSeconds}
       />
+
+      <section className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm text-ink-secondary">Session export</h2>
+            <p className="mt-1 text-xs text-ink-tertiary">
+              Export current range or full history as CSV/JSON.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border border-surface-border bg-surface-overlay/70 p-3">
+            <p className="text-xs uppercase tracking-[0.1em] text-ink-tertiary">Current range</p>
+            <p className="mt-1 text-xs text-ink-secondary">Scope: {selectedWindowLabel}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                loading={activeExport?.scope === 'range' && activeExport.format === 'csv'}
+                onClick={() => {
+                  void handleExport('range', 'csv')
+                }}
+                size="sm"
+                variant="outlined"
+              >
+                Export CSV
+              </Button>
+              <Button
+                loading={activeExport?.scope === 'range' && activeExport.format === 'json'}
+                onClick={() => {
+                  void handleExport('range', 'json')
+                }}
+                size="sm"
+                variant="ghost"
+              >
+                Export JSON
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-surface-border bg-surface-overlay/70 p-3">
+            <p className="text-xs uppercase tracking-[0.1em] text-ink-tertiary">Full history</p>
+            <p className="mt-1 text-xs text-ink-secondary">Scope: all sessions for this account.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                loading={activeExport?.scope === 'history' && activeExport.format === 'csv'}
+                onClick={() => {
+                  void handleExport('history', 'csv')
+                }}
+                size="sm"
+                variant="outlined"
+              >
+                Export CSV
+              </Button>
+              <Button
+                loading={activeExport?.scope === 'history' && activeExport.format === 'json'}
+                onClick={() => {
+                  void handleExport('history', 'json')
+                }}
+                size="sm"
+                variant="ghost"
+              >
+                Export JSON
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {exportError ? <p className="mt-3 text-sm text-red-300">{exportError}</p> : null}
+      </section>
 
       <section>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
@@ -251,7 +328,7 @@ export function StatsPage() {
             </Button>
 
             <span className="min-w-32 text-center text-xs text-ink-secondary">
-              {formatRangeWindow(range, selectedWindow.from, selectedWindow.to)}
+              {selectedWindowLabel}
             </span>
 
             <Button

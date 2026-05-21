@@ -1,16 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useUser } from '@/hooks/useUser'
-import { queryKeys } from '@/lib/queryKeys'
-import { supabase } from '@/utils/supabase'
-
-export interface SessionSnapshotInput {
-  taskIdSnapshot: string | null
-  taskNameSnapshot: string | null
-  taskColorSnapshot: string | null
-  categoryIdSnapshot: string | null
-  categoryNameSnapshot: string | null
-  categoryColorSnapshot: string | null
-}
+import { invalidateSessionQueries } from '@/lib/sessionQueryInvalidation'
+import { toSessionSnapshotColumns } from '@/lib/sessionSnapshot'
+import type { SessionSnapshotInput } from '@/lib/sessionSnapshot'
+import { supabase } from '@/lib/supabaseClient'
 
 export interface SessionUpdateInput {
   id: string
@@ -19,16 +12,13 @@ export interface SessionUpdateInput {
   breakSeconds: number
   startedAt: string
   endedAt: string
+  notes: string | null
   snapshot: SessionSnapshotInput
 }
 
 export function useSessionMutations() {
   const queryClient = useQueryClient()
   const { user } = useUser()
-
-  const invalidateSessionQueries = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user?.id) })
-  }
 
   const updateSession = useMutation({
     mutationFn: async (payload: SessionUpdateInput) => {
@@ -41,16 +31,12 @@ export function useSessionMutations() {
         .from('sessions')
         .update({
           task_id: payload.taskId,
-          task_id_snapshot: payload.snapshot.taskIdSnapshot,
-          task_name_snapshot: payload.snapshot.taskNameSnapshot,
-          task_color_snapshot: payload.snapshot.taskColorSnapshot,
-          category_id_snapshot: payload.snapshot.categoryIdSnapshot,
-          category_name_snapshot: payload.snapshot.categoryNameSnapshot,
-          category_color_snapshot: payload.snapshot.categoryColorSnapshot,
+          ...toSessionSnapshotColumns(payload.snapshot),
           work_seconds: payload.workSeconds,
           break_seconds: payload.breakSeconds,
           started_at: payload.startedAt,
           ended_at: payload.endedAt,
+          notes: payload.notes,
           edited_at: new Date().toISOString(),
         })
         .eq('id', payload.id)
@@ -58,7 +44,9 @@ export function useSessionMutations() {
 
       if (error) throw error
     },
-    onSuccess: invalidateSessionQueries,
+    onSuccess: () => {
+      void invalidateSessionQueries(queryClient, user?.id)
+    },
   })
 
   const softDeleteSession = useMutation({
@@ -76,7 +64,9 @@ export function useSessionMutations() {
 
       if (error) throw error
     },
-    onSuccess: invalidateSessionQueries,
+    onSuccess: () => {
+      void invalidateSessionQueries(queryClient, user?.id)
+    },
   })
 
   const restoreSession = useMutation({
@@ -94,7 +84,9 @@ export function useSessionMutations() {
 
       if (error) throw error
     },
-    onSuccess: invalidateSessionQueries,
+    onSuccess: () => {
+      void invalidateSessionQueries(queryClient, user?.id)
+    },
   })
 
   return {

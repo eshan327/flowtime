@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { formatDuration } from '@/lib/utils'
+import { formatDuration } from '@/lib/formatting'
 import type { HeatmapDay } from '@/types'
 
 interface HeatmapGridProps {

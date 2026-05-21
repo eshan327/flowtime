@@ -25,8 +25,12 @@ Live app: https://flowtimeboard.vercel.app
 - Timer workflow:
 	- Start work only after selecting a task.
 	- Quick-add task directly from task selector.
+	- Quick replay from the last completed session.
 	- Stop anytime and automatically compute earned break.
 	- Run break, skip break, and resume next session.
+	- Optional focus mode lock prevents task switching while working.
+	- Global keyboard shortcuts for timer controls and panel actions.
+	- Optional category-specific break divisor override with global fallback.
 	- Visual timer progress cues (break countdown ring + work progress bar).
 	- Session persistence to Supabase.
 	- Quick correction actions on completed sessions (edit/delete last session).
@@ -35,7 +39,8 @@ Live app: https://flowtimeboard.vercel.app
 	- Streak tracking.
 	- Category/task aggregation.
 	- Heatmap-style historical activity.
-	- Session Log with edit and soft-delete + undo.
+	- CSV/JSON export for current range and full history.
+	- Session Log with edit, notes, and soft-delete + undo.
 	- Historical attribution uses session snapshots so task/category drift does not rewrite old stats.
 - Responsive shell for desktop and mobile navigation.
 
@@ -50,6 +55,14 @@ Live app: https://flowtimeboard.vercel.app
 - Supabase
 - Recharts + Lucide
 - ESLint + Prettier + simple-git-hooks + lint-staged
+
+## Architecture Conventions
+
+- Shared infrastructure and cross-feature domain helpers live in [src/lib](src/lib).
+- Supabase client usage must import from [src/lib/supabaseClient.ts](src/lib/supabaseClient.ts) only.
+- Context files define providers/state containers; consumer hooks live in [src/hooks](src/hooks).
+- Feature-specific UI, hooks, and stores stay in their feature folders under [src/features](src/features).
+- Cross-feature reuse should flow through shared modules in [src/lib](src/lib) and [src/types](src/types), not by importing between feature folders directly.
 
 ## Local Development
 
@@ -98,6 +111,16 @@ Optional fallback:
 - Renaming, recoloring, archiving, or deleting tasks/categories does not retroactively change old stats attribution.
 - Editing a session is an explicit correction action and intentionally updates historical aggregates.
 - Deleting a session in-app is soft-delete (`deleted_at`) so it can be undone in the UI window.
+- Supabase migration files in `supabase/migrations` are canonical schema history and should remain committed.
+
+## Schema Migrations
+
+When schema changes are introduced, run:
+
+```bash
+supabase db push
+pnpm update-types
+```
 
 ## Deployment Notes
 

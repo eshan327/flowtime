@@ -13,12 +13,28 @@ interface TaskSelectorProps {
   onQuickAddTask?: (name: string) => Promise<string | null> | string | null
   disabled?: boolean
   isLoading?: boolean
+  shortcutsEnabled?: boolean
+  shortcutsBlocked?: boolean
 }
 
 interface GroupedTasks {
   key: string
   label: string
   tasks: TaskWithCategory[]
+}
+
+function isTypingTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  const tagName = target.tagName.toLowerCase()
+  return (
+    target.isContentEditable ||
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select'
+  )
 }
 
 export function TaskSelector({
@@ -28,6 +44,8 @@ export function TaskSelector({
   onQuickAddTask,
   disabled = false,
   isLoading = false,
+  shortcutsEnabled = true,
+  shortcutsBlocked = false,
 }: TaskSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [quickAddValue, setQuickAddValue] = useState('')
@@ -68,6 +86,28 @@ export function TaskSelector({
       document.removeEventListener('mousedown', handleOutsideClick)
     }
   }, [isOpen])
+
+  useEffect(() => {
+    if (!shortcutsEnabled) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return
+      if (event.metaKey || event.ctrlKey || event.altKey) return
+      if (isTypingTarget(event.target)) return
+      if (event.key.toLowerCase() !== 't') return
+      if (disabled || shortcutsBlocked) return
+
+      event.preventDefault()
+      setIsOpen(true)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [disabled, shortcutsBlocked, shortcutsEnabled])
 
   return (
     <div className="relative w-full max-w-md" ref={containerRef}>

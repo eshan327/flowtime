@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
-import { supabase } from '@/utils/supabase'
+import { supabase } from '@/lib/supabaseClient'
 
 function GoogleIcon() {
   return (

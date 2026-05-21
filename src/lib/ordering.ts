@@ -23,6 +23,28 @@ export function getNextPosition(items: Array<{ position: number }>) {
   return maxPosition + 1
 }
 
+export interface PositionedItem {
+  id: string
+  position: number
+  created_at: string
+}
+
+export function sortByPositionAndCreatedAt<T extends PositionedItem>(items: T[]) {
+  return [...items].sort(
+    (a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at)
+  )
+}
+
+export function applyOptimisticReorder<T extends PositionedItem>(
+  items: T[],
+  movedId: string,
+  newPosition: number
+) {
+  return sortByPositionAndCreatedAt(
+    items.map((item) => (item.id === movedId ? { ...item, position: newPosition } : item))
+  )
+}
+
 export function shouldRenormalizeById<T extends { id: string; position: number }>(
   items: T[],
   movedId: string,

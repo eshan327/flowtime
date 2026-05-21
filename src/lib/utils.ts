@@ -1,5 +1,14 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { toHourKey, toLocalDateKey, toStartOfDay, toWeekStart } from '@/lib/dateMath'
+import {
+  getSessionCategoryId,
+  getSessionCategoryName,
+  getSessionColor,
+  getSessionTaskColor,
+  getSessionTaskId,
+  getSessionTaskName,
+} from '@/lib/sessionSnapshot'
 import type {
   CategorySeconds,
   CategorySummary,
@@ -7,73 +16,7 @@ import type {
   HeatmapDay,
   SessionWithTask,
   TaskSummary,
-  TaskWithCategory,
-  TimeRange,
 } from '@/types'
-
-const DEFAULT_COLOR = '#a8a8a8'
-
-function pad(num: number) {
-  return String(num).padStart(2, '0')
-}
-
-function toLocalDateKey(date: Date) {
-  return date.toLocaleDateString('en-CA')
-}
-
-function toHourKey(date: Date) {
-  return `${toLocalDateKey(date)}T${pad(date.getHours())}`
-}
-
-function toWeekStart(date: Date) {
-  const weekStart = new Date(date)
-  weekStart.setHours(0, 0, 0, 0)
-  const day = weekStart.getDay()
-  weekStart.setDate(weekStart.getDate() - day)
-  return weekStart
-}
-
-function toStartOfDay(date: Date) {
-  const start = new Date(date)
-  start.setHours(0, 0, 0, 0)
-  return start
-}
-
-function toEndOfDay(date: Date) {
-  const end = new Date(date)
-  end.setHours(23, 59, 59, 999)
-  return end
-}
-
-function getSessionColor(session: SessionWithTask) {
-  return (
-    session.category_color_snapshot ??
-    session.task_color_snapshot ??
-    session.tasks?.categories?.color ??
-    session.tasks?.color ??
-    DEFAULT_COLOR
-  )
-}
-
-function getSessionCategoryId(session: SessionWithTask) {
-  return session.category_id_snapshot ?? session.tasks?.category_id ?? null
-}
-
-function getSessionCategoryName(session: SessionWithTask) {
-  return session.category_name_snapshot ?? session.tasks?.categories?.name ?? 'Uncategorized'
-}
-
-function getSessionTaskId(session: SessionWithTask) {
-  return session.task_id_snapshot ?? session.task_id ?? null
-}
-
-function getSessionTaskName(session: SessionWithTask) {
-  return session.task_name_snapshot ?? session.tasks?.name ?? null
-}
-
-function getSessionTaskColor(session: SessionWithTask) {
-  return session.task_color_snapshot ?? session.tasks?.color ?? getSessionColor(session)
-}
 
 function addSessionToCategoryBuckets(
   buckets: Map<string, CategorySeconds>,
@@ -102,34 +45,6 @@ function toSortedCategoryBuckets(buckets: Map<string, CategorySeconds>) {
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
-}
-
-export function formatClock(totalSeconds: number) {
-  const safeSeconds = Math.max(0, Math.floor(totalSeconds))
-  const minutes = Math.floor(safeSeconds / 60)
-  const seconds = safeSeconds % 60
-
-  return `${pad(minutes)}:${pad(seconds)}`
-}
-
-export function formatDuration(totalSeconds: number) {
-  const safeSeconds = Math.max(0, Math.floor(totalSeconds))
-  const hours = Math.floor(safeSeconds / 3600)
-  const minutes = Math.floor((safeSeconds % 3600) / 60)
-
-  if (hours > 0 && minutes > 0) {
-    return `${hours}h ${minutes}m`
-  }
-
-  if (hours > 0) {
-    return `${hours}h`
-  }
-
-  return `${minutes}m`
-}
-
-export function getTaskColor(task: TaskWithCategory) {
-  return task.categories?.color ?? task.color ?? DEFAULT_COLOR
 }
 
 export function computeStreak(sessions: { started_at: string }[]) {
@@ -410,60 +325,4 @@ export function buildHeatmapData(sessions: SessionWithTask[]): HeatmapDay[] {
       byCategory,
     }
   })
-}
-
-export function getRangeDates(range: TimeRange): { from: Date; to: Date } {
-  return getRangeDatesForAnchor(range, new Date())
-}
-
-export function getRangeDatesForAnchor(
-  range: TimeRange,
-  anchorDate: Date
-): { from: Date; to: Date } {
-  const anchor = new Date(anchorDate)
-
-  if (range === 'day') {
-    const from = toStartOfDay(anchor)
-    return { from, to: toEndOfDay(from) }
-  }
-
-  if (range === 'week') {
-    const from = toWeekStart(anchor)
-    const to = new Date(from)
-    to.setDate(from.getDate() + 6)
-    return { from, to: toEndOfDay(to) }
-  }
-
-  if (range === 'month') {
-    const from = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
-    const to = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)
-    return { from, to: toEndOfDay(to) }
-  }
-
-  const from = new Date(anchor.getFullYear(), 0, 1)
-  const to = new Date(anchor.getFullYear(), 11, 31)
-  return { from, to: toEndOfDay(to) }
-}
-
-export function shiftRangeAnchor(range: TimeRange, anchorDate: Date, direction: -1 | 1): Date {
-  const { from } = getRangeDatesForAnchor(range, anchorDate)
-  const next = new Date(from)
-
-  if (range === 'day') {
-    next.setDate(next.getDate() + direction)
-    return next
-  }
-
-  if (range === 'week') {
-    next.setDate(next.getDate() + direction * 7)
-    return next
-  }
-
-  if (range === 'month') {
-    next.setMonth(next.getMonth() + direction)
-    return next
-  }
-
-  next.setFullYear(next.getFullYear() + direction)
-  return next
 }

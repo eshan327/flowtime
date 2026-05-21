@@ -2,7 +2,7 @@ import { useMemo, type ComponentProps } from 'react'
 import { BarChart3 } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { formatDuration } from '@/lib/utils'
+import { formatDuration } from '@/lib/formatting'
 import type { DaySummary, TimeRange } from '@/types'
 
 interface DailyBarChartProps {

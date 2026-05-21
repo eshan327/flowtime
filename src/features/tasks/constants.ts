@@ -1,5 +1,7 @@
+import { DEFAULT_NEUTRAL_COLOR, DEFAULT_TASK_COLOR as BASE_TASK_COLOR } from '@/lib/colors'
+
 export const COLOR_PRESETS = [
-  '#e06c75',
+  BASE_TASK_COLOR,
   '#e5534b',
   '#f0883e',
   '#d19a66',
@@ -18,8 +20,8 @@ export const COLOR_PRESETS = [
   '#9cdcfe',
   '#ce9178',
   '#d4a574',
-  '#a8a8a8',
+  DEFAULT_NEUTRAL_COLOR,
 ] as const
 
-export const DEFAULT_TASK_COLOR = COLOR_PRESETS[0]
+export const DEFAULT_TASK_COLOR = BASE_TASK_COLOR
 export const POSITION_RENORMALIZE_THRESHOLD = 0.0001

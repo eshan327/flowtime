@@ -1,10 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DEFAULT_TASK_COLOR, POSITION_RENORMALIZE_THRESHOLD } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
-import { getNextPosition, requireUserId, shouldRenormalizeById } from '@/lib/ordering'
+import {
+  applyOptimisticReorder,
+  getNextPosition,
+  requireUserId,
+  shouldRenormalizeById,
+  sortByPositionAndCreatedAt,
+} from '@/lib/ordering'
 import { queryKeys } from '@/lib/queryKeys'
-import { supabase } from '@/utils/supabase'
-import type { Task, TaskWithCategory } from '@/types'
+import { supabase } from '@/lib/supabaseClient'
+import type { Category, Task, TaskWithCategory } from '@/types'
 
 interface ReorderTaskContext {
   previous: TaskWithCategory[]
@@ -28,9 +34,28 @@ function toTaskRow(task: TaskWithCategory, position: number): Task {
   }
 }
 
+function toTaskCategorySummary(category: Category) {
+  return {
+    id: category.id,
+    name: category.name,
+    color: category.color,
+    archived_at: category.archived_at,
+    break_divisor: category.break_divisor,
+  }
+}
+
 export function useTasks() {
   const queryClient = useQueryClient()
   const { user } = useUser()
+
+  const updateTasksCache = (
+    userId: string,
+    updater: (current: TaskWithCategory[]) => TaskWithCategory[]
+  ) => {
+    queryClient.setQueryData<TaskWithCategory[]>(tasksQueryKey(userId), (current) =>
+      updater(current ?? [])
+    )
+  }
 
   const tasksQuery = useQuery({
     queryKey: tasksQueryKey(user?.id),
@@ -38,7 +63,7 @@ export function useTasks() {
       const { data, error } = await supabase
         .from('tasks')
         .select(
-          'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at)'
+          'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at, break_divisor)'
         )
         .eq('user_id', user!.id)
         .order('position', { ascending: true })
@@ -66,15 +91,16 @@ export function useTasks() {
           color: categoryId ? null : DEFAULT_TASK_COLOR,
         })
         .select(
-          'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at)'
+          'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at, break_divisor)'
         )
         .single()
 
       if (error) throw error
       return data as TaskWithCategory
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tasksQueryKey(user?.id) })
+    onSuccess: (createdTask) => {
+      const userId = requireUserId(user?.id)
+      updateTasksCache(userId, (current) => sortByPositionAndCreatedAt([...current, createdTask]))
     },
   })
 
@@ -99,25 +125,41 @@ export function useTasks() {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tasksQueryKey(user?.id) })
+    onSuccess: (_result, variables) => {
+      const userId = requireUserId(user?.id)
+      updateTasksCache(userId, (current) =>
+        current.map((task) => {
+          if (task.id !== variables.id) return task
+
+          return {
+            ...task,
+            name: variables.name !== undefined ? variables.name.trim() : task.name,
+            color: variables.color !== undefined ? variables.color : task.color,
+          }
+        })
+      )
     },
   })
 
   const completeTask = useMutation({
     mutationFn: async (id: string) => {
       const userId = requireUserId(user?.id)
+      const completedAt = new Date().toISOString()
       const { error } = await supabase
         .from('tasks')
-        .update({ completed_at: new Date().toISOString() })
+        .update({ completed_at: completedAt })
         .eq('id', id)
         .eq('user_id', userId)
 
       if (error) throw error
+      return { id, completedAt }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tasksQueryKey(user?.id) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.subtasksRoot() })
+    onSuccess: ({ id, completedAt }) => {
+      const userId = requireUserId(user?.id)
+      updateTasksCache(userId, (current) =>
+        current.map((task) => (task.id === id ? { ...task, completed_at: completedAt } : task))
+      )
+      queryClient.removeQueries({ queryKey: queryKeys.subtasks(id) })
     },
   })
 
@@ -128,9 +170,10 @@ export function useTasks() {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tasksQueryKey(user?.id) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.subtasksRoot() })
+    onSuccess: (_result, id) => {
+      const userId = requireUserId(user?.id)
+      updateTasksCache(userId, (current) => current.filter((task) => task.id !== id))
+      queryClient.removeQueries({ queryKey: queryKeys.subtasks(id) })
     },
   })
 
@@ -145,9 +188,11 @@ export function useTasks() {
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tasksQueryKey(user?.id) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.subtasksRoot() })
+    onSuccess: (_result, id) => {
+      const userId = requireUserId(user?.id)
+      updateTasksCache(userId, (current) =>
+        current.map((task) => (task.id === id ? { ...task, completed_at: null } : task))
+      )
     },
   })
 
@@ -159,10 +204,11 @@ export function useTasks() {
       const tasksInTargetCategory = existing.filter(
         (task) => task.id !== id && task.category_id === categoryId
       )
+      const nextPosition = getNextPosition(tasksInTargetCategory)
 
       const updates: Partial<Pick<Task, 'category_id' | 'position' | 'color'>> = {
         category_id: categoryId,
-        position: getNextPosition(tasksInTargetCategory),
+        position: nextPosition,
       }
 
       if (categoryId !== null) {
@@ -180,9 +226,44 @@ export function useTasks() {
         .eq('user_id', userId)
 
       if (error) throw error
+
+      return {
+        id,
+        categoryId,
+        position: nextPosition,
+        color: updates.color ?? currentTask?.color ?? null,
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tasksQueryKey(user?.id) })
+    onSuccess: (payload) => {
+      const userId = requireUserId(user?.id)
+      const categories = queryClient.getQueryData<Category[]>(queryKeys.categories(userId)) ?? []
+      const targetCategory = payload.categoryId
+        ? (categories.find((category) => category.id === payload.categoryId) ?? null)
+        : null
+
+      updateTasksCache(userId, (current) =>
+        current.map((task) => {
+          if (task.id !== payload.id) return task
+
+          if (payload.categoryId === null) {
+            return {
+              ...task,
+              category_id: null,
+              categories: null,
+              position: payload.position,
+              color: payload.color,
+            }
+          }
+
+          return {
+            ...task,
+            category_id: payload.categoryId,
+            categories: targetCategory ? toTaskCategorySummary(targetCategory) : task.categories,
+            position: payload.position,
+            color: payload.color,
+          }
+        })
+      )
     },
   })
 
@@ -209,9 +290,7 @@ export function useTasks() {
           task.user_id === movedTask.user_id
       )
 
-      const reordered = bucket
-        .map((task) => (task.id === id ? { ...task, position: newPosition } : task))
-        .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
+      const reordered = applyOptimisticReorder(bucket, id, newPosition)
 
       if (!shouldRenormalizeById(reordered, id, POSITION_RENORMALIZE_THRESHOLD)) return
 
@@ -227,9 +306,23 @@ export function useTasks() {
       await queryClient.cancelQueries({ queryKey: tasksQueryKey(userId) })
 
       const previous = queryClient.getQueryData<TaskWithCategory[]>(tasksQueryKey(userId)) ?? []
-      const optimistic = previous
-        .map((task) => (task.id === id ? { ...task, position: newPosition } : task))
-        .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at))
+      const movedTask = previous.find((task) => task.id === id)
+      if (!movedTask) {
+        return { previous, userId }
+      }
+
+      const bucket = previous.filter(
+        (task) =>
+          task.completed_at === null &&
+          task.category_id === movedTask.category_id &&
+          task.user_id === movedTask.user_id
+      )
+      const optimisticBucket = applyOptimisticReorder(bucket, id, newPosition)
+      const optimisticBucketById = new Map(optimisticBucket.map((task) => [task.id, task]))
+
+      const optimistic = sortByPositionAndCreatedAt(
+        previous.map((task) => optimisticBucketById.get(task.id) ?? task)
+      )
 
       queryClient.setQueryData(tasksQueryKey(userId), optimistic)
       return { previous, userId }

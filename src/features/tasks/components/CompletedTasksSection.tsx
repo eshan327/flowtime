@@ -1,0 +1,78 @@
+import { ChevronDown, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import type { TaskWithCategory } from '@/types'
+
+interface CompletedTasksSectionProps {
+  tasks: TaskWithCategory[]
+  isExpanded: boolean
+  onToggle: () => void
+  onRestoreTask: (taskId: string) => Promise<void> | void
+  onDeleteTask: (taskId: string) => Promise<void> | void
+}
+
+export function CompletedTasksSection({
+  tasks,
+  isExpanded,
+  onToggle,
+  onRestoreTask,
+  onDeleteTask,
+}: CompletedTasksSectionProps) {
+  return (
+    <section className="rounded-xl border border-surface-border bg-surface-raised/60 p-3">
+      <Button
+        className="h-auto w-full justify-between px-1 text-sm"
+        onClick={onToggle}
+        size="sm"
+        variant="ghost"
+      >
+        <span>Completed tasks ({tasks.length})</span>
+        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </Button>
+
+      {isExpanded ? (
+        tasks.length === 0 ? (
+          <p className="mt-2 text-sm text-ink-tertiary">No completed tasks yet.</p>
+        ) : (
+          <div className="mt-2 space-y-2">
+            {tasks.map((task) => (
+              <div
+                className="flex items-center justify-between gap-2 rounded-lg border border-surface-border px-3 py-2"
+                key={task.id}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-ink-primary">{task.name}</p>
+                  <p className="text-xs text-ink-tertiary">
+                    {task.categories?.name ?? 'Uncategorized'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={async () => {
+                      await onRestoreTask(task.id)
+                    }}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    Restore
+                  </Button>
+
+                  <Button
+                    className="text-red-300 hover:text-red-200"
+                    onClick={async () => {
+                      await onDeleteTask(task.id)
+                    }}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : null}
+    </section>
+  )
+}

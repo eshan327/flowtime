@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
-import { formatDuration } from '@/lib/utils'
+import { formatDuration } from '@/lib/formatting'
+import { getSessionTaskName } from '@/lib/sessionSnapshot'
 import type { SessionWithTask } from '@/types'
 
 interface SessionLogProps {
@@ -16,6 +17,7 @@ interface SessionEntry {
   dateLabel: string
   timeLabel: string
   taskName: string
+  notes: string | null
 }
 
 function toDateLabel(isoString: string) {
@@ -50,7 +52,8 @@ export function SessionLog({
         session,
         dateLabel: toDateLabel(session.started_at),
         timeLabel: `${toTimeLabel(session.started_at)} - ${toTimeLabel(session.ended_at)}`,
-        taskName: session.task_name_snapshot ?? session.tasks?.name ?? 'No task',
+        taskName: getSessionTaskName(session) ?? 'No task',
+        notes: session.notes,
       }))
   }, [sessions])
 
@@ -66,7 +69,7 @@ export function SessionLog({
 
   return (
     <div className="space-y-3">
-      {pageEntries.map(({ session, dateLabel, timeLabel, taskName }, index) => {
+      {pageEntries.map(({ session, dateLabel, timeLabel, taskName, notes }, index) => {
         const previousEntry = pageEntries[index - 1]
         const showDateHeader = !previousEntry || previousEntry.dateLabel !== dateLabel
 
@@ -85,6 +88,9 @@ export function SessionLog({
                     Work {formatDuration(session.work_seconds)} · Break{' '}
                     {formatDuration(session.break_seconds)}
                   </p>
+                  {notes ? (
+                    <p className="whitespace-pre-wrap text-xs text-ink-secondary">Note: {notes}</p>
+                  ) : null}
                 </div>
 
                 <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { TimerPhase } from '@/features/timer/stores/timerStore'
-import { formatClock } from '@/lib/utils'
+import { formatClock } from '@/lib/formatting'
 
 interface TimerClockProps {
   phase: TimerPhase

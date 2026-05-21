@@ -11,6 +11,7 @@ export type Database = {
       categories: {
         Row: {
           archived_at: string | null
+          break_divisor: number | null
           color: string
           created_at: string
           id: string
@@ -20,6 +21,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          break_divisor?: number | null
           color?: string
           created_at?: string
           id?: string
@@ -29,6 +31,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          break_divisor?: number | null
           color?: string
           created_at?: string
           id?: string
@@ -48,6 +51,7 @@ export type Database = {
           edited_at: string | null
           ended_at: string
           id: string
+          notes: string | null
           started_at: string
           task_color_snapshot: string | null
           task_id: string | null
@@ -65,6 +69,7 @@ export type Database = {
           edited_at?: string | null
           ended_at?: string
           id?: string
+          notes?: string | null
           started_at: string
           task_color_snapshot?: string | null
           task_id?: string | null
@@ -82,6 +87,7 @@ export type Database = {
           edited_at?: string | null
           ended_at?: string
           id?: string
+          notes?: string | null
           started_at?: string
           task_color_snapshot?: string | null
           task_id?: string | null

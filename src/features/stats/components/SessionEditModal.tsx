@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { getSessionTaskName } from '@/lib/sessionSnapshot'
 import type { SessionWithTask, TaskWithCategory } from '@/types'
 
 export interface SessionEditValues {
@@ -11,6 +12,7 @@ export interface SessionEditValues {
   breakSeconds: number
   startedAt: string
   endedAt: string
+  notes: string | null
 }
 
 interface SessionEditModalProps {
@@ -87,6 +89,7 @@ function SessionEditModalContent({
   const [breakMinutes, setBreakMinutes] = useState(
     String(Math.max(0, Math.round(session.break_seconds / 60)))
   )
+  const [notes, setNotes] = useState(session.notes ?? '')
   const [startedAt, setStartedAt] = useState(toLocalInputValue(session.started_at))
   const [endedAt, setEndedAt] = useState(toLocalInputValue(session.ended_at))
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -95,7 +98,7 @@ function SessionEditModalContent({
     if (!session.task_id) return null
     if (tasks.some((task) => task.id === session.task_id)) return null
 
-    const fallbackTaskName = session.task_name_snapshot ?? session.tasks?.name
+    const fallbackTaskName = getSessionTaskName(session)
     if (!fallbackTaskName) return null
 
     return {
@@ -162,6 +165,16 @@ function SessionEditModalContent({
           />
         </div>
 
+        <div>
+          <p className="mb-2 text-xs uppercase tracking-[0.1em] text-ink-tertiary">Notes</p>
+          <textarea
+            className="min-h-[96px] w-full rounded-lg border border-surface-border bg-surface-overlay px-3 py-2 text-sm text-ink-primary outline-none transition focus:border-ink-secondary"
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Optional session notes"
+            value={notes}
+          />
+        </div>
+
         {validationError ? <p className="text-sm text-red-300">{validationError}</p> : null}
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
 
@@ -204,6 +217,8 @@ function SessionEditModalContent({
               }
 
               setValidationError(null)
+              const normalizedNotes = notes.trim().length > 0 ? notes.trim() : null
+
               void onSave({
                 id: session.id,
                 taskId: taskId || null,
@@ -211,6 +226,7 @@ function SessionEditModalContent({
                 breakSeconds: Math.round(parsedBreakMinutes * 60),
                 startedAt: startedIso,
                 endedAt: endedIso,
+                notes: normalizedNotes,
               })
             }}
             variant="filled"
