@@ -92,7 +92,6 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
             commitBreakDivisorInput(event.currentTarget.value)
             event.currentTarget.blur()
           }}
-          placeholder={String(DEFAULT_BREAK_DIVISOR)}
           step={1}
           type="text"
         />
