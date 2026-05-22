@@ -1,20 +1,20 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import {
+  loadHistoryPageModule,
+  loadStatsPageModule,
+  loadTasksPageModule,
+  loadTimerPageModule,
+} from '@/app/routePreload'
 import { Layout } from '@/components/ui/Layout'
 import { Spinner } from '@/components/ui/Spinner'
 import { AuthGuard } from '@/features/auth/components/AuthGuard'
 
-const TimerPage = lazy(() =>
-  import('@/features/timer/TimerPage').then((mod) => ({ default: mod.TimerPage }))
-)
-const TasksPage = lazy(() =>
-  import('@/features/tasks/TasksPage').then((mod) => ({ default: mod.TasksPage }))
-)
-const StatsPage = lazy(() =>
-  import('@/features/stats/StatsPage').then((mod) => ({ default: mod.StatsPage }))
-)
+const TimerPage = lazy(() => loadTimerPageModule().then((mod) => ({ default: mod.TimerPage })))
+const TasksPage = lazy(() => loadTasksPageModule().then((mod) => ({ default: mod.TasksPage })))
+const StatsPage = lazy(() => loadStatsPageModule().then((mod) => ({ default: mod.StatsPage })))
 const HistoryPage = lazy(() =>
-  import('@/features/history/HistoryPage').then((mod) => ({ default: mod.HistoryPage }))
+  loadHistoryPageModule().then((mod) => ({ default: mod.HistoryPage }))
 )
 
 export function Router() {

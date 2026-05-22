@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ListTodo } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -45,10 +45,10 @@ function buildSections(
 ): TaskSection[] {
   const sortedCategories = sortByPosition(categories)
   const sortedTasks = sortByPosition(tasks)
-  const activeCategoryIds = new Set(sortedCategories.map((category) => category.id))
+  const categoriesById = new Map(sortedCategories.map((category) => [category.id, category]))
 
   if (activeTab !== 'all') {
-    const activeCategory = sortedCategories.find((category) => category.id === activeTab)
+    const activeCategory = categoriesById.get(activeTab)
     const categoryId = activeCategory?.id ?? null
 
     return [
@@ -63,30 +63,36 @@ function buildSections(
     ]
   }
 
-  const sections: TaskSection[] = []
-
+  const activeSectionsByCategoryId = new Map<string, TaskSection>()
   for (const category of sortedCategories) {
-    const categoryTasks = sortedTasks.filter((task) => task.category_id === category.id)
-    if (categoryTasks.length === 0) continue
-
-    sections.push({
+    activeSectionsByCategoryId.set(category.id, {
       key: category.id,
       title: category.name,
       categoryId: category.id,
       color: category.color,
-      tasks: categoryTasks,
+      tasks: [],
       isArchivedCategory: false,
     })
   }
 
   const archivedSectionsByCategoryId = new Map<string, TaskSection>()
-  for (const task of sortedTasks) {
-    if (!task.category_id) continue
-    if (activeCategoryIds.has(task.category_id)) continue
+  const uncategorizedTasks: TaskWithCategory[] = []
 
-    const existingSection = archivedSectionsByCategoryId.get(task.category_id)
-    if (existingSection) {
-      existingSection.tasks.push(task)
+  for (const task of sortedTasks) {
+    if (!task.category_id) {
+      uncategorizedTasks.push(task)
+      continue
+    }
+
+    const activeSection = activeSectionsByCategoryId.get(task.category_id)
+    if (activeSection) {
+      activeSection.tasks.push(task)
+      continue
+    }
+
+    const existingArchivedSection = archivedSectionsByCategoryId.get(task.category_id)
+    if (existingArchivedSection) {
+      existingArchivedSection.tasks.push(task)
       continue
     }
 
@@ -100,9 +106,16 @@ function buildSections(
     })
   }
 
+  const sections: TaskSection[] = []
+  for (const category of sortedCategories) {
+    const section = activeSectionsByCategoryId.get(category.id)
+    if (section && section.tasks.length > 0) {
+      sections.push(section)
+    }
+  }
+
   sections.push(...archivedSectionsByCategoryId.values())
 
-  const uncategorizedTasks = sortedTasks.filter((task) => task.category_id === null)
   if (uncategorizedTasks.length > 0 || sections.length === 0) {
     sections.push({
       key: 'uncategorized',
@@ -131,7 +144,10 @@ export function TaskList({
   onRestoreCategory,
   onReorderTask,
 }: TaskListProps) {
-  const sections = buildSections(tasks, categories, activeTab)
+  const sections = useMemo(
+    () => buildSections(tasks, categories, activeTab),
+    [tasks, categories, activeTab]
+  )
   const hasAnyTasks = tasks.length > 0
   const [archivedMoveTargets, setArchivedMoveTargets] = useState<Record<string, string>>({})
 

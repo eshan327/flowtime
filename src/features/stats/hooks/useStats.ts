@@ -123,7 +123,26 @@ export function useStats(range: TimeRange, anchorDate: Date) {
   const sessions = useMemo(() => rangeQuery.data ?? [], [rangeQuery.data])
   const allSessions = useMemo(() => heatmapQuery.data ?? [], [heatmapQuery.data])
   const streakSessions = useMemo(() => streakQuery.data ?? [], [streakQuery.data])
-  const streak = computeStreak(streakSessions)
+  const streak = useMemo(() => computeStreak(streakSessions), [streakSessions])
+
+  const totalWorkSeconds = useMemo(
+    () => sessions.reduce((sum, session) => sum + session.work_seconds, 0),
+    [sessions]
+  )
+
+  const byDay = useMemo(
+    () =>
+      range === 'day'
+        ? aggregateByHour(sessions, from)
+        : range === 'year'
+          ? aggregateByWeek(sessions, from, to)
+          : aggregateByDay(sessions, from, to),
+    [range, sessions, from, to]
+  )
+
+  const byCategory = useMemo(() => aggregateByCategory(sessions), [sessions])
+  const byTask = useMemo(() => aggregateByTask(sessions), [sessions])
+  const allDays = useMemo(() => buildHeatmapData(allSessions), [allSessions])
 
   const isLoading =
     (rangeQuery.isLoading && !rangeQuery.data) ||
@@ -135,18 +154,13 @@ export function useStats(range: TimeRange, anchorDate: Date) {
     error: rangeQuery.error ?? heatmapQuery.error ?? streakQuery.error,
     sessions,
     totalSessions: sessions.length,
-    totalWorkSeconds: sessions.reduce((sum, session) => sum + session.work_seconds, 0),
+    totalWorkSeconds,
     currentStreak: streak.current,
     longestStreak: streak.longest,
-    byDay:
-      range === 'day'
-        ? aggregateByHour(sessions, from)
-        : range === 'year'
-          ? aggregateByWeek(sessions, from, to)
-          : aggregateByDay(sessions, from, to),
-    byCategory: aggregateByCategory(sessions),
-    byTask: aggregateByTask(sessions),
-    allDays: buildHeatmapData(allSessions),
+    byDay,
+    byCategory,
+    byTask,
+    allDays,
     heatmapSessions: allSessions,
   }
 }

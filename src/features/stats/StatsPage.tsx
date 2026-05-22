@@ -14,7 +14,7 @@ import { formatDuration } from '@/lib/formatting'
 import { getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
 import { toLocalDateKey } from '@/lib/dateMath'
 import { getErrorMessage } from '@/lib/errorMessages'
-import type { TimeRange } from '@/types'
+import type { SessionWithTask, TimeRange } from '@/types'
 
 function getNavigationFloor() {
   const floor = new Date()
@@ -76,15 +76,29 @@ export function StatsPage() {
     return stats.allDays.find((day) => day.date === selectedHeatmapDate) ?? null
   }, [selectedHeatmapDate, stats.allDays])
 
+  const heatmapSessionsByDate = useMemo(() => {
+    const map = new Map<string, SessionWithTask[]>()
+
+    for (const session of stats.heatmapSessions) {
+      const key = toLocalDateKey(new Date(session.started_at))
+      const existing = map.get(key)
+      if (existing) {
+        existing.push(session)
+      } else {
+        map.set(key, [session])
+      }
+    }
+
+    return map
+  }, [stats.heatmapSessions])
+
   const selectedHeatmapSessions = useMemo(() => {
     if (!selectedHeatmapDate) {
       return []
     }
 
-    return stats.heatmapSessions.filter(
-      (session) => toLocalDateKey(new Date(session.started_at)) === selectedHeatmapDate
-    )
-  }, [selectedHeatmapDate, stats.heatmapSessions])
+    return heatmapSessionsByDate.get(selectedHeatmapDate) ?? []
+  }, [heatmapSessionsByDate, selectedHeatmapDate])
 
   if (stats.isLoading) {
     return (

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { POSITION_RENORMALIZE_THRESHOLD } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
@@ -332,9 +333,25 @@ export function useCategories() {
     },
   })
 
-  const allCategories = categoriesQuery.data ?? []
-  const categories = allCategories.filter((category) => category.archived_at == null)
-  const archivedCategories = allCategories.filter((category) => category.archived_at != null)
+  const allCategories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data])
+  const { categories, archivedCategories } = useMemo(() => {
+    const nextCategories: Category[] = []
+    const nextArchivedCategories: Category[] = []
+
+    for (const category of allCategories) {
+      if (category.archived_at == null) {
+        nextCategories.push(category)
+        continue
+      }
+
+      nextArchivedCategories.push(category)
+    }
+
+    return {
+      categories: nextCategories,
+      archivedCategories: nextArchivedCategories,
+    }
+  }, [allCategories])
 
   return {
     categories,

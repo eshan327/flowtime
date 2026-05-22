@@ -1,9 +1,13 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { Archive, BarChart3, CheckSquare, Home, LogOut } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
+import { prefetchDataForRoute, prefetchInitialAppData } from '@/app/navDataPrefetch'
+import { preloadAllRouteModules, preloadRouteModule } from '@/app/routePreload'
 import { Button } from '@/components/ui/Button'
 import { useUser } from '@/hooks/useUser'
+import { markNavigationComplete, markNavigationStart } from '@/lib/perf'
 import { supabase } from '@/lib/supabaseClient'
 
 function desktopNavClassName(isActive: boolean) {
@@ -67,8 +71,11 @@ function formatJoinedDate(createdAt: string | null | undefined) {
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user } = useUser()
+  const location = useLocation()
+  const queryClient = useQueryClient()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
+  const prefetchedRoutesRef = useRef(new Set<string>())
 
   const displayName = getUserDisplayName(
     user?.email,
@@ -88,6 +95,56 @@ export function Layout({ children }: { children: ReactNode }) {
     }
   }
 
+  const prefetchRoute = useCallback(
+    (route: string) => {
+      preloadRouteModule(route)
+
+      if (!user?.id || prefetchedRoutesRef.current.has(route)) {
+        return
+      }
+
+      prefetchedRoutesRef.current.add(route)
+      void prefetchDataForRoute(route, queryClient, user.id)
+    },
+    [queryClient, user]
+  )
+
+  const getNavPrefetchProps = useCallback(
+    (route: string) => ({
+      onClick: () => markNavigationStart(route),
+      onMouseEnter: () => prefetchRoute(route),
+      onFocus: () => prefetchRoute(route),
+      onTouchStart: () => prefetchRoute(route),
+    }),
+    [prefetchRoute]
+  )
+
+  useEffect(() => {
+    markNavigationComplete(location.pathname)
+  }, [location.pathname])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void preloadAllRouteModules()
+    }, 300)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const timer = window.setTimeout(() => {
+      void prefetchInitialAppData(queryClient, user.id)
+    }, 700)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [queryClient, user?.id])
+
   return (
     <div className="min-h-screen bg-surface-base text-ink-primary">
       <div className="mx-auto flex min-h-screen max-w-7xl md:flex-row">
@@ -95,19 +152,35 @@ export function Layout({ children }: { children: ReactNode }) {
           <p className="text-xs uppercase tracking-[0.14em] text-ink-tertiary">Flowtime</p>
 
           <nav className="mt-5 grid gap-1">
-            <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/">
+            <NavLink
+              className={({ isActive }) => desktopNavClassName(isActive)}
+              to="/"
+              {...getNavPrefetchProps('/')}
+            >
               <Home className="h-4 w-4" />
               Timer
             </NavLink>
-            <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/tasks">
+            <NavLink
+              className={({ isActive }) => desktopNavClassName(isActive)}
+              to="/tasks"
+              {...getNavPrefetchProps('/tasks')}
+            >
               <CheckSquare className="h-4 w-4" />
               Tasks
             </NavLink>
-            <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/stats">
+            <NavLink
+              className={({ isActive }) => desktopNavClassName(isActive)}
+              to="/stats"
+              {...getNavPrefetchProps('/stats')}
+            >
               <BarChart3 className="h-4 w-4" />
               Stats
             </NavLink>
-            <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/history">
+            <NavLink
+              className={({ isActive }) => desktopNavClassName(isActive)}
+              to="/history"
+              {...getNavPrefetchProps('/history')}
+            >
               <Archive className="h-4 w-4" />
               History
             </NavLink>
@@ -183,6 +256,7 @@ export function Layout({ children }: { children: ReactNode }) {
             aria-label="Timer"
             className={({ isActive }) => mobileNavClassName(isActive)}
             to="/"
+            {...getNavPrefetchProps('/')}
           >
             <Home className="h-5 w-5" />
             <span className="sr-only">Timer</span>
@@ -192,6 +266,7 @@ export function Layout({ children }: { children: ReactNode }) {
             aria-label="Tasks"
             className={({ isActive }) => mobileNavClassName(isActive)}
             to="/tasks"
+            {...getNavPrefetchProps('/tasks')}
           >
             <CheckSquare className="h-5 w-5" />
             <span className="sr-only">Tasks</span>
@@ -201,6 +276,7 @@ export function Layout({ children }: { children: ReactNode }) {
             aria-label="Stats"
             className={({ isActive }) => mobileNavClassName(isActive)}
             to="/stats"
+            {...getNavPrefetchProps('/stats')}
           >
             <BarChart3 className="h-5 w-5" />
             <span className="sr-only">Stats</span>
@@ -210,6 +286,7 @@ export function Layout({ children }: { children: ReactNode }) {
             aria-label="History"
             className={({ isActive }) => mobileNavClassName(isActive)}
             to="/history"
+            {...getNavPrefetchProps('/history')}
           >
             <Archive className="h-5 w-5" />
             <span className="sr-only">History</span>

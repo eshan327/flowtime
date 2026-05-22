@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useUser } from '@/hooks/useUser'
 import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabaseClient'
@@ -24,6 +24,7 @@ export function useHistorySessions({ from, to, enabled = true }: UseHistorySessi
   const query = useQuery({
     queryKey: queryKeys.sessionsHistoryRange(userId, fromIso, toIso),
     enabled: enabled && !!userId,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       if (!userId) {
         throw new Error('User not authenticated')

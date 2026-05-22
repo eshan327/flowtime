@@ -241,17 +241,6 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
                     onFocus={(event) => setTooltipFromEvent(event, day)}
                     onMouseEnter={(event) => setTooltipFromEvent(event, day)}
                     onMouseLeave={() => setTooltip(null)}
-                    onMouseMove={(event) => {
-                      setTooltip((current) =>
-                        current
-                          ? {
-                              ...current,
-                              x: event.clientX,
-                              y: event.clientY,
-                            }
-                          : current
-                      )
-                    }}
                     style={{ backgroundColor: getHeatmapColor(day) }}
                     type="button"
                   />

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { POSITION_RENORMALIZE_THRESHOLD } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
@@ -192,12 +193,29 @@ export function useSubtasks(taskId: string | null) {
     },
   })
 
-  const allSubtasks = subtasksQuery.data ?? []
+  const allSubtasks = useMemo(() => subtasksQuery.data ?? [], [subtasksQuery.data])
+  const { subtasks, completedCount } = useMemo(() => {
+    const activeSubtasks: Subtask[] = []
+    let nextCompletedCount = 0
+
+    for (const subtask of allSubtasks) {
+      if (subtask.completed_at === null) {
+        activeSubtasks.push(subtask)
+      } else {
+        nextCompletedCount += 1
+      }
+    }
+
+    return {
+      subtasks: activeSubtasks,
+      completedCount: nextCompletedCount,
+    }
+  }, [allSubtasks])
 
   return {
-    subtasks: allSubtasks.filter((subtask) => subtask.completed_at === null),
+    subtasks,
     totalCount: allSubtasks.length,
-    completedCount: allSubtasks.filter((subtask) => subtask.completed_at !== null).length,
+    completedCount,
     isLoading: subtasksQuery.isLoading,
     error: subtasksQuery.error,
     addSubtask,

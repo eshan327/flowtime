@@ -13,17 +13,14 @@ import {
   createSessionExportPayload,
   downloadSessionExportFile,
   type SessionExportFormat,
-  type SessionExportScope,
 } from '@/features/stats/lib/sessionExport'
 import { useHistorySessions } from '@/features/history/hooks/useHistorySessions'
 import { useSessionMutations } from '@/features/stats/hooks/useSessionMutations'
 import { useCategories } from '@/features/tasks/hooks/useCategories'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
-import { useUser } from '@/hooks/useUser'
 import { getRangeDatesForAnchor } from '@/lib/dateRange'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { createSessionSnapshotForTaskId } from '@/lib/sessionSnapshot'
-import { supabase } from '@/lib/supabaseClient'
 import type { SessionWithTask, TimeRange } from '@/types'
 
 type HistoryRange = TimeRange | 'all-time' | 'custom'
@@ -185,7 +182,6 @@ function isWithinWindow(value: string | null | undefined, from: Date | null, to:
 }
 
 export function HistoryPage() {
-  const { user } = useUser()
   const now = useMemo(() => new Date(), [])
   const [range, setRange] = useState<HistoryRange>('month')
   const [customFrom, setCustomFrom] = useState(
@@ -198,10 +194,7 @@ export function HistoryPage() {
   const [recentlyDeletedSession, setRecentlyDeletedSession] = useState<SessionWithTask | null>(null)
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
-  const [activeExport, setActiveExport] = useState<{
-    scope: SessionExportScope
-    format: SessionExportFormat
-  } | null>(null)
+  const [activeExportFormat, setActiveExportFormat] = useState<SessionExportFormat | null>(null)
   const undoTimeoutRef = useRef<number | null>(null)
 
   const {
@@ -244,20 +237,28 @@ export function HistoryPage() {
       return []
     }
 
+    if (isAllTimeRange) {
+      return archivedCategories
+    }
+
     return archivedCategories.filter((category) =>
       isWithinWindow(category.archived_at, historyWindow.from, historyWindow.to)
     )
-  }, [archivedCategories, historyWindow])
+  }, [archivedCategories, historyWindow, isAllTimeRange])
 
   const filteredCompletedTasks = useMemo(() => {
     if (!historyWindow.isValid) {
       return []
     }
 
+    if (isAllTimeRange) {
+      return completedTasks
+    }
+
     return completedTasks.filter((task) =>
       isWithinWindow(task.completed_at, historyWindow.from, historyWindow.to)
     )
-  }, [completedTasks, historyWindow])
+  }, [completedTasks, historyWindow, isAllTimeRange])
 
   useEffect(() => {
     return () => {
@@ -313,78 +314,29 @@ export function HistoryPage() {
     }
   }
 
-  const handleExport = async (scope: SessionExportScope, format: SessionExportFormat) => {
-    setActiveExport({ scope, format })
+  const handleExport = async (format: SessionExportFormat) => {
+    setActiveExportFormat(format)
     setExportError(null)
 
     try {
-      let sessionsForExport = sessions
-
-      if (scope === 'history') {
-        if (!isAllTimeRange) {
-          throw new Error('Full history export is only available in all-time mode.')
-        }
-
-        if (!user?.id) {
-          throw new Error('User not authenticated')
-        }
-
-        const { data, error } = await supabase
-          .from('sessions')
-          .select(
-            '*, tasks(id, name, color, category_id, categories(id, name, color, archived_at, break_divisor))'
-          )
-          .eq('user_id', user.id)
-          .is('deleted_at', null)
-          .order('started_at', { ascending: true })
-
-        if (error) throw error
-        sessionsForExport = data as SessionWithTask[]
-      }
+      const exportScope = isAllTimeRange ? 'history' : 'range'
 
       const payload = createSessionExportPayload({
-        sessions: sessionsForExport,
-        scope,
+        sessions,
+        scope: exportScope,
         format,
         range: historyWindow.exportRange,
-        from: scope === 'range' ? (historyWindow.from ?? undefined) : undefined,
-        to: scope === 'range' ? (historyWindow.to ?? undefined) : undefined,
+        from: exportScope === 'range' ? (historyWindow.from ?? undefined) : undefined,
+        to: exportScope === 'range' ? (historyWindow.to ?? undefined) : undefined,
       })
 
       downloadSessionExportFile(payload)
     } catch (error) {
       setExportError(getErrorMessage(error, 'Unable to export sessions right now.'))
     } finally {
-      setActiveExport(null)
+      setActiveExportFormat(null)
     }
   }
-
-  const exportPanels: Array<{
-    scope: SessionExportScope
-    title: string
-    subtitle: string
-    disabled?: boolean
-  }> = [
-    {
-      scope: 'range',
-      title: isAllTimeRange ? 'All time' : 'Selected range',
-      subtitle: historyWindow.isValid
-        ? isAllTimeRange
-          ? 'Scope: all sessions for this account.'
-          : `Scope: ${historyWindow.label}`
-        : 'Custom range is invalid. Select a valid start and end date.',
-      disabled: !historyWindow.isValid,
-    },
-    ...(isAllTimeRange
-      ? [
-          {
-            scope: 'history' as const,
-            title: 'Full history',
-            subtitle: 'Scope: all sessions for this account.',
-          },
-        ]
-      : []),
-  ]
 
   const isLoading =
     categoriesLoading || tasksLoading || (historyWindow.isValid ? sessionsLoading : false)
@@ -467,7 +419,7 @@ export function HistoryPage() {
       </section>
 
       <section className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm text-ink-secondary">Session export</h2>
             <p className="mt-1 text-xs text-ink-tertiary">
@@ -475,35 +427,27 @@ export function HistoryPage() {
                 ? 'Export all sessions as CSV/JSON.'
                 : 'Export sessions in the selected range as CSV/JSON.'}
             </p>
+            <p className="mt-1 text-xs text-ink-secondary">
+              Scope: {historyWindow.isValid ? historyWindow.label : 'Invalid custom range'}
+            </p>
           </div>
-        </div>
 
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          {exportPanels.map((panel) => (
-            <div
-              className="rounded-lg border border-surface-border bg-surface-overlay/70 p-3"
-              key={panel.scope}
-            >
-              <p className="text-xs uppercase tracking-[0.1em] text-ink-tertiary">{panel.title}</p>
-              <p className="mt-1 text-xs text-ink-secondary">{panel.subtitle}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {(['csv', 'json'] as const).map((format) => (
-                  <Button
-                    disabled={panel.disabled}
-                    key={format}
-                    loading={activeExport?.scope === panel.scope && activeExport.format === format}
-                    onClick={() => {
-                      void handleExport(panel.scope, format)
-                    }}
-                    size="sm"
-                    variant={format === 'csv' ? 'outlined' : 'ghost'}
-                  >
-                    Export {format.toUpperCase()}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ))}
+          <div className="flex flex-wrap gap-2">
+            {(['csv', 'json'] as const).map((format) => (
+              <Button
+                disabled={!historyWindow.isValid}
+                key={format}
+                loading={activeExportFormat === format}
+                onClick={() => {
+                  void handleExport(format)
+                }}
+                size="sm"
+                variant={format === 'csv' ? 'outlined' : 'ghost'}
+              >
+                Export {format.toUpperCase()}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {exportError ? <p className="mt-3 text-sm text-red-300">{exportError}</p> : null}

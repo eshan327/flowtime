@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { DEFAULT_TASK_COLOR, POSITION_RENORMALIZE_THRESHOLD } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
@@ -337,15 +338,31 @@ export function useTasks() {
     },
   })
 
-  const allTasks = tasksQuery.data ?? []
-  const activeTasks = allTasks.filter((task) => task.completed_at === null)
-  const completedTasks = allTasks
-    .filter((task) => task.completed_at !== null)
-    .sort((a, b) => {
+  const allTasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data])
+  const { activeTasks, completedTasks } = useMemo(() => {
+    const nextActiveTasks: TaskWithCategory[] = []
+    const nextCompletedTasks: TaskWithCategory[] = []
+
+    for (const task of allTasks) {
+      if (task.completed_at === null) {
+        nextActiveTasks.push(task)
+        continue
+      }
+
+      nextCompletedTasks.push(task)
+    }
+
+    nextCompletedTasks.sort((a, b) => {
       const aValue = a.completed_at ?? a.created_at
       const bValue = b.completed_at ?? b.created_at
       return bValue.localeCompare(aValue)
     })
+
+    return {
+      activeTasks: nextActiveTasks,
+      completedTasks: nextCompletedTasks,
+    }
+  }, [allTasks])
 
   return {
     tasks: activeTasks,
