@@ -6,8 +6,6 @@ import {
   DEFAULT_BREAK_DIVISOR,
   DEFAULT_FOCUS_MODE_LOCK,
   DEFAULT_SHORTCUTS_ENABLED,
-  MAX_BREAK_DIVISOR,
-  MIN_BREAK_DIVISOR,
   sanitizeChimeId,
   useTimerSettingsStore,
 } from '@/features/timer/stores/timerSettingsStore'
@@ -59,6 +57,19 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
   const setFocusModeLock = useTimerSettingsStore((state) => state.setFocusModeLock)
   const setShortcutsEnabled = useTimerSettingsStore((state) => state.setShortcutsEnabled)
   const resetSettings = useTimerSettingsStore((state) => state.resetSettings)
+  const commitBreakDivisorInput = (rawValue: string) => {
+    const trimmed = rawValue.trim()
+    if (!trimmed) {
+      return
+    }
+
+    const parsed = Number(trimmed)
+    if (!Number.isInteger(parsed)) {
+      return
+    }
+
+    setBreakDivisor(parsed)
+  }
 
   const selectedChime =
     DONE_CHIME_OPTIONS.find((option) => option.id === sanitizeChimeId(chimeId)) ??
@@ -68,19 +79,27 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
     <Modal isOpen={isOpen} onClose={onClose} title="Timer Settings">
       <div className="space-y-4">
         <Input
+          defaultValue={String(breakDivisor)}
           label="Break divisor"
-          max={MAX_BREAK_DIVISOR}
-          min={MIN_BREAK_DIVISOR}
-          onChange={(event) => {
-            const next = Number(event.target.value)
-            setBreakDivisor(next)
+          inputMode="numeric"
+          key={breakDivisor}
+          onBlur={(event) => {
+            commitBreakDivisorInput(event.target.value)
           }}
-          type="number"
-          value={breakDivisor}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return
+            event.preventDefault()
+            commitBreakDivisorInput(event.currentTarget.value)
+            event.currentTarget.blur()
+          }}
+          placeholder={String(DEFAULT_BREAK_DIVISOR)}
+          step={1}
+          type="text"
         />
 
         <p className="text-xs text-ink-secondary">
-          Break length is calculated as work time / divisor. Default is {DEFAULT_BREAK_DIVISOR}.
+          Break length is calculated as work time / divisor. Use any whole number of 1 or more.
+          Default is {DEFAULT_BREAK_DIVISOR}.
         </p>
 
         <div className="space-y-2">

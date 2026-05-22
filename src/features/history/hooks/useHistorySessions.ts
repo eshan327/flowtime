@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient'
 import type { SessionWithTask } from '@/types'
 
 const SESSION_WITH_CATEGORY_SELECT =
-  '*, tasks(id, name, color, category_id, categories(id, name, color, archived_at, break_divisor))'
+  '*, tasks(id, name, color, category_id, categories(id, name, color, archived_at))'
 
 interface UseHistorySessionsOptions {
   from: Date | null

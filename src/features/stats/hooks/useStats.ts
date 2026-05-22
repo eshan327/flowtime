@@ -16,7 +16,7 @@ import type { Session, SessionWithTask, TimeRange } from '@/types'
 import { supabase } from '@/lib/supabaseClient'
 
 const SESSION_WITH_CATEGORY_SELECT =
-  '*, tasks(id, name, color, category_id, categories(id, name, color, archived_at, break_divisor))'
+  '*, tasks(id, name, color, category_id, categories(id, name, color, archived_at))'
 
 export function useStats(range: TimeRange, anchorDate: Date) {
   const { user } = useUser()

@@ -20,7 +20,6 @@ export function TasksPage() {
     addCategory,
     renameCategory,
     recolorCategory,
-    setCategoryBreakDivisor,
     archiveCategory,
     unarchiveCategory,
     deleteCategory,
@@ -56,7 +55,6 @@ export function TasksPage() {
     handleReorderTask,
     handleRenameCategory,
     handleRecolorCategory,
-    handleSetCategoryBreakDivisor,
     handleReorderCategory,
   } = useTaskPageActions({
     activeTab,
@@ -65,7 +63,6 @@ export function TasksPage() {
     addCategory,
     renameCategory,
     recolorCategory,
-    setCategoryBreakDivisor,
     archiveCategory,
     unarchiveCategory,
     deleteCategory,
@@ -116,7 +113,6 @@ export function TasksPage() {
         onDeleteCategory={handleDeleteCategory}
         onRecolorCategory={handleRecolorCategory}
         onRenameCategory={handleRenameCategory}
-        onSetCategoryBreakDivisor={handleSetCategoryBreakDivisor}
         onReorderCategory={handleReorderCategory}
       />
 

@@ -170,7 +170,6 @@ export function toSessionWithTask(
                 id: snapshot.categoryIdSnapshot,
                 name: snapshot.categoryNameSnapshot ?? 'Category',
                 color: snapshot.categoryColorSnapshot ?? DEFAULT_NEUTRAL_COLOR,
-                break_divisor: null,
                 archived_at: null,
               }
             : null,

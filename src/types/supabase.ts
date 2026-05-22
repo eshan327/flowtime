@@ -11,7 +11,6 @@ export type Database = {
       categories: {
         Row: {
           archived_at: string | null
-          break_divisor: number | null
           color: string
           created_at: string
           id: string
@@ -21,7 +20,6 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
-          break_divisor?: number | null
           color?: string
           created_at?: string
           id?: string
@@ -31,7 +29,6 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
-          break_divisor?: number | null
           color?: string
           created_at?: string
           id?: string

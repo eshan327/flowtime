@@ -3,29 +3,15 @@ import { persist } from 'zustand/middleware'
 import { DEFAULT_DONE_CHIME_ID, DONE_CHIME_OPTIONS, type ChimeOptionId } from '@/lib/audio'
 
 export const DEFAULT_BREAK_DIVISOR = 5
-export const MIN_BREAK_DIVISOR = 2
-export const MAX_BREAK_DIVISOR = 10
+export const MIN_GLOBAL_BREAK_DIVISOR = 1
 export const DEFAULT_FOCUS_MODE_LOCK = true
 export const DEFAULT_SHORTCUTS_ENABLED = true
-
-export function isValidBreakDivisor(value: number | null | undefined): value is number {
-  return (
-    typeof value === 'number' &&
-    Number.isInteger(value) &&
-    value >= MIN_BREAK_DIVISOR &&
-    value <= MAX_BREAK_DIVISOR
-  )
-}
 
 export function sanitizeBreakDivisor(value: number) {
   if (!Number.isFinite(value)) return DEFAULT_BREAK_DIVISOR
 
   const rounded = Math.round(value)
-  if (isValidBreakDivisor(rounded)) {
-    return rounded
-  }
-
-  return Math.min(MAX_BREAK_DIVISOR, Math.max(MIN_BREAK_DIVISOR, rounded))
+  return Math.max(MIN_GLOBAL_BREAK_DIVISOR, rounded)
 }
 
 export function getBreakSeconds(workSeconds: number, breakDivisor: number) {

@@ -19,7 +19,7 @@ interface ReorderTaskContext {
 }
 
 const TASK_WITH_CATEGORY_SELECT =
-  'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at, break_divisor)'
+  'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at)'
 
 export function tasksQueryKey(userId?: string) {
   return queryKeys.tasks(userId)
@@ -44,7 +44,6 @@ function toTaskCategorySummary(category: Category) {
     name: category.name,
     color: category.color,
     archived_at: category.archived_at,
-    break_divisor: category.break_divisor,
   }
 }
 

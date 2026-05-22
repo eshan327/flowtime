@@ -16,11 +16,7 @@ import { useTimerKeyboardShortcuts } from '@/features/timer/hooks/useTimerKeyboa
 import { useTimerSessionPipeline } from '@/features/timer/hooks/useTimerSessionPipeline'
 import { useTodaySummary } from '@/features/timer/hooks/useTodaySummary'
 import { useTimer } from '@/features/timer/hooks/useTimer'
-import {
-  getBreakSeconds,
-  isValidBreakDivisor,
-  useTimerSettingsStore,
-} from '@/features/timer/stores/timerSettingsStore'
+import { getBreakSeconds, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
@@ -118,14 +114,10 @@ export function TimerPage() {
     : false
   const selectedTaskColor =
     selectedTask?.categories?.color ?? selectedTask?.color ?? DEFAULT_TASK_COLOR
-  const selectedCategoryBreakDivisor = selectedTask?.categories?.break_divisor
-  const effectiveBreakDivisor = isValidBreakDivisor(selectedCategoryBreakDivisor)
-    ? selectedCategoryBreakDivisor
-    : breakDivisor
   const canStartWork = Boolean(selectedTask && selectedTaskIsSelectable)
 
   useTimer({
-    breakDivisor: effectiveBreakDivisor,
+    breakDivisor,
     notificationsEnabled,
     chimeEnabled,
     chimeId,
@@ -192,7 +184,7 @@ export function TimerPage() {
         ? selectedTask.name
         : 'Select a task to begin'
       : phase === 'working'
-        ? `Break earned: ${formatClock(getBreakSeconds(workSeconds, effectiveBreakDivisor))}`
+        ? `Break earned: ${formatClock(getBreakSeconds(workSeconds, breakDivisor))}`
         : phase === 'breaking'
           ? `You earned ${formatClock(breakTotal)} - take it easy`
           : 'Break complete - ready for the next session'
@@ -237,7 +229,7 @@ export function TimerPage() {
       lastSavedSession,
       lastSessionId,
       workSeconds,
-      breakDivisor: effectiveBreakDivisor,
+      breakDivisor,
       setLastSessionId,
       setLastSavedSession,
       setIsSessionEditOpen,
@@ -255,7 +247,7 @@ export function TimerPage() {
     userId: user?.id,
     isSavingSession,
     selectedTaskId,
-    breakDivisor: effectiveBreakDivisor,
+    breakDivisor,
     buildSessionSnapshot,
     saveTimerSession,
     setLastSessionId,

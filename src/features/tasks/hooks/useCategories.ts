@@ -71,15 +71,7 @@ export function useCategories() {
   })
 
   const addCategory = useMutation({
-    mutationFn: async ({
-      name,
-      color,
-      breakDivisor,
-    }: {
-      name: string
-      color: string
-      breakDivisor: number | null
-    }) => {
+    mutationFn: async ({ name, color }: { name: string; color: string }) => {
       const userId = requireCurrentUserId()
       const existing = queryClient.getQueryData<Category[]>(categoriesQueryKey(userId)) ?? []
 
@@ -90,7 +82,6 @@ export function useCategories() {
           name: name.trim(),
           color,
           position: getNextPosition(existing),
-          break_divisor: breakDivisor,
         })
         .select('*')
         .single()
@@ -162,37 +153,6 @@ export function useCategories() {
           ? {
               ...task.categories,
               color: variables.color,
-            }
-          : task.categories,
-      }))
-    },
-  })
-
-  const setCategoryBreakDivisor = useMutation({
-    mutationFn: async ({ id, breakDivisor }: { id: string; breakDivisor: number | null }) => {
-      const userId = requireCurrentUserId()
-      const { error } = await supabase
-        .from('categories')
-        .update({ break_divisor: breakDivisor })
-        .eq('id', id)
-        .eq('user_id', userId)
-
-      if (error) throw error
-    },
-    onSuccess: (_result, variables) => {
-      const userId = requireCurrentUserId()
-
-      patchCategoryInCache(userId, variables.id, (category) => ({
-        ...category,
-        break_divisor: variables.breakDivisor,
-      }))
-
-      updateTasksForCategory(userId, variables.id, (task) => ({
-        ...task,
-        categories: task.categories
-          ? {
-              ...task.categories,
-              break_divisor: variables.breakDivisor,
             }
           : task.categories,
       }))
@@ -361,7 +321,6 @@ export function useCategories() {
     addCategory,
     renameCategory,
     recolorCategory,
-    setCategoryBreakDivisor,
     archiveCategory,
     unarchiveCategory,
     deleteCategory,

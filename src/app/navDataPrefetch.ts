@@ -6,10 +6,10 @@ import { supabase } from '@/lib/supabaseClient'
 import type { TimeRange } from '@/types'
 
 const TASK_WITH_CATEGORY_SELECT =
-  'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at, break_divisor)'
+  'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at)'
 
 const SESSION_WITH_CATEGORY_SELECT =
-  '*, tasks(id, name, color, category_id, categories(id, name, color, archived_at, break_divisor))'
+  '*, tasks(id, name, color, category_id, categories(id, name, color, archived_at))'
 
 function normalizeRoutePath(route: string): '/' | '/tasks' | '/stats' | '/history' | null {
   if (route === '/' || route.startsWith('/?')) return '/'

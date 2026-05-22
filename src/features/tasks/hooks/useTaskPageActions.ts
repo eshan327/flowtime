@@ -9,10 +9,9 @@ interface UseTaskPageActionsOptions {
   activeTab: string
   setActiveTab: (tab: string) => void
   categories: Category[]
-  addCategory: AsyncMutation<{ name: string; color: string; breakDivisor: number | null }, Category>
+  addCategory: AsyncMutation<{ name: string; color: string }, Category>
   renameCategory: AsyncMutation<{ id: string; name: string }>
   recolorCategory: AsyncMutation<{ id: string; color: string }>
-  setCategoryBreakDivisor: AsyncMutation<{ id: string; breakDivisor: number | null }>
   archiveCategory: AsyncMutation<string>
   unarchiveCategory: AsyncMutation<string>
   deleteCategory: AsyncMutation<string>
@@ -33,7 +32,6 @@ export function useTaskPageActions({
   addCategory,
   renameCategory,
   recolorCategory,
-  setCategoryBreakDivisor,
   archiveCategory,
   unarchiveCategory,
   deleteCategory,
@@ -55,7 +53,6 @@ export function useTaskPageActions({
     addCategory.error ??
     renameCategory.error ??
     recolorCategory.error ??
-    setCategoryBreakDivisor.error ??
     archiveCategory.error ??
     unarchiveCategory.error ??
     deleteCategory.error ??
@@ -75,11 +72,7 @@ export function useTaskPageActions({
   return {
     resolvedActiveTab,
     mutationError,
-    handleCreateCategory: async (payload: {
-      name: string
-      color: string
-      breakDivisor: number | null
-    }) => {
+    handleCreateCategory: async (payload: { name: string; color: string }) => {
       const created = await addCategory.mutateAsync(payload)
       setActiveTab(created.id)
     },
@@ -118,8 +111,6 @@ export function useTaskPageActions({
     handleRenameCategory: (id: string, name: string) => runMutation(renameCategory, { id, name }),
     handleRecolorCategory: (id: string, color: string) =>
       runMutation(recolorCategory, { id, color }),
-    handleSetCategoryBreakDivisor: (id: string, breakDivisor: number | null) =>
-      runMutation(setCategoryBreakDivisor, { id, breakDivisor }),
     handleReorderCategory: (id: string, newPosition: number) =>
       runMutation(reorderCategory, { id, newPosition }),
   }

@@ -19,9 +19,6 @@ import {
 import { getErrorMessage } from '@/lib/errorMessages'
 import type { Category } from '@/types'
 
-const MIN_BREAK_DIVISOR = 2
-const MAX_BREAK_DIVISOR = 10
-
 interface CategoryTabsProps {
   categories: Category[]
   activeTab: string
@@ -29,7 +26,6 @@ interface CategoryTabsProps {
   onAddCategory: () => void
   onRenameCategory: (id: string, name: string) => Promise<void> | void
   onRecolorCategory: (id: string, color: string) => Promise<void> | void
-  onSetCategoryBreakDivisor: (id: string, breakDivisor: number | null) => Promise<void> | void
   onArchiveCategory: (id: string) => Promise<void> | void
   onDeleteCategory: (id: string) => Promise<void> | void
   onReorderCategory: (id: string, newPosition: number) => Promise<void> | void
@@ -42,7 +38,6 @@ export function CategoryTabs({
   onAddCategory,
   onRenameCategory,
   onRecolorCategory,
-  onSetCategoryBreakDivisor,
   onArchiveCategory,
   onDeleteCategory,
   onReorderCategory,
@@ -366,62 +361,6 @@ export function CategoryTabs({
             variant="ghost"
           >
             Change color
-          </Button>
-
-          <Button
-            className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
-            onClick={() => {
-              const existingValue =
-                contextMenu.category.break_divisor === null
-                  ? ''
-                  : String(contextMenu.category.break_divisor)
-              const nextValue = window.prompt(
-                `Category break divisor (${MIN_BREAK_DIVISOR}-${MAX_BREAK_DIVISOR}). Leave blank to use global setting.`,
-                existingValue
-              )
-
-              if (nextValue === null) {
-                return
-              }
-
-              const trimmed = nextValue.trim()
-              if (trimmed.length === 0) {
-                Promise.resolve(onSetCategoryBreakDivisor(contextMenu.category.id, null))
-                  .then(() => {
-                    setReorderError(null)
-                    setContextMenu(null)
-                  })
-                  .catch((error) => {
-                    setReorderError(getErrorMessage(error, 'Unable to update category break rule.'))
-                  })
-                return
-              }
-
-              const parsed = Number(trimmed)
-              if (
-                !Number.isInteger(parsed) ||
-                parsed < MIN_BREAK_DIVISOR ||
-                parsed > MAX_BREAK_DIVISOR
-              ) {
-                setReorderError(
-                  `Break divisor must be an integer between ${MIN_BREAK_DIVISOR} and ${MAX_BREAK_DIVISOR}.`
-                )
-                return
-              }
-
-              Promise.resolve(onSetCategoryBreakDivisor(contextMenu.category.id, parsed))
-                .then(() => {
-                  setReorderError(null)
-                  setContextMenu(null)
-                })
-                .catch((error) => {
-                  setReorderError(getErrorMessage(error, 'Unable to update category break rule.'))
-                })
-            }}
-            size="sm"
-            variant="ghost"
-          >
-            Set break rule
           </Button>
 
           <Button
