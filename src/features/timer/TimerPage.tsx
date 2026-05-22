@@ -16,7 +16,11 @@ import { useTimerKeyboardShortcuts } from '@/features/timer/hooks/useTimerKeyboa
 import { useTimerSessionPipeline } from '@/features/timer/hooks/useTimerSessionPipeline'
 import { useTodaySummary } from '@/features/timer/hooks/useTodaySummary'
 import { useTimer } from '@/features/timer/hooks/useTimer'
-import { getBreakSeconds, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
+import {
+  getBreakSeconds,
+  isValidBreakDivisor,
+  useTimerSettingsStore,
+} from '@/features/timer/stores/timerSettingsStore'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
@@ -114,8 +118,10 @@ export function TimerPage() {
     : false
   const selectedTaskColor =
     selectedTask?.categories?.color ?? selectedTask?.color ?? DEFAULT_TASK_COLOR
-  const selectedCategoryBreakDivisor = selectedTask?.categories?.break_divisor ?? null
-  const effectiveBreakDivisor = selectedCategoryBreakDivisor ?? breakDivisor
+  const selectedCategoryBreakDivisor = selectedTask?.categories?.break_divisor
+  const effectiveBreakDivisor = isValidBreakDivisor(selectedCategoryBreakDivisor)
+    ? selectedCategoryBreakDivisor
+    : breakDivisor
   const canStartWork = Boolean(selectedTask && selectedTaskIsSelectable)
 
   useTimer({

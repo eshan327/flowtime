@@ -8,9 +8,24 @@ export const MAX_BREAK_DIVISOR = 10
 export const DEFAULT_FOCUS_MODE_LOCK = true
 export const DEFAULT_SHORTCUTS_ENABLED = true
 
+export function isValidBreakDivisor(value: number | null | undefined): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= MIN_BREAK_DIVISOR &&
+    value <= MAX_BREAK_DIVISOR
+  )
+}
+
 export function sanitizeBreakDivisor(value: number) {
   if (!Number.isFinite(value)) return DEFAULT_BREAK_DIVISOR
-  return Math.min(MAX_BREAK_DIVISOR, Math.max(MIN_BREAK_DIVISOR, Math.round(value)))
+
+  const rounded = Math.round(value)
+  if (isValidBreakDivisor(rounded)) {
+    return rounded
+  }
+
+  return Math.min(MAX_BREAK_DIVISOR, Math.max(MIN_BREAK_DIVISOR, rounded))
 }
 
 export function getBreakSeconds(workSeconds: number, breakDivisor: number) {
