@@ -1,27 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { ArchivedCategoriesSection } from '@/features/tasks/components/ArchivedCategoriesSection'
 import { CompletedTasksSection } from '@/features/tasks/components/CompletedTasksSection'
-import { SessionLog } from '@/features/stats/components/SessionLog'
-import {
-  SessionEditModal,
-  type SessionEditValues,
-} from '@/features/stats/components/SessionEditModal'
 import {
   createSessionExportPayload,
   downloadSessionExportFile,
   type SessionExportFormat,
 } from '@/features/stats/lib/sessionExport'
 import { useHistorySessions } from '@/features/history/hooks/useHistorySessions'
-import { useSessionMutations } from '@/features/stats/hooks/useSessionMutations'
 import { useCategories } from '@/features/tasks/hooks/useCategories'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { getRangeDatesForAnchor } from '@/lib/dateRange'
 import { getErrorMessage } from '@/lib/errorMessages'
-import { createSessionSnapshotForTaskId } from '@/lib/sessionSnapshot'
-import type { SessionWithTask, TimeRange } from '@/types'
+import type { TimeRange } from '@/types'
 
 type HistoryRange = TimeRange | 'all-time' | 'custom'
 
@@ -158,29 +151,6 @@ function getHistoryWindow(
   }
 }
 
-function isWithinWindow(value: string | null | undefined, from: Date | null, to: Date | null) {
-  if (!value) {
-    return false
-  }
-
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) {
-    return false
-  }
-
-  const time = parsed.getTime()
-
-  if (from && time < from.getTime()) {
-    return false
-  }
-
-  if (to && time > to.getTime()) {
-    return false
-  }
-
-  return true
-}
-
 export function HistoryPage() {
   const now = useMemo(() => new Date(), [])
   const [range, setRange] = useState<HistoryRange>('month')
@@ -190,12 +160,8 @@ export function HistoryPage() {
   const [customTo, setCustomTo] = useState(toDateInputValue(now))
   const [showArchivedCategories, setShowArchivedCategories] = useState(false)
   const [showCompletedTasks, setShowCompletedTasks] = useState(false)
-  const [editingSession, setEditingSession] = useState<SessionWithTask | null>(null)
-  const [recentlyDeletedSession, setRecentlyDeletedSession] = useState<SessionWithTask | null>(null)
-  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
   const [activeExportFormat, setActiveExportFormat] = useState<SessionExportFormat | null>(null)
-  const undoTimeoutRef = useRef<number | null>(null)
 
   const {
     archivedCategories,
@@ -206,15 +172,12 @@ export function HistoryPage() {
   } = useCategories()
 
   const {
-    activeTasks,
     completedTasks,
     isLoading: tasksLoading,
     error: tasksError,
     restoreTask,
     deleteTask,
   } = useTasks()
-
-  const { updateSession, softDeleteSession, restoreSession } = useSessionMutations()
 
   const historyWindow = useMemo(
     () => getHistoryWindow(range, customFrom, customTo),
@@ -232,87 +195,14 @@ export function HistoryPage() {
     enabled: historyWindow.isValid,
   })
 
-  const filteredArchivedCategories = useMemo(() => {
-    if (!historyWindow.isValid) {
-      return []
-    }
-
-    if (isAllTimeRange) {
-      return archivedCategories
-    }
-
-    return archivedCategories.filter((category) =>
-      isWithinWindow(category.archived_at, historyWindow.from, historyWindow.to)
-    )
-  }, [archivedCategories, historyWindow, isAllTimeRange])
-
-  const filteredCompletedTasks = useMemo(() => {
-    if (!historyWindow.isValid) {
-      return []
-    }
-
-    if (isAllTimeRange) {
-      return completedTasks
-    }
-
-    return completedTasks.filter((task) =>
-      isWithinWindow(task.completed_at, historyWindow.from, historyWindow.to)
-    )
-  }, [completedTasks, historyWindow, isAllTimeRange])
-
-  useEffect(() => {
-    return () => {
-      if (undoTimeoutRef.current !== null) {
-        window.clearTimeout(undoTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  const handleSaveSessionEdit = async (values: SessionEditValues) => {
-    if (!editingSession) return
-
-    const selectedTask = values.taskId
-      ? activeTasks.find((task) => task.id === values.taskId)
-      : null
-
-    const snapshot = createSessionSnapshotForTaskId(
-      values.taskId,
-      selectedTask ?? null,
-      editingSession
-    )
-
-    await updateSession.mutateAsync({
-      id: values.id,
-      taskId: values.taskId,
-      workSeconds: values.workSeconds,
-      breakSeconds: values.breakSeconds,
-      startedAt: values.startedAt,
-      endedAt: values.endedAt,
-      notes: values.notes,
-      snapshot,
-    })
-
-    setEditingSession(null)
-  }
-
-  const handleDeleteSession = async (session: SessionWithTask) => {
-    setDeletingSessionId(session.id)
-
-    try {
-      await softDeleteSession.mutateAsync(session.id)
-      setRecentlyDeletedSession(session)
-
-      if (undoTimeoutRef.current !== null) {
-        window.clearTimeout(undoTimeoutRef.current)
-      }
-
-      undoTimeoutRef.current = window.setTimeout(() => {
-        setRecentlyDeletedSession(null)
-      }, 7000)
-    } finally {
-      setDeletingSessionId(null)
-    }
-  }
+  const archiveSummary = useMemo(
+    () => ({
+      archivedCategories: archivedCategories.length,
+      completedTasks: completedTasks.length,
+      exportableSessions: historyWindow.isValid ? sessions.length : 0,
+    }),
+    [archivedCategories, completedTasks, historyWindow.isValid, sessions]
+  )
 
   const handleExport = async (format: SessionExportFormat) => {
     setActiveExportFormat(format)
@@ -338,19 +228,12 @@ export function HistoryPage() {
     }
   }
 
-  const isLoading =
-    categoriesLoading || tasksLoading || (historyWindow.isValid ? sessionsLoading : false)
+  const isLoading = categoriesLoading || tasksLoading
 
-  const loadError = categoriesError ?? tasksError ?? sessionsError
+  const loadError = categoriesError ?? tasksError
 
   const mutationError =
-    unarchiveCategory.error ??
-    deleteCategory.error ??
-    restoreTask.error ??
-    deleteTask.error ??
-    updateSession.error ??
-    softDeleteSession.error ??
-    restoreSession.error
+    unarchiveCategory.error ?? deleteCategory.error ?? restoreTask.error ?? deleteTask.error
 
   if (isLoading) {
     return (
@@ -374,11 +257,15 @@ export function HistoryPage() {
     <section className="mx-auto max-w-5xl space-y-6">
       <header>
         <p className="text-xs uppercase tracking-[0.14em] text-ink-tertiary">History</p>
-        <h1 className="mt-2 text-2xl font-light">Archived & Session History</h1>
+        <h1 className="mt-2 text-2xl font-light">Archive</h1>
+        <p className="mt-2 max-w-2xl text-sm text-ink-secondary">
+          Keep your workspace clean by managing archived categories and completed tasks, then export
+          any session window when needed.
+        </p>
       </header>
 
       <section className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
-        <p className="text-sm text-ink-secondary">Range filter</p>
+        <p className="text-sm text-ink-secondary">Export range</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {HISTORY_RANGE_OPTIONS.map((option) => (
             <Button
@@ -412,10 +299,34 @@ export function HistoryPage() {
           </div>
         ) : null}
 
-        <p className="mt-3 text-xs text-ink-tertiary">Active window: {historyWindow.label}</p>
+        <p className="mt-3 text-xs text-ink-tertiary">Export window: {historyWindow.label}</p>
         {!historyWindow.isValid ? (
           <p className="mt-2 text-sm text-red-300">Pick a valid custom start/end date range.</p>
         ) : null}
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        <article className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+          <p className="text-xs uppercase tracking-[0.08em] text-ink-tertiary">
+            Archived categories
+          </p>
+          <p className="mt-2 text-2xl font-light">{archiveSummary.archivedCategories}</p>
+          <p className="mt-1 text-xs text-ink-tertiary">All-time archive total</p>
+        </article>
+
+        <article className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+          <p className="text-xs uppercase tracking-[0.08em] text-ink-tertiary">Completed tasks</p>
+          <p className="mt-2 text-2xl font-light">{archiveSummary.completedTasks}</p>
+          <p className="mt-1 text-xs text-ink-tertiary">All-time archive total</p>
+        </article>
+
+        <article className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+          <p className="text-xs uppercase tracking-[0.08em] text-ink-tertiary">
+            Exportable sessions
+          </p>
+          <p className="mt-2 text-2xl font-light">{archiveSummary.exportableSessions}</p>
+          <p className="mt-1 text-xs text-ink-tertiary">In the current export window</p>
+        </article>
       </section>
 
       <section className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
@@ -430,12 +341,15 @@ export function HistoryPage() {
             <p className="mt-1 text-xs text-ink-secondary">
               Scope: {historyWindow.isValid ? historyWindow.label : 'Invalid custom range'}
             </p>
+            {sessionsLoading ? (
+              <p className="mt-1 text-xs text-ink-tertiary">Loading sessions for export...</p>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-2">
             {(['csv', 'json'] as const).map((format) => (
               <Button
-                disabled={!historyWindow.isValid}
+                disabled={!historyWindow.isValid || sessionsLoading}
                 key={format}
                 loading={activeExportFormat === format}
                 onClick={() => {
@@ -450,11 +364,16 @@ export function HistoryPage() {
           </div>
         </div>
 
+        {sessionsError ? (
+          <p className="mt-3 text-sm text-red-300">
+            {getErrorMessage(sessionsError, 'Unable to load sessions for export right now.')}
+          </p>
+        ) : null}
         {exportError ? <p className="mt-3 text-sm text-red-300">{exportError}</p> : null}
       </section>
 
       <ArchivedCategoriesSection
-        categories={filteredArchivedCategories}
+        categories={archivedCategories}
         isExpanded={showArchivedCategories}
         onDeleteCategory={async (id) => {
           await deleteCategory.mutateAsync(id)
@@ -474,61 +393,14 @@ export function HistoryPage() {
           await restoreTask.mutateAsync(id)
         }}
         onToggle={() => setShowCompletedTasks((current) => !current)}
-        tasks={filteredCompletedTasks}
+        tasks={completedTasks}
       />
-
-      <section>
-        <h2 className="mb-2 text-sm text-ink-secondary">Session log</h2>
-        {historyWindow.isValid ? (
-          <SessionLog
-            deletingSessionId={deletingSessionId}
-            onDelete={(session) => {
-              void handleDeleteSession(session)
-            }}
-            onEdit={setEditingSession}
-            sessions={sessions}
-          />
-        ) : (
-          <p className="text-sm text-ink-tertiary">Pick a valid custom range to see sessions.</p>
-        )}
-
-        {recentlyDeletedSession ? (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-700/40 bg-amber-900/20 px-3 py-2">
-            <p className="text-sm text-amber-200">Session deleted. Undo if this was accidental.</p>
-            <Button
-              onClick={() => {
-                void restoreSession.mutateAsync(recentlyDeletedSession.id).then(() => {
-                  setRecentlyDeletedSession(null)
-                })
-              }}
-              size="sm"
-              variant="ghost"
-            >
-              Undo
-            </Button>
-          </div>
-        ) : null}
-      </section>
 
       {mutationError ? (
         <p className="text-sm text-red-300">
           {getErrorMessage(mutationError, 'Unable to update history right now.')}
         </p>
       ) : null}
-
-      <SessionEditModal
-        error={
-          updateSession.error
-            ? getErrorMessage(updateSession.error, 'Unable to update session right now.')
-            : null
-        }
-        isOpen={!!editingSession}
-        isSaving={updateSession.isPending}
-        onClose={() => setEditingSession(null)}
-        onSave={handleSaveSessionEdit}
-        session={editingSession}
-        tasks={activeTasks}
-      />
     </section>
   )
 }
