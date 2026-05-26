@@ -151,6 +151,29 @@ function getHistoryWindow(
   }
 }
 
+function isWithinWindow(value: string | null | undefined, from: Date | null, to: Date | null) {
+  if (!value) {
+    return false
+  }
+
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return false
+  }
+
+  const time = parsed.getTime()
+
+  if (from && time < from.getTime()) {
+    return false
+  }
+
+  if (to && time > to.getTime()) {
+    return false
+  }
+
+  return true
+}
+
 export function HistoryPage() {
   const now = useMemo(() => new Date(), [])
   const [range, setRange] = useState<HistoryRange>('month')
@@ -195,13 +218,33 @@ export function HistoryPage() {
     enabled: historyWindow.isValid,
   })
 
+  const filteredArchivedCategories = useMemo(() => {
+    if (!historyWindow.isValid) {
+      return []
+    }
+
+    return archivedCategories.filter((category) =>
+      isWithinWindow(category.archived_at, historyWindow.from, historyWindow.to)
+    )
+  }, [archivedCategories, historyWindow])
+
+  const filteredCompletedTasks = useMemo(() => {
+    if (!historyWindow.isValid) {
+      return []
+    }
+
+    return completedTasks.filter((task) =>
+      isWithinWindow(task.completed_at, historyWindow.from, historyWindow.to)
+    )
+  }, [completedTasks, historyWindow])
+
   const archiveSummary = useMemo(
     () => ({
-      archivedCategories: archivedCategories.length,
-      completedTasks: completedTasks.length,
+      archivedCategories: filteredArchivedCategories.length,
+      completedTasks: filteredCompletedTasks.length,
       exportableSessions: historyWindow.isValid ? sessions.length : 0,
     }),
-    [archivedCategories, completedTasks, historyWindow.isValid, sessions]
+    [filteredArchivedCategories, filteredCompletedTasks, historyWindow.isValid, sessions]
   )
 
   const handleExport = async (format: SessionExportFormat) => {
@@ -311,13 +354,13 @@ export function HistoryPage() {
             Archived categories
           </p>
           <p className="mt-2 text-2xl font-light">{archiveSummary.archivedCategories}</p>
-          <p className="mt-1 text-xs text-ink-tertiary">All-time archive total</p>
+          <p className="mt-1 text-xs text-ink-tertiary">In the selected window</p>
         </article>
 
         <article className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
           <p className="text-xs uppercase tracking-[0.08em] text-ink-tertiary">Completed tasks</p>
           <p className="mt-2 text-2xl font-light">{archiveSummary.completedTasks}</p>
-          <p className="mt-1 text-xs text-ink-tertiary">All-time archive total</p>
+          <p className="mt-1 text-xs text-ink-tertiary">In the selected window</p>
         </article>
 
         <article className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
@@ -373,7 +416,7 @@ export function HistoryPage() {
       </section>
 
       <ArchivedCategoriesSection
-        categories={archivedCategories}
+        categories={filteredArchivedCategories}
         isExpanded={showArchivedCategories}
         onDeleteCategory={async (id) => {
           await deleteCategory.mutateAsync(id)
@@ -393,7 +436,7 @@ export function HistoryPage() {
           await restoreTask.mutateAsync(id)
         }}
         onToggle={() => setShowCompletedTasks((current) => !current)}
-        tasks={completedTasks}
+        tasks={filteredCompletedTasks}
       />
 
       {mutationError ? (
