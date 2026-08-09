@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -51,6 +51,7 @@ export function TaskSelector({
   const [quickAddValue, setQuickAddValue] = useState('')
   const [isQuickAdding, setIsQuickAdding] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const listboxId = useId()
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId)
 
@@ -81,9 +82,17 @@ export function TaskSelector({
       }
     }
 
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
+
     document.addEventListener('mousedown', handleOutsideClick)
+    document.addEventListener('keydown', handleEscape)
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick)
+      document.removeEventListener('keydown', handleEscape)
     }
   }, [isOpen])
 
@@ -136,9 +145,19 @@ export function TaskSelector({
   return (
     <div className="relative w-full max-w-md" ref={containerRef}>
       <Button
+        aria-controls={listboxId}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
         className="w-full justify-between px-3"
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            setIsOpen(true)
+          }
+        }}
+        role="combobox"
         variant="outlined"
       >
         {isLoading ? (
@@ -181,51 +200,57 @@ export function TaskSelector({
             </div>
           ) : null}
 
-          <Button
-            className={`flex w-full items-center justify-start gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
-              selectedTaskId === null
-                ? 'bg-surface-raised text-ink-primary'
-                : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
-            }`}
-            onClick={() => selectAndClose(null)}
-            size="sm"
-            variant="ghost"
-          >
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-ink-tertiary" />
-            No task
-          </Button>
+          <div aria-label="Choose a task" id={listboxId} role="listbox">
+            <Button
+              aria-selected={selectedTaskId === null}
+              className={`flex w-full items-center justify-start gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
+                selectedTaskId === null
+                  ? 'bg-surface-raised text-ink-primary'
+                  : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
+              }`}
+              onClick={() => selectAndClose(null)}
+              role="option"
+              size="sm"
+              variant="ghost"
+            >
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-ink-tertiary" />
+              No task
+            </Button>
 
-          {groupedTasks.map((group) => (
-            <div className="mt-1" key={group.key}>
-              <p className="px-3 py-1 text-[11px] uppercase tracking-[0.08em] text-ink-tertiary">
-                {group.label}
-              </p>
+            {groupedTasks.map((group) => (
+              <div aria-label={group.label} className="mt-1" key={group.key} role="group">
+                <p className="px-3 py-1 text-[11px] uppercase tracking-[0.08em] text-ink-tertiary">
+                  {group.label}
+                </p>
 
-              {group.tasks.map((task) => {
-                const dotColor = task.categories?.color ?? task.color ?? DEFAULT_TASK_COLOR
+                {group.tasks.map((task) => {
+                  const dotColor = task.categories?.color ?? task.color ?? DEFAULT_TASK_COLOR
 
-                return (
-                  <Button
-                    className={`flex w-full items-center justify-start gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
-                      selectedTaskId === task.id
-                        ? 'bg-surface-raised text-ink-primary'
-                        : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
-                    }`}
-                    key={task.id}
-                    onClick={() => selectAndClose(task.id)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    <span
-                      className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: dotColor }}
-                    />
-                    <span className="truncate">{task.name}</span>
-                  </Button>
-                )
-              })}
-            </div>
-          ))}
+                  return (
+                    <Button
+                      aria-selected={selectedTaskId === task.id}
+                      className={`flex w-full items-center justify-start gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
+                        selectedTaskId === task.id
+                          ? 'bg-surface-raised text-ink-primary'
+                          : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
+                      }`}
+                      key={task.id}
+                      onClick={() => selectAndClose(task.id)}
+                      role="option"
+                      size="sm"
+                      variant="ghost"
+                    >
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: dotColor }}
+                      />
+                      <span className="truncate">{task.name}</span>
+                    </Button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
     </div>

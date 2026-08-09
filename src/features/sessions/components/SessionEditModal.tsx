@@ -84,10 +84,10 @@ function SessionEditModalContent({
 }: SessionEditModalContentProps) {
   const [taskId, setTaskId] = useState<string>(session.task_id ?? '')
   const [workMinutes, setWorkMinutes] = useState(
-    String(Math.max(0, Math.round(session.work_seconds / 60)))
+    String(Math.max(0, Number((session.work_seconds / 60).toFixed(2))))
   )
   const [breakMinutes, setBreakMinutes] = useState(
-    String(Math.max(0, Math.round(session.break_seconds / 60)))
+    String(Math.max(0, Number((session.break_seconds / 60).toFixed(2))))
   )
   const [notes, setNotes] = useState(session.notes ?? '')
   const [startedAt, setStartedAt] = useState(toLocalInputValue(session.started_at))
@@ -134,6 +134,7 @@ function SessionEditModalContent({
             inputMode="numeric"
             label="Work Minutes"
             min={0}
+            step="any"
             onChange={(event) => setWorkMinutes(event.target.value)}
             type="number"
             value={workMinutes}
@@ -143,6 +144,7 @@ function SessionEditModalContent({
             inputMode="numeric"
             label="Break Minutes"
             min={0}
+            step="any"
             onChange={(event) => setBreakMinutes(event.target.value)}
             type="number"
             value={breakMinutes}

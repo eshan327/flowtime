@@ -61,6 +61,11 @@ export function ArchivedCategoriesSection({
                   <Button
                     className="text-red-300 hover:text-red-200"
                     onClick={async () => {
+                      const confirmed = window.confirm(
+                        `Delete ${category.name} permanently? Its tasks will become uncategorized.`
+                      )
+                      if (!confirmed) return
+
                       await onDeleteCategory(category.id)
                     }}
                     size="sm"

@@ -2,19 +2,31 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
+import {
+  SessionEditModal,
+  type SessionEditValues,
+} from '@/features/sessions/components/SessionEditModal'
+import { SessionLog } from '@/features/sessions/components/SessionLog'
+import { useSessionMutations } from '@/features/sessions/hooks/useSessionMutations'
 import { ArchivedCategoriesSection } from '@/features/tasks/components/ArchivedCategoriesSection'
 import { CompletedTasksSection } from '@/features/tasks/components/CompletedTasksSection'
 import {
   createSessionExportPayload,
   downloadSessionExportFile,
   type SessionExportFormat,
-} from '@/features/stats/lib/sessionExport'
+} from '@/features/sessions/lib/sessionExport'
 import { useHistorySessions } from '@/features/history/hooks/useHistorySessions'
 import { useCategories } from '@/features/tasks/hooks/useCategories'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { getRangeDatesForAnchor } from '@/lib/dateRange'
+import { toEndOfDay, toStartOfDay } from '@/lib/dateMath'
 import { getErrorMessage } from '@/lib/errorMessages'
-import type { TimeRange } from '@/types'
+import {
+  createSessionSnapshotForTaskId,
+  getSessionCategoryName,
+  getSessionTaskName,
+} from '@/lib/sessionSnapshot'
+import type { SessionWithTask, TimeRange } from '@/types'
 
 type HistoryRange = TimeRange | 'all-time' | 'custom'
 
@@ -46,18 +58,6 @@ function toParsedDate(value: string) {
   }
 
   return parsed
-}
-
-function toStartOfDay(date: Date) {
-  const result = new Date(date)
-  result.setHours(0, 0, 0, 0)
-  return result
-}
-
-function toEndOfDay(date: Date) {
-  const result = new Date(date)
-  result.setHours(23, 59, 59, 999)
-  return result
 }
 
 function formatHistoryWindow(range: TimeRange, from: Date, to: Date) {
@@ -185,6 +185,9 @@ export function HistoryPage() {
   const [showCompletedTasks, setShowCompletedTasks] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
   const [activeExportFormat, setActiveExportFormat] = useState<SessionExportFormat | null>(null)
+  const [sessionSearch, setSessionSearch] = useState('')
+  const [editingSession, setEditingSession] = useState<SessionWithTask | null>(null)
+  const [lastDeletedSession, setLastDeletedSession] = useState<SessionWithTask | null>(null)
 
   const {
     archivedCategories,
@@ -195,12 +198,18 @@ export function HistoryPage() {
   } = useCategories()
 
   const {
+    activeTasks,
     completedTasks,
     isLoading: tasksLoading,
     error: tasksError,
     restoreTask,
     deleteTask,
   } = useTasks()
+  const { updateSession, softDeleteSession, restoreSession } = useSessionMutations()
+  const sessionTasks = useMemo(
+    () => [...activeTasks, ...completedTasks],
+    [activeTasks, completedTasks]
+  )
 
   const historyWindow = useMemo(
     () => getHistoryWindow(range, customFrom, customTo),
@@ -247,6 +256,22 @@ export function HistoryPage() {
     [filteredArchivedCategories, filteredCompletedTasks, historyWindow.isValid, sessions]
   )
 
+  const filteredSessions = useMemo(() => {
+    const search = sessionSearch.trim().toLocaleLowerCase()
+    if (!search) return sessions
+
+    return sessions.filter((session) => {
+      const values = [
+        getSessionTaskName(session),
+        getSessionCategoryName(session),
+        session.notes,
+        new Date(session.started_at).toLocaleDateString(),
+      ]
+
+      return values.some((value) => value?.toLocaleLowerCase().includes(search))
+    })
+  }, [sessionSearch, sessions])
+
   const handleExport = async (format: SessionExportFormat) => {
     setActiveExportFormat(format)
     setExportError(null)
@@ -271,12 +296,55 @@ export function HistoryPage() {
     }
   }
 
+  const handleSaveSessionEdit = async (values: SessionEditValues) => {
+    if (!editingSession) return
+
+    const selectedTask = values.taskId
+      ? (sessionTasks.find((task) => task.id === values.taskId) ?? null)
+      : null
+    const snapshot = createSessionSnapshotForTaskId(values.taskId, selectedTask, editingSession)
+
+    await updateSession.mutateAsync({
+      id: values.id,
+      taskId: values.taskId,
+      workSeconds: values.workSeconds,
+      breakSeconds: values.breakSeconds,
+      startedAt: values.startedAt,
+      endedAt: values.endedAt,
+      notes: values.notes,
+      snapshot,
+    })
+    setEditingSession(null)
+  }
+
+  const handleDeleteSession = (session: SessionWithTask) => {
+    void softDeleteSession
+      .mutateAsync(session.id)
+      .then(() => setLastDeletedSession(session))
+      .catch(() => undefined)
+  }
+
+  const handleUndoSessionDelete = () => {
+    if (!lastDeletedSession) return
+
+    void restoreSession
+      .mutateAsync(lastDeletedSession.id)
+      .then(() => setLastDeletedSession(null))
+      .catch(() => undefined)
+  }
+
   const isLoading = categoriesLoading || tasksLoading
 
   const loadError = categoriesError ?? tasksError
 
   const mutationError =
-    unarchiveCategory.error ?? deleteCategory.error ?? restoreTask.error ?? deleteTask.error
+    updateSession.error ??
+    softDeleteSession.error ??
+    restoreSession.error ??
+    unarchiveCategory.error ??
+    deleteCategory.error ??
+    restoreTask.error ??
+    deleteTask.error
 
   if (isLoading) {
     return (
@@ -302,8 +370,7 @@ export function HistoryPage() {
         <p className="text-xs uppercase tracking-[0.14em] text-ink-tertiary">History</p>
         <h1 className="mt-2 text-2xl font-light">Archive</h1>
         <p className="mt-2 max-w-2xl text-sm text-ink-secondary">
-          Keep your workspace clean by managing archived categories and completed tasks, then export
-          any session window when needed.
+          Review and correct focus sessions, manage archived work, and export any date range.
         </p>
       </header>
 
@@ -370,6 +437,63 @@ export function HistoryPage() {
           <p className="mt-2 text-2xl font-light">{archiveSummary.exportableSessions}</p>
           <p className="mt-1 text-xs text-ink-tertiary">In the current export window</p>
         </article>
+      </section>
+
+      <section className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm text-ink-secondary">Session log</h2>
+            <p className="mt-1 text-xs text-ink-tertiary">{historyWindow.label}</p>
+          </div>
+
+          {lastDeletedSession ? (
+            <div className="flex items-center gap-2" role="status">
+              <p className="text-xs text-ink-secondary">Session deleted.</p>
+              <Button
+                loading={restoreSession.isPending}
+                onClick={handleUndoSessionDelete}
+                size="sm"
+                variant="outlined"
+              >
+                Undo
+              </Button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mb-4 max-w-sm">
+          <Input
+            label="Search sessions"
+            onChange={(event) => setSessionSearch(event.target.value)}
+            placeholder="Task, category, note, or date"
+            type="search"
+            value={sessionSearch}
+          />
+          {sessionSearch.trim() ? (
+            <p className="mt-2 text-xs text-ink-tertiary" role="status">
+              {filteredSessions.length} matching{' '}
+              {filteredSessions.length === 1 ? 'session' : 'sessions'}
+            </p>
+          ) : null}
+        </div>
+
+        {sessionsLoading ? (
+          <div className="flex items-center gap-2 text-sm text-ink-secondary">
+            <Spinner />
+            Loading sessions...
+          </div>
+        ) : sessionsError ? (
+          <p className="text-sm text-red-300" role="alert">
+            {getErrorMessage(sessionsError, 'Unable to load sessions right now.')}
+          </p>
+        ) : (
+          <SessionLog
+            deletingSessionId={softDeleteSession.isPending ? softDeleteSession.variables : null}
+            onDelete={handleDeleteSession}
+            onEdit={setEditingSession}
+            sessions={filteredSessions}
+          />
+        )}
       </section>
 
       <section className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
@@ -440,10 +564,24 @@ export function HistoryPage() {
       />
 
       {mutationError ? (
-        <p className="text-sm text-red-300">
+        <p className="text-sm text-red-300" role="alert">
           {getErrorMessage(mutationError, 'Unable to update history right now.')}
         </p>
       ) : null}
+
+      <SessionEditModal
+        error={
+          updateSession.error
+            ? getErrorMessage(updateSession.error, 'Unable to update session right now.')
+            : null
+        }
+        isOpen={!!editingSession}
+        isSaving={updateSession.isPending}
+        onClose={() => setEditingSession(null)}
+        onSave={handleSaveSessionEdit}
+        session={editingSession}
+        tasks={sessionTasks}
+      />
     </section>
   )
 }

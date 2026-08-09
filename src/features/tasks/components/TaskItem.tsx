@@ -83,9 +83,19 @@ export function TaskItem({
       }
     }
 
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false)
+        setShowMoveMenu(false)
+        setShowColorPicker(false)
+      }
+    }
+
     document.addEventListener('mousedown', handleOutsideClick)
+    document.addEventListener('keydown', handleEscape)
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick)
+      document.removeEventListener('keydown', handleEscape)
     }
   }, [isMenuOpen])
 
@@ -257,6 +267,7 @@ export function TaskItem({
           <div className="min-w-0 flex-1">
             {isEditing ? (
               <Input
+                aria-label={`Rename ${task.name}`}
                 className="w-full px-2 py-1 text-sm"
                 onBlur={() => {
                   void handleSaveName()
@@ -316,6 +327,8 @@ export function TaskItem({
 
           <div className="relative" ref={menuRef}>
             <Button
+              aria-expanded={isMenuOpen}
+              aria-haspopup="menu"
               aria-label={`Task options for ${task.name}`}
               className="p-0 text-ink-tertiary transition hover:text-ink-secondary"
               onClick={() => {
@@ -330,7 +343,11 @@ export function TaskItem({
             </Button>
 
             {isMenuOpen ? (
-              <div className="absolute right-0 z-20 mt-1 w-52 rounded-lg border border-surface-border bg-surface-overlay p-1 shadow-xl">
+              <div
+                aria-label={`${task.name} options`}
+                className="absolute right-0 z-20 mt-1 w-52 rounded-lg border border-surface-border bg-surface-overlay p-1 shadow-xl"
+                role="menu"
+              >
                 <Button
                   className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
                   onClick={() => {
@@ -434,6 +451,11 @@ export function TaskItem({
                 <Button
                   className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-raised"
                   onClick={() => {
+                    const confirmed = window.confirm(
+                      `Delete ${task.name} permanently? Its session history will be preserved.`
+                    )
+                    if (!confirmed) return
+
                     closeMenu()
                     setIsDeleting(true)
                     window.setTimeout(() => {
@@ -476,7 +498,11 @@ export function TaskItem({
         <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-ink-primary" />
       ) : null}
 
-      {reorderError ? <p className="mt-2 text-xs text-red-300">{reorderError}</p> : null}
+      {reorderError ? (
+        <p className="mt-2 text-xs text-red-300" role="alert">
+          {reorderError}
+        </p>
+      ) : null}
     </div>
   )
 }

@@ -11,15 +11,11 @@ import {
 } from '@/lib/ordering'
 import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabaseClient'
-import type { Category, TaskWithCategory } from '@/types'
+import type { Category } from '@/types'
 
 interface ReorderCategoryContext {
   previous: Category[]
   userId: string
-}
-
-export function categoriesQueryKey(userId?: string) {
-  return queryKeys.categories(userId)
 }
 
 export function useCategories() {
@@ -28,34 +24,8 @@ export function useCategories() {
 
   const requireCurrentUserId = () => requireUserId(user?.id)
 
-  const updateCategoriesCache = (userId: string, updater: (current: Category[]) => Category[]) => {
-    queryClient.setQueryData<Category[]>(categoriesQueryKey(userId), (current) =>
-      updater(current ?? [])
-    )
-  }
-
-  const updateTasksForCategory = (
-    userId: string,
-    categoryId: string,
-    updater: (task: TaskWithCategory) => TaskWithCategory
-  ) => {
-    queryClient.setQueryData<TaskWithCategory[]>(queryKeys.tasks(userId), (current) =>
-      (current ?? []).map((task) => (task.category_id === categoryId ? updater(task) : task))
-    )
-  }
-
-  const patchCategoryInCache = (
-    userId: string,
-    categoryId: string,
-    updater: (category: Category) => Category
-  ) => {
-    updateCategoriesCache(userId, (current) =>
-      current.map((category) => (category.id === categoryId ? updater(category) : category))
-    )
-  }
-
   const categoriesQuery = useQuery({
-    queryKey: categoriesQueryKey(user?.id),
+    queryKey: queryKeys.categories(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
@@ -73,7 +43,7 @@ export function useCategories() {
   const addCategory = useMutation({
     mutationFn: async ({ name, color }: { name: string; color: string }) => {
       const userId = requireCurrentUserId()
-      const existing = queryClient.getQueryData<Category[]>(categoriesQueryKey(userId)) ?? []
+      const existing = queryClient.getQueryData<Category[]>(queryKeys.categories(userId)) ?? []
 
       const { data, error } = await supabase
         .from('categories')
@@ -89,12 +59,7 @@ export function useCategories() {
       if (error) throw error
       return data as Category
     },
-    onSuccess: (createdCategory) => {
-      const userId = requireCurrentUserId()
-      updateCategoriesCache(userId, (current) =>
-        sortByPositionAndCreatedAt([...current, createdCategory])
-      )
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) }),
   })
 
   const renameCategory = useMutation({
@@ -108,23 +73,9 @@ export function useCategories() {
 
       if (error) throw error
     },
-    onSuccess: (_result, variables) => {
-      const userId = requireCurrentUserId()
-
-      patchCategoryInCache(userId, variables.id, (category) => ({
-        ...category,
-        name: variables.name.trim(),
-      }))
-
-      updateTasksForCategory(userId, variables.id, (task) => ({
-        ...task,
-        categories: task.categories
-          ? {
-              ...task.categories,
-              name: variables.name.trim(),
-            }
-          : task.categories,
-      }))
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
+      return queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) })
     },
   })
 
@@ -139,23 +90,9 @@ export function useCategories() {
 
       if (error) throw error
     },
-    onSuccess: (_result, variables) => {
-      const userId = requireCurrentUserId()
-
-      patchCategoryInCache(userId, variables.id, (category) => ({
-        ...category,
-        color: variables.color,
-      }))
-
-      updateTasksForCategory(userId, variables.id, (task) => ({
-        ...task,
-        categories: task.categories
-          ? {
-              ...task.categories,
-              color: variables.color,
-            }
-          : task.categories,
-      }))
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
+      return queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) })
     },
   })
 
@@ -170,16 +107,9 @@ export function useCategories() {
 
       if (error) throw error
     },
-    onSuccess: (_result, id) => {
-      const userId = requireCurrentUserId()
-
-      updateCategoriesCache(userId, (current) => current.filter((category) => category.id !== id))
-
-      updateTasksForCategory(userId, id, (task) => ({
-        ...task,
-        category_id: null,
-        categories: null,
-      }))
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
+      return queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) })
     },
   })
 
@@ -195,7 +125,7 @@ export function useCategories() {
 
       if (error) throw error
 
-      const cached = queryClient.getQueryData<Category[]>(categoriesQueryKey(userId)) ?? []
+      const cached = queryClient.getQueryData<Category[]>(queryKeys.categories(userId)) ?? []
       const activeCategories = cached.filter((category) => category.archived_at === null)
 
       const reordered = applyOptimisticReorder(activeCategories, id, newPosition)
@@ -215,23 +145,23 @@ export function useCategories() {
     },
     onMutate: async ({ id, newPosition }): Promise<ReorderCategoryContext> => {
       const userId = requireCurrentUserId()
-      await queryClient.cancelQueries({ queryKey: categoriesQueryKey(userId) })
+      await queryClient.cancelQueries({ queryKey: queryKeys.categories(userId) })
 
-      const previous = queryClient.getQueryData<Category[]>(categoriesQueryKey(userId)) ?? []
+      const previous = queryClient.getQueryData<Category[]>(queryKeys.categories(userId)) ?? []
       const optimistic = sortByPositionAndCreatedAt(
         applyOptimisticReorder(previous, id, newPosition)
       )
 
-      queryClient.setQueryData(categoriesQueryKey(userId), optimistic)
+      queryClient.setQueryData(queryKeys.categories(userId), optimistic)
 
       return { previous, userId }
     },
     onError: (_error, _variables, context) => {
       if (!context) return
-      queryClient.setQueryData(categoriesQueryKey(context.userId), context.previous)
+      queryClient.setQueryData(queryKeys.categories(context.userId), context.previous)
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: categoriesQueryKey(user?.id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) })
     },
   })
 
@@ -248,20 +178,9 @@ export function useCategories() {
       if (error) throw error
       return { id, archivedAt }
     },
-    onSuccess: ({ id, archivedAt }) => {
-      const userId = requireCurrentUserId()
-
-      patchCategoryInCache(userId, id, (category) => ({ ...category, archived_at: archivedAt }))
-
-      updateTasksForCategory(userId, id, (task) => ({
-        ...task,
-        categories: task.categories
-          ? {
-              ...task.categories,
-              archived_at: archivedAt,
-            }
-          : task.categories,
-      }))
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
+      return queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) })
     },
   })
 
@@ -276,20 +195,9 @@ export function useCategories() {
 
       if (error) throw error
     },
-    onSuccess: (_result, id) => {
-      const userId = requireCurrentUserId()
-
-      patchCategoryInCache(userId, id, (category) => ({ ...category, archived_at: null }))
-
-      updateTasksForCategory(userId, id, (task) => ({
-        ...task,
-        categories: task.categories
-          ? {
-              ...task.categories,
-              archived_at: null,
-            }
-          : task.categories,
-      }))
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
+      return queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) })
     },
   })
 

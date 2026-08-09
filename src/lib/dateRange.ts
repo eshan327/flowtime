@@ -1,10 +1,6 @@
 import { toEndOfDay, toStartOfDay, toWeekStart } from '@/lib/dateMath'
 import type { TimeRange } from '@/types'
 
-export function getRangeDates(range: TimeRange): { from: Date; to: Date } {
-  return getRangeDatesForAnchor(range, new Date())
-}
-
 export function getRangeDatesForAnchor(
   range: TimeRange,
   anchorDate: Date

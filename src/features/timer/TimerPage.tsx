@@ -3,15 +3,17 @@ import { Settings2, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
-import { SessionEditModal } from '@/features/stats/components/SessionEditModal'
-import { useSessionMutations } from '@/features/stats/hooks/useSessionMutations'
+import {
+  SessionEditModal,
+  type SessionEditValues,
+} from '@/features/sessions/components/SessionEditModal'
+import { useSessionMutations } from '@/features/sessions/hooks/useSessionMutations'
 import { SessionSummary } from '@/features/timer/components/SessionSummary'
 import { TimerSettingsModal } from '@/features/timer/components/TimerSettingsModal'
 import { TaskSelector } from '@/features/timer/components/TaskSelector'
 import { TimerClock } from '@/features/timer/components/TimerClock'
 import { TimerControls } from '@/features/timer/components/TimerControls'
 import { useRunawayProtection } from '@/features/timer/hooks/useRunawayProtection'
-import { useTimerCommandHandlers } from '@/features/timer/hooks/useTimerCommandHandlers'
 import { useTimerKeyboardShortcuts } from '@/features/timer/hooks/useTimerKeyboardShortcuts'
 import { useTimerSessionPipeline } from '@/features/timer/hooks/useTimerSessionPipeline'
 import { useTodaySummary } from '@/features/timer/hooks/useTodaySummary'
@@ -23,8 +25,13 @@ import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { useUser } from '@/hooks/useUser'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { formatClock, formatDuration } from '@/lib/formatting'
-import { createSessionSnapshotFromSelection } from '@/lib/sessionSnapshot'
-import type { SessionWithTask } from '@/types'
+import { requestNotificationPermission } from '@/lib/notifications'
+import {
+  createSessionSnapshotForTaskId,
+  createSessionSnapshotFromSelection,
+  toSessionWithTask,
+} from '@/lib/sessionSnapshot'
+import type { Session, SessionWithTask } from '@/types'
 
 export function TimerPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -32,6 +39,7 @@ export function TimerPage() {
   const [lastSavedSession, setLastSavedSession] = useState<SessionWithTask | null>(null)
 
   const { user } = useUser()
+  const userId = user?.id
   const { tasks, addTask, isLoading: tasksLoading, error: tasksError } = useTasks()
   const { updateSession, softDeleteSession } = useSessionMutations()
 
@@ -103,7 +111,16 @@ export function TimerPage() {
     }))
   )
 
-  const { saveSession, saveTimerSession, isSavingSession } = useTimerSessionPipeline({
+  const {
+    saveSession,
+    saveTimerSession,
+    retryLastSessionSave,
+    queuedSessionCount,
+    lastSaveQueued,
+    outboxError,
+    isSavingSession,
+  } = useTimerSessionPipeline({
+    userId,
     setLastSessionId,
     setLastSavedSession,
   })
@@ -158,8 +175,8 @@ export function TimerPage() {
     if (phase !== 'idle') return
     if (!selectedTaskId) return
     if (selectableTasks.some((task) => task.id === selectedTaskId)) return
-    setSelectedTask(null)
-  }, [phase, selectedTaskId, selectableTasks, setSelectedTask])
+    setSelectedTask(null, userId)
+  }, [phase, selectedTaskId, selectableTasks, setSelectedTask, userId])
 
   useEffect(() => {
     if (!selectedTask) {
@@ -198,13 +215,13 @@ export function TimerPage() {
   const canReplaySession = phase === 'done' && !!replayTask
 
   const handleReplayLastSession = useCallback(() => {
-    if (!replayTask) {
+    if (!replayTask || !userId) {
       return
     }
 
     const replayColor = replayTask.categories?.color ?? replayTask.color ?? DEFAULT_TASK_COLOR
 
-    setSelectedTask(replayTask.id)
+    setSelectedTask(replayTask.id, userId)
     setSelectedTaskSnapshot({
       name: replayTask.name,
       color: replayColor,
@@ -214,37 +231,112 @@ export function TimerPage() {
     })
 
     setLastSavedSession(null)
-    startWork()
-  }, [replayTask, setSelectedTask, setSelectedTaskSnapshot, startWork])
+    startWork(userId)
+  }, [replayTask, setSelectedTask, setSelectedTaskSnapshot, startWork, userId])
 
-  const { handleStopWork, handleStartWork, handleSaveSessionEdit, handleDeleteLastSession } =
-    useTimerCommandHandlers({
-      notificationsEnabled,
-      canStartWork,
-      isSavingSession,
-      startedAt,
-      userId: user?.id,
-      selectedTaskId,
-      selectableTasks,
-      lastSavedSession,
-      lastSessionId,
-      workSeconds,
-      breakDivisor,
-      setLastSessionId,
-      setLastSavedSession,
-      setIsSessionEditOpen,
-      startWork,
-      stopWork,
-      saveTimerSession,
-      buildSessionSnapshot,
-      updateSession,
-      softDeleteSession,
-    })
+  const handleStopWork = useCallback(() => {
+    if (notificationsEnabled) void requestNotificationPermission()
+    if (isSavingSession) return
+
+    const snapshot = buildSessionSnapshot()
+    const sessionTask = {
+      name: snapshot.taskNameSnapshot,
+      color: snapshot.taskColorSnapshot,
+      categoryId: snapshot.categoryIdSnapshot,
+      categoryName: snapshot.categoryNameSnapshot,
+      categoryColor: snapshot.categoryColorSnapshot,
+    }
+
+    if (startedAt && userId) {
+      void saveTimerSession(
+        {
+          user_id: userId,
+          task_id: selectedTaskId,
+          work_seconds: workSeconds,
+          break_seconds: getBreakSeconds(workSeconds, breakDivisor),
+          started_at: startedAt.toISOString(),
+          ended_at: new Date().toISOString(),
+        },
+        snapshot
+      ).catch(() => setLastSessionId(null))
+    }
+
+    stopWork({ sessionTask, breakDivisor })
+  }, [
+    breakDivisor,
+    buildSessionSnapshot,
+    isSavingSession,
+    notificationsEnabled,
+    saveTimerSession,
+    selectedTaskId,
+    setLastSessionId,
+    startedAt,
+    stopWork,
+    userId,
+    workSeconds,
+  ])
+
+  const handleStartWork = useCallback(() => {
+    if (!canStartWork || !userId) return
+    setLastSavedSession(null)
+    startWork(userId)
+  }, [canStartWork, startWork, userId])
+
+  const handleSaveSessionEdit = useCallback(
+    async (values: SessionEditValues) => {
+      if (!lastSavedSession) return
+
+      const selectedEditTask = values.taskId
+        ? (selectableTasks.find((task) => task.id === values.taskId) ?? null)
+        : null
+      const snapshot = createSessionSnapshotForTaskId(
+        values.taskId,
+        selectedEditTask,
+        lastSavedSession
+      )
+
+      await updateSession.mutateAsync({
+        id: values.id,
+        taskId: values.taskId,
+        workSeconds: values.workSeconds,
+        breakSeconds: values.breakSeconds,
+        startedAt: values.startedAt,
+        endedAt: values.endedAt,
+        notes: values.notes,
+        snapshot,
+      })
+
+      setLastSavedSession((current) => {
+        if (!current) return current
+        const updated: Session = {
+          ...current,
+          task_id: values.taskId,
+          work_seconds: values.workSeconds,
+          break_seconds: values.breakSeconds,
+          started_at: values.startedAt,
+          ended_at: values.endedAt,
+          notes: values.notes,
+        }
+        return toSessionWithTask(updated, snapshot)
+      })
+      setIsSessionEditOpen(false)
+    },
+    [lastSavedSession, selectableTasks, updateSession]
+  )
+
+  const handleDeleteLastSession = useCallback(async () => {
+    const sessionId = lastSavedSession?.id ?? lastSessionId
+    if (!sessionId) return
+
+    await softDeleteSession.mutateAsync(sessionId)
+    setLastSavedSession(null)
+    setLastSessionId(null)
+  }, [lastSavedSession?.id, lastSessionId, setLastSessionId, softDeleteSession])
 
   useRunawayProtection({
     runawayDetected,
     startedAt,
-    userId: user?.id,
+    userId,
     isSavingSession,
     selectedTaskId,
     breakDivisor,
@@ -295,7 +387,7 @@ export function TimerPage() {
             const createdTask = await addTask.mutateAsync({ name, categoryId: null })
             return createdTask.id
           }}
-          onSelectTask={setSelectedTask}
+          onSelectTask={(taskId) => setSelectedTask(taskId, userId)}
           selectedTaskId={selectedTaskId}
           shortcutsBlocked={isSettingsOpen || isSessionEditOpen}
           shortcutsEnabled={shortcutsEnabled}
@@ -322,24 +414,62 @@ export function TimerPage() {
             />
           </div>
 
-          {saveSession.isError && saveSession.variables ? (
-            <div className="mt-4 w-full rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
+          {queuedSessionCount > 0 ? (
+            <div
+              aria-live="polite"
+              className="mt-4 w-full rounded-lg border border-amber-300/40 bg-amber-950/20 px-3 py-2 text-sm text-amber-100"
+              role="status"
+            >
               <div className="flex items-start justify-between gap-3">
                 <p>
-                  Couldn't save session - check your connection. You focused for{' '}
-                  {formatDuration(saveSession.variables.work_seconds)}.
+                  {lastSaveQueued ? 'Saved offline.' : 'Syncing saved sessions.'}{' '}
+                  {queuedSessionCount} {queuedSessionCount === 1 ? 'session is' : 'sessions are'}{' '}
+                  waiting to sync.
                 </p>
                 <Button
-                  aria-label="Dismiss save error"
-                  className="p-0 transition hover:bg-red-900/40"
-                  onClick={() => saveSession.reset()}
-                  size="icon"
-                  variant="ghost"
+                  loading={saveSession.isPending}
+                  onClick={retryLastSessionSave}
+                  size="sm"
+                  variant="outlined"
                 >
-                  <X className="h-4 w-4" />
+                  Retry
                 </Button>
               </div>
             </div>
+          ) : null}
+
+          {saveSession.isError && queuedSessionCount === 0 && saveSession.variables ? (
+            <div
+              className="mt-4 w-full rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200"
+              role="alert"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p>
+                  Couldn't save or queue this session. You focused for{' '}
+                  {formatDuration(saveSession.variables.work_seconds)}.
+                </p>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button onClick={retryLastSessionSave} size="sm" variant="outlined">
+                    Retry
+                  </Button>
+                  <Button
+                    aria-label="Dismiss save error"
+                    className="p-0 transition hover:bg-red-900/40"
+                    onClick={() => saveSession.reset()}
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {outboxError ? (
+            <p className="mt-2 text-xs text-red-300" role="alert">
+              Offline storage is unavailable; keep this page open until the session saves.
+            </p>
           ) : null}
 
           {phase === 'done' ? (

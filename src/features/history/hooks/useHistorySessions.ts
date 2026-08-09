@@ -1,12 +1,8 @@
 import { useMemo } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { fetchSessionRows } from '@/features/sessions/api/sessionQueries'
 import { useUser } from '@/hooks/useUser'
 import { queryKeys } from '@/lib/queryKeys'
-import { supabase } from '@/lib/supabaseClient'
-import type { SessionWithTask } from '@/types'
-
-const SESSION_WITH_CATEGORY_SELECT =
-  '*, tasks(id, name, color, category_id, categories(id, name, color, archived_at))'
 
 interface UseHistorySessionsOptions {
   from: Date | null
@@ -30,24 +26,12 @@ export function useHistorySessions({ from, to, enabled = true }: UseHistorySessi
         throw new Error('User not authenticated')
       }
 
-      let request = supabase
-        .from('sessions')
-        .select(SESSION_WITH_CATEGORY_SELECT)
-        .eq('user_id', userId)
-        .is('deleted_at', null)
-
-      if (fromIso) {
-        request = request.gte('started_at', fromIso)
-      }
-
-      if (toIso) {
-        request = request.lte('started_at', toIso)
-      }
-
-      const { data, error } = await request.order('started_at', { ascending: false })
-      if (error) throw error
-
-      return data as SessionWithTask[]
+      return fetchSessionRows({
+        userId,
+        fromIso: fromIso ?? undefined,
+        toIso: toIso ?? undefined,
+        ascending: false,
+      })
     },
   })
 

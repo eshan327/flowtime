@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useUser } from '@/hooks/useUser'
-import { invalidateSessionQueries } from '@/lib/sessionQueryInvalidation'
+import { queryKeys } from '@/lib/queryKeys'
 import { toSessionSnapshotColumns } from '@/lib/sessionSnapshot'
 import type { SessionSnapshotInput } from '@/lib/sessionSnapshot'
 import { supabase } from '@/lib/supabaseClient'
@@ -45,7 +45,7 @@ export function useSessionMutations() {
       if (error) throw error
     },
     onSuccess: () => {
-      void invalidateSessionQueries(queryClient, user?.id)
+      if (user?.id) void queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user.id) })
     },
   })
 
@@ -65,7 +65,7 @@ export function useSessionMutations() {
       if (error) throw error
     },
     onSuccess: () => {
-      void invalidateSessionQueries(queryClient, user?.id)
+      if (user?.id) void queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user.id) })
     },
   })
 
@@ -85,7 +85,7 @@ export function useSessionMutations() {
       if (error) throw error
     },
     onSuccess: () => {
-      void invalidateSessionQueries(queryClient, user?.id)
+      if (user?.id) void queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user.id) })
     },
   })
 

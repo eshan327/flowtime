@@ -18,10 +18,6 @@ interface ReorderSubtaskContext {
   safeTaskId: string
 }
 
-export function subtasksQueryKey(taskId?: string) {
-  return queryKeys.subtasks(taskId)
-}
-
 export function useSubtasks(taskId: string | null) {
   const queryClient = useQueryClient()
   const { user } = useUser()
@@ -29,24 +25,8 @@ export function useSubtasks(taskId: string | null) {
   const requireCurrentUserId = () => requireUserId(user?.id)
   const requireSafeTaskId = () => requireTaskId(taskId ?? undefined)
 
-  const updateSubtasksCache = (safeTaskId: string, updater: (current: Subtask[]) => Subtask[]) => {
-    queryClient.setQueryData<Subtask[]>(subtasksQueryKey(safeTaskId), (current) =>
-      updater(current ?? [])
-    )
-  }
-
-  const patchSubtaskInCache = (
-    safeTaskId: string,
-    subtaskId: string,
-    updater: (subtask: Subtask) => Subtask
-  ) => {
-    updateSubtasksCache(safeTaskId, (current) =>
-      current.map((subtask) => (subtask.id === subtaskId ? updater(subtask) : subtask))
-    )
-  }
-
   const subtasksQuery = useQuery({
-    queryKey: subtasksQueryKey(taskId ?? undefined),
+    queryKey: queryKeys.subtasks(taskId ?? undefined),
     queryFn: async () => {
       const userId = requireCurrentUserId()
       const safeTaskId = requireSafeTaskId()
@@ -68,7 +48,7 @@ export function useSubtasks(taskId: string | null) {
     mutationFn: async (name: string) => {
       const userId = requireCurrentUserId()
       const safeTaskId = requireSafeTaskId()
-      const existing = queryClient.getQueryData<Subtask[]>(subtasksQueryKey(safeTaskId)) ?? []
+      const existing = queryClient.getQueryData<Subtask[]>(queryKeys.subtasks(safeTaskId)) ?? []
 
       const { data, error } = await supabase
         .from('subtasks')
@@ -84,10 +64,8 @@ export function useSubtasks(taskId: string | null) {
       if (error) throw error
       return data as Subtask
     },
-    onSuccess: (createdSubtask) => {
-      const safeTaskId = requireSafeTaskId()
-      updateSubtasksCache(safeTaskId, (current) => [...current, createdSubtask])
-    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtasks(taskId ?? undefined) }),
   })
 
   const renameSubtask = useMutation({
@@ -101,13 +79,8 @@ export function useSubtasks(taskId: string | null) {
 
       if (error) throw error
     },
-    onSuccess: (_result, variables) => {
-      const safeTaskId = requireSafeTaskId()
-      patchSubtaskInCache(safeTaskId, variables.id, (subtask) => ({
-        ...subtask,
-        name: variables.name.trim(),
-      }))
-    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtasks(taskId ?? undefined) }),
   })
 
   const completeSubtask = useMutation({
@@ -121,15 +94,9 @@ export function useSubtasks(taskId: string | null) {
         .eq('user_id', userId)
 
       if (error) throw error
-      return { id, completedAt }
     },
-    onSuccess: ({ id, completedAt }) => {
-      const safeTaskId = requireSafeTaskId()
-      patchSubtaskInCache(safeTaskId, id, (subtask) => ({
-        ...subtask,
-        completed_at: completedAt,
-      }))
-    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtasks(taskId ?? undefined) }),
   })
 
   const deleteSubtask = useMutation({
@@ -139,10 +106,8 @@ export function useSubtasks(taskId: string | null) {
 
       if (error) throw error
     },
-    onSuccess: (_result, id) => {
-      const safeTaskId = requireSafeTaskId()
-      updateSubtasksCache(safeTaskId, (current) => current.filter((subtask) => subtask.id !== id))
-    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtasks(taskId ?? undefined) }),
   })
 
   const reorderSubtask = useMutation({
@@ -158,7 +123,7 @@ export function useSubtasks(taskId: string | null) {
 
       if (error) throw error
 
-      const cached = queryClient.getQueryData<Subtask[]>(subtasksQueryKey(safeTaskId)) ?? []
+      const cached = queryClient.getQueryData<Subtask[]>(queryKeys.subtasks(safeTaskId)) ?? []
       const reordered = applyOptimisticReorder(cached, id, newPosition)
 
       if (!shouldRenormalizeById(reordered, id, POSITION_RENORMALIZE_THRESHOLD)) return
@@ -176,20 +141,20 @@ export function useSubtasks(taskId: string | null) {
     },
     onMutate: async ({ id, newPosition }): Promise<ReorderSubtaskContext> => {
       const safeTaskId = requireSafeTaskId()
-      await queryClient.cancelQueries({ queryKey: subtasksQueryKey(safeTaskId) })
+      await queryClient.cancelQueries({ queryKey: queryKeys.subtasks(safeTaskId) })
 
-      const previous = queryClient.getQueryData<Subtask[]>(subtasksQueryKey(safeTaskId)) ?? []
+      const previous = queryClient.getQueryData<Subtask[]>(queryKeys.subtasks(safeTaskId)) ?? []
       const optimistic = applyOptimisticReorder(previous, id, newPosition)
 
-      queryClient.setQueryData(subtasksQueryKey(safeTaskId), optimistic)
+      queryClient.setQueryData(queryKeys.subtasks(safeTaskId), optimistic)
       return { previous, safeTaskId }
     },
     onError: (_error, _variables, context) => {
       if (!context) return
-      queryClient.setQueryData(subtasksQueryKey(context.safeTaskId), context.previous)
+      queryClient.setQueryData(queryKeys.subtasks(context.safeTaskId), context.previous)
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: subtasksQueryKey(taskId ?? undefined) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtasks(taskId ?? undefined) })
     },
   })
 

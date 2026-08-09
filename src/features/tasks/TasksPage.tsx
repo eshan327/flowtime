@@ -4,7 +4,6 @@ import { AddCategoryForm } from '@/features/tasks/components/AddCategoryForm'
 import { CategoryTabs } from '@/features/tasks/components/CategoryTabs'
 import { TaskList } from '@/features/tasks/components/TaskList'
 import { useCategories } from '@/features/tasks/hooks/useCategories'
-import { useTaskPageActions } from '@/features/tasks/hooks/useTaskPageActions'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { getErrorMessage } from '@/lib/errorMessages'
 
@@ -33,48 +32,30 @@ export function TasksPage() {
     addTask,
     updateTask,
     completeTask,
-    restoreTask,
     deleteTask,
     moveTask,
     reorderTask,
   } = useTasks()
 
-  const {
-    resolvedActiveTab,
-    mutationError,
-    handleCreateCategory,
-    handleArchiveCategory,
-    handleDeleteCategory,
-    handleRestoreArchivedCategory,
-    handleMoveArchivedTasks,
-    handleAddTask,
-    handleUpdateTask,
-    handleCompleteTask,
-    handleDeleteTask,
-    handleMoveTask,
-    handleReorderTask,
-    handleRenameCategory,
-    handleRecolorCategory,
-    handleReorderCategory,
-  } = useTaskPageActions({
-    activeTab,
-    setActiveTab,
-    categories,
-    addCategory,
-    renameCategory,
-    recolorCategory,
-    archiveCategory,
-    unarchiveCategory,
-    deleteCategory,
-    reorderCategory,
-    addTask,
-    updateTask,
-    completeTask,
-    restoreTask,
-    deleteTask,
-    moveTask,
-    reorderTask,
-  })
+  const resolvedActiveTab =
+    activeTab !== 'all' && !categories.some((category) => category.id === activeTab)
+      ? 'all'
+      : activeTab
+
+  const mutationError =
+    addCategory.error ??
+    renameCategory.error ??
+    recolorCategory.error ??
+    archiveCategory.error ??
+    unarchiveCategory.error ??
+    deleteCategory.error ??
+    reorderCategory.error ??
+    addTask.error ??
+    updateTask.error ??
+    completeTask.error ??
+    deleteTask.error ??
+    moveTask.error ??
+    reorderTask.error
 
   const isLoading = categoriesLoading || tasksLoading
   const error = categoriesError ?? tasksError
@@ -108,31 +89,60 @@ export function TasksPage() {
         activeTab={resolvedActiveTab}
         categories={categories}
         onAddCategory={() => setIsAddCategoryOpen(true)}
-        onArchiveCategory={handleArchiveCategory}
+        onArchiveCategory={async (id) => {
+          await archiveCategory.mutateAsync(id)
+          if (resolvedActiveTab === id) setActiveTab('all')
+        }}
         onChangeTab={setActiveTab}
-        onDeleteCategory={handleDeleteCategory}
-        onRecolorCategory={handleRecolorCategory}
-        onRenameCategory={handleRenameCategory}
-        onReorderCategory={handleReorderCategory}
+        onDeleteCategory={async (id) => {
+          await deleteCategory.mutateAsync(id)
+          if (resolvedActiveTab === id) setActiveTab('all')
+        }}
+        onRecolorCategory={async (id, color) => {
+          await recolorCategory.mutateAsync({ id, color })
+        }}
+        onRenameCategory={async (id, name) => {
+          await renameCategory.mutateAsync({ id, name })
+        }}
+        onReorderCategory={async (id, newPosition) => {
+          await reorderCategory.mutateAsync({ id, newPosition })
+        }}
       />
 
       <TaskList
         activeTab={resolvedActiveTab}
         archivedCategories={archivedCategories}
         categories={categories}
-        onAddTask={handleAddTask}
-        onCompleteTask={handleCompleteTask}
-        onDeleteTask={handleDeleteTask}
-        onMoveTask={handleMoveTask}
-        onMoveArchivedTasks={handleMoveArchivedTasks}
-        onRestoreCategory={handleRestoreArchivedCategory}
-        onReorderTask={handleReorderTask}
-        onUpdateTask={handleUpdateTask}
+        onAddTask={async (payload) => {
+          await addTask.mutateAsync(payload)
+        }}
+        onCompleteTask={async (id) => {
+          await completeTask.mutateAsync(id)
+        }}
+        onDeleteTask={async (id) => {
+          await deleteTask.mutateAsync(id)
+        }}
+        onMoveTask={async (payload) => {
+          await moveTask.mutateAsync(payload)
+        }}
+        onMoveArchivedTasks={async (taskIds, categoryId) => {
+          for (const id of taskIds) await moveTask.mutateAsync({ id, categoryId })
+        }}
+        onRestoreCategory={async (id) => {
+          await unarchiveCategory.mutateAsync(id)
+          setActiveTab(id)
+        }}
+        onReorderTask={async (payload) => {
+          await reorderTask.mutateAsync(payload)
+        }}
+        onUpdateTask={async (payload) => {
+          await updateTask.mutateAsync(payload)
+        }}
         tasks={activeTasks}
       />
 
       {mutationError ? (
-        <p className="text-sm text-red-300">
+        <p className="text-sm text-red-300" role="alert">
           {getErrorMessage(mutationError, 'Task action failed.')}
         </p>
       ) : null}
@@ -140,7 +150,10 @@ export function TasksPage() {
       <AddCategoryForm
         isOpen={isAddCategoryOpen}
         onClose={() => setIsAddCategoryOpen(false)}
-        onCreate={handleCreateCategory}
+        onCreate={async (payload) => {
+          const category = await addCategory.mutateAsync(payload)
+          setActiveTab(category.id)
+        }}
       />
     </section>
   )

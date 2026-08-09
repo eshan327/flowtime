@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { GripVertical, Plus } from 'lucide-react'
+import { GripVertical, MoreHorizontal, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
 import {
   canStartDrag,
@@ -61,11 +63,13 @@ export function CategoryTabs({
     null
   )
   const [reorderError, setReorderError] = useState<string | null>(null)
+  const [renamingCategory, setRenamingCategory] = useState<Category | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const [isRenaming, setIsRenaming] = useState(false)
 
   const menuRef = useRef<HTMLDivElement>(null)
   const dragIntentCategoryIdRef = useRef<string | null>(null)
-  const longPressTimeoutRef = useRef<number | null>(null)
-  const longPressTriggeredRef = useRef(false)
 
   useEffect(() => {
     if (!contextMenu) return
@@ -78,35 +82,34 @@ export function CategoryTabs({
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [contextMenu])
-
-  useEffect(() => {
-    if (!contextMenu) {
-      longPressTriggeredRef.current = false
-    }
-  }, [contextMenu])
-
-  useEffect(() => {
-    return () => {
-      if (longPressTimeoutRef.current !== null) {
-        window.clearTimeout(longPressTimeoutRef.current)
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setContextMenu(null)
+        setShowColorPickerForCategoryId(null)
       }
     }
-  }, [])
 
-  const clearLongPress = () => {
-    if (longPressTimeoutRef.current !== null) {
-      window.clearTimeout(longPressTimeoutRef.current)
-      longPressTimeoutRef.current = null
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
     }
-  }
+  }, [contextMenu])
 
   const openCategoryMenu = (category: Category, x: number, y: number) => {
-    setContextMenu({ category, x, y })
+    const menuWidth = 224
+    const estimatedMenuHeight = 360
+    const viewportPadding = 8
+
+    setContextMenu({
+      category,
+      x: Math.max(viewportPadding, Math.min(x, window.innerWidth - menuWidth - viewportPadding)),
+      y: Math.max(
+        viewportPadding,
+        Math.min(y, window.innerHeight - estimatedMenuHeight - viewportPadding)
+      ),
+    })
     setShowColorPickerForCategoryId(null)
   }
 
@@ -163,6 +166,40 @@ export function CategoryTabs({
     }
   }
 
+  const closeRenameModal = () => {
+    if (isRenaming) return
+    setRenamingCategory(null)
+    setRenameValue('')
+    setRenameError(null)
+  }
+
+  const saveCategoryName = async () => {
+    if (!renamingCategory) return
+
+    const trimmed = renameValue.trim()
+    if (!trimmed) {
+      setRenameError('Category name is required.')
+      return
+    }
+
+    if (trimmed === renamingCategory.name) {
+      closeRenameModal()
+      return
+    }
+
+    setIsRenaming(true)
+    setRenameError(null)
+    try {
+      await onRenameCategory(renamingCategory.id, trimmed)
+      setRenamingCategory(null)
+      setRenameValue('')
+    } catch (error) {
+      setRenameError(getErrorMessage(error, 'Unable to rename category.'))
+    } finally {
+      setIsRenaming(false)
+    }
+  }
+
   return (
     <>
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -188,26 +225,6 @@ export function CategoryTabs({
             }`}
             draggable
             key={category.id}
-            onContextMenu={(event) => {
-              event.preventDefault()
-              openCategoryMenu(category, event.clientX, event.clientY)
-            }}
-            onTouchCancel={clearLongPress}
-            onTouchEnd={clearLongPress}
-            onTouchMove={clearLongPress}
-            onTouchStart={(event) => {
-              if (event.touches.length !== 1) return
-
-              const clientX = event.touches[0].clientX
-              const clientY = event.touches[0].clientY
-              clearLongPress()
-              longPressTriggeredRef.current = false
-
-              longPressTimeoutRef.current = window.setTimeout(() => {
-                longPressTriggeredRef.current = true
-                openCategoryMenu(category, clientX, clientY)
-              }, 450)
-            }}
             onDragEnd={clearDragState}
             onDragOver={(event) => {
               event.preventDefault()
@@ -253,14 +270,7 @@ export function CategoryTabs({
 
             <Button
               className="flex items-center gap-2 px-1 py-1 text-sm"
-              onClick={() => {
-                if (longPressTriggeredRef.current) {
-                  longPressTriggeredRef.current = false
-                  return
-                }
-
-                onChangeTab(category.id)
-              }}
+              onClick={() => onChangeTab(category.id)}
               size="sm"
               variant="ghost"
             >
@@ -288,6 +298,21 @@ export function CategoryTabs({
             >
               <GripVertical className="h-3.5 w-3.5" />
             </Button>
+
+            <Button
+              aria-expanded={contextMenu?.category.id === category.id}
+              aria-haspopup="menu"
+              aria-label={`Open options for ${category.name}`}
+              className="p-0 text-ink-tertiary hover:text-ink-secondary"
+              onClick={(event) => {
+                const rect = event.currentTarget.getBoundingClientRect()
+                openCategoryMenu(category, rect.right - 224, rect.bottom + 4)
+              }}
+              size="icon"
+              variant="ghost"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </Button>
           </div>
         ))}
 
@@ -304,8 +329,10 @@ export function CategoryTabs({
 
       {contextMenu ? (
         <div
+          aria-label={`${contextMenu.category.name} options`}
           className="fixed z-50 w-56 rounded-lg border border-surface-border bg-surface-overlay p-2 shadow-xl"
           ref={menuRef}
+          role="menu"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <Button
@@ -316,6 +343,7 @@ export function CategoryTabs({
               setContextMenu(null)
             }}
             size="sm"
+            role="menuitem"
             variant="ghost"
           >
             Move earlier
@@ -329,6 +357,7 @@ export function CategoryTabs({
               setContextMenu(null)
             }}
             size="sm"
+            role="menuitem"
             variant="ghost"
           >
             Move later
@@ -337,16 +366,13 @@ export function CategoryTabs({
           <Button
             className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
             onClick={() => {
-              const nextName = window.prompt('Rename category', contextMenu.category.name)
-              if (!nextName) return
-
-              const trimmed = nextName.trim()
-              if (!trimmed) return
-
-              void onRenameCategory(contextMenu.category.id, trimmed)
+              setRenamingCategory(contextMenu.category)
+              setRenameValue(contextMenu.category.name)
+              setRenameError(null)
               setContextMenu(null)
             }}
             size="sm"
+            role="menuitem"
             variant="ghost"
           >
             Rename
@@ -358,6 +384,7 @@ export function CategoryTabs({
               setShowColorPickerForCategoryId(contextMenu.category.id)
             }}
             size="sm"
+            role="menuitem"
             variant="ghost"
           >
             Change color
@@ -370,6 +397,7 @@ export function CategoryTabs({
               setContextMenu(null)
             }}
             size="sm"
+            role="menuitem"
             variant="ghost"
           >
             Archive
@@ -391,10 +419,16 @@ export function CategoryTabs({
           <Button
             className="w-full justify-start px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-raised"
             onClick={() => {
+              const confirmed = window.confirm(
+                `Delete ${contextMenu.category.name} permanently? Its tasks will become uncategorized.`
+              )
+              if (!confirmed) return
+
               void onDeleteCategory(contextMenu.category.id)
               setContextMenu(null)
             }}
             size="sm"
+            role="menuitem"
             variant="ghost"
           >
             Delete permanently
@@ -402,7 +436,39 @@ export function CategoryTabs({
         </div>
       ) : null}
 
-      {reorderError ? <p className="mt-2 text-xs text-red-300">{reorderError}</p> : null}
+      <Modal isOpen={!!renamingCategory} onClose={closeRenameModal} title="Rename category">
+        <div className="space-y-4">
+          <Input
+            autoFocus
+            error={renameError ?? undefined}
+            label="Category name"
+            maxLength={120}
+            onChange={(event) => setRenameValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                void saveCategoryName()
+              }
+            }}
+            value={renameValue}
+          />
+
+          <div className="flex justify-end gap-2">
+            <Button disabled={isRenaming} onClick={closeRenameModal} variant="ghost">
+              Cancel
+            </Button>
+            <Button loading={isRenaming} onClick={saveCategoryName} variant="filled">
+              Save
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {reorderError ? (
+        <p className="mt-2 text-xs text-red-300" role="alert">
+          {reorderError}
+        </p>
+      ) : null}
     </>
   )
 }

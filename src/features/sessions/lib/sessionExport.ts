@@ -109,7 +109,8 @@ function toSessionExportRecord(session: SessionWithTask): SessionExportRecord {
 }
 
 function toCsvCell(value: unknown) {
-  const serialized = value == null ? '' : String(value)
+  const rawValue = value == null ? '' : String(value)
+  const serialized = /^[=+\-@]/.test(rawValue) ? `'${rawValue}` : rawValue
   const escaped = serialized.replace(/"/g, '""')
 
   return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped

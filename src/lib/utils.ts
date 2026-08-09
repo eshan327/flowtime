@@ -1,5 +1,4 @@
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge, type ClassNameValue } from 'tailwind-merge'
 import { toHourKey, toLocalDateKey, toStartOfDay, toWeekStart } from '@/lib/dateMath'
 import {
   getSessionCategoryId,
@@ -84,36 +83,14 @@ function aggregateSessionsByKeys(
   }))
 }
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+export function cn(...inputs: ClassNameValue[]) {
+  return twMerge(...inputs)
 }
 
 export function computeStreak(sessions: { started_at: string }[]) {
   const uniqueDateKeys = Array.from(
     new Set(sessions.map((session) => toLocalDateKey(new Date(session.started_at))))
   ).sort()
-
-  if (uniqueDateKeys.length === 0) {
-    return { current: 0, longest: 0 }
-  }
-
-  let longest = 1
-  let running = 1
-
-  for (let index = 1; index < uniqueDateKeys.length; index += 1) {
-    const prev = new Date(`${uniqueDateKeys[index - 1]}T00:00:00`)
-    const curr = new Date(`${uniqueDateKeys[index]}T00:00:00`)
-    const diffDays = Math.round((curr.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000))
-
-    if (diffDays === 1) {
-      running += 1
-      if (running > longest) {
-        longest = running
-      }
-    } else {
-      running = 1
-    }
-  }
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -127,7 +104,7 @@ export function computeStreak(sessions: { started_at: string }[]) {
     cursor.setDate(cursor.getDate() - 1)
   }
 
-  return { current, longest }
+  return current
 }
 
 export function aggregateByHour(sessions: SessionWithTask[], anchorDate: Date): DaySummary[] {

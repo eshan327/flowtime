@@ -6,7 +6,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['GeistVariable', 'system-ui', 'sans-serif'],
+        sans: ['system-ui', 'sans-serif'],
       },
       colors: {
         surface: {

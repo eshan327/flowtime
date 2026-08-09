@@ -61,7 +61,11 @@ export function SessionLog({
   const activePage = Math.min(page, totalPages)
 
   if (entries.length === 0) {
-    return <p className="text-sm text-ink-tertiary">No sessions in this range yet.</p>
+    return (
+      <p aria-live="polite" className="text-sm text-ink-tertiary">
+        No sessions in this range yet.
+      </p>
+    )
   }
 
   const pageStart = (activePage - 1) * pageSize

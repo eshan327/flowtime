@@ -60,6 +60,11 @@ export function CompletedTasksSection({
                   <Button
                     className="text-red-300 hover:text-red-200"
                     onClick={async () => {
+                      const confirmed = window.confirm(
+                        `Delete ${task.name} permanently? Its session history will be preserved.`
+                      )
+                      if (!confirmed) return
+
                       await onDeleteTask(task.id)
                     }}
                     size="sm"

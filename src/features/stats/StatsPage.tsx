@@ -5,7 +5,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { CategoryBreakdown } from '@/features/stats/components/CategoryBreakdown'
 import { DailyBarChart } from '@/features/stats/components/DailyBarChart'
 import { HeatmapGrid } from '@/features/stats/components/HeatmapGrid'
-import { SessionLog } from '@/features/stats/components/SessionLog'
+import { SessionLog } from '@/features/sessions/components/SessionLog'
 import { SummaryCards } from '@/features/stats/components/SummaryCards'
 import { TaskBreakdown } from '@/features/stats/components/TaskBreakdown'
 import { TimeRangeSelector } from '@/features/stats/components/TimeRangeSelector'
@@ -93,10 +93,7 @@ export function StatsPage() {
   }, [stats.heatmapSessions])
 
   const selectedHeatmapSessions = useMemo(() => {
-    if (!selectedHeatmapDate) {
-      return []
-    }
-
+    if (!selectedHeatmapDate) return []
     return heatmapSessionsByDate.get(selectedHeatmapDate) ?? []
   }, [heatmapSessionsByDate, selectedHeatmapDate])
 
