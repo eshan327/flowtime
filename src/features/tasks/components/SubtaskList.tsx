@@ -5,11 +5,8 @@ import { Input } from '@/components/ui/Input'
 import { AddTaskForm } from '@/features/tasks/components/AddTaskForm'
 import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
 import {
-  canStartDrag,
-  clearDragIntentId,
   getVerticalDropPlacement,
   resolveDraggedId,
-  setDragIntentId,
   SUBTASK_DRAG_MIME,
 } from '@/features/tasks/lib/dragReorder'
 import {
@@ -57,7 +54,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
   }, [editingSubtaskId])
 
   const clearDragState = () => {
-    clearDragIntentId(dragIntentSubtaskIdRef)
+    dragIntentSubtaskIdRef.current = null
     setDraggedSubtaskId(null)
     setDropTarget(null)
   }
@@ -165,7 +162,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                 setDropTarget({ id: subtask.id, placement })
               }}
               onDragStart={(event) => {
-                if (!canStartDrag(dragIntentSubtaskIdRef, subtask.id)) {
+                if (dragIntentSubtaskIdRef.current !== subtask.id) {
                   event.preventDefault()
                   return
                 }
@@ -193,13 +190,13 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                   aria-label={`Reorder subtask ${subtask.name}`}
                   className="cursor-grab p-0 text-ink-tertiary transition hover:text-ink-secondary"
                   onPointerCancel={() => {
-                    clearDragIntentId(dragIntentSubtaskIdRef)
+                    dragIntentSubtaskIdRef.current = null
                   }}
                   onPointerDown={() => {
-                    setDragIntentId(dragIntentSubtaskIdRef, subtask.id)
+                    dragIntentSubtaskIdRef.current = subtask.id
                   }}
                   onPointerUp={() => {
-                    clearDragIntentId(dragIntentSubtaskIdRef)
+                    dragIntentSubtaskIdRef.current = null
                   }}
                   size="icon"
                   variant="ghost"

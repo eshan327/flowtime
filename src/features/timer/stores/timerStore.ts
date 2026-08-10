@@ -53,30 +53,10 @@ interface TimerState {
   dismissRunaway: () => void
 }
 
-type TimerDataState = Pick<
-  TimerState,
-  | 'ownerUserId'
-  | 'phase'
-  | 'workSeconds'
-  | 'breakEndAt'
-  | 'breakTotal'
-  | 'startedAt'
-  | 'selectedTaskId'
-  | 'selectedTaskName'
-  | 'selectedTaskColor'
-  | 'selectedCategoryId'
-  | 'selectedCategoryName'
-  | 'selectedCategoryColor'
-  | 'lastSessionId'
-  | 'lastSessionTaskName'
-  | 'lastSessionTaskColor'
-  | 'runawayDetected'
->
-
-function createInitialTimerState(): TimerDataState {
+function createInitialTimerState() {
   return {
     ownerUserId: null,
-    phase: 'idle',
+    phase: 'idle' as TimerPhase,
     workSeconds: 0,
     breakEndAt: null,
     breakTotal: 0,
@@ -95,7 +75,7 @@ function createInitialTimerState(): TimerDataState {
 }
 
 export const useTimerStore = create<TimerState>()(
-  persist<TimerState, [], [], TimerDataState>(
+  persist(
     (set, get) => ({
       ...createInitialTimerState(),
 
@@ -210,7 +190,7 @@ export const useTimerStore = create<TimerState>()(
     {
       name: 'flowtime-timer-state',
       version: 1,
-      storage: createJSONStorage<TimerDataState>(() => localStorage, {
+      storage: createJSONStorage(() => localStorage, {
         reviver: (key, value) => {
           if ((key === 'startedAt' || key === 'breakEndAt') && typeof value === 'string') {
             const date = new Date(value)
@@ -219,28 +199,6 @@ export const useTimerStore = create<TimerState>()(
 
           return value
         },
-      }),
-      partialize: (state) => ({
-        ownerUserId: state.ownerUserId,
-        phase: state.phase,
-        workSeconds: state.workSeconds,
-        breakEndAt: state.breakEndAt,
-        breakTotal: state.breakTotal,
-        startedAt: state.startedAt,
-        selectedTaskId: state.selectedTaskId,
-        selectedTaskName: state.selectedTaskName,
-        selectedTaskColor: state.selectedTaskColor,
-        selectedCategoryId: state.selectedCategoryId,
-        selectedCategoryName: state.selectedCategoryName,
-        selectedCategoryColor: state.selectedCategoryColor,
-        lastSessionId: state.lastSessionId,
-        lastSessionTaskName: state.lastSessionTaskName,
-        lastSessionTaskColor: state.lastSessionTaskColor,
-        runawayDetected: state.runawayDetected,
-      }),
-      merge: (persistedState, currentState) => ({
-        ...currentState,
-        ...(persistedState as TimerDataState),
       }),
     }
   )

@@ -2,16 +2,15 @@ import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
-import { CategoryBreakdown } from '@/features/stats/components/CategoryBreakdown'
+import { BreakdownChart } from '@/features/stats/components/BreakdownChart'
 import { DailyBarChart } from '@/features/stats/components/DailyBarChart'
 import { HeatmapGrid } from '@/features/stats/components/HeatmapGrid'
 import { SessionLog } from '@/features/sessions/components/SessionLog'
 import { SummaryCards } from '@/features/stats/components/SummaryCards'
-import { TaskBreakdown } from '@/features/stats/components/TaskBreakdown'
 import { TimeRangeSelector } from '@/features/stats/components/TimeRangeSelector'
 import { useStats } from '@/features/stats/hooks/useStats'
 import { formatDuration } from '@/lib/formatting'
-import { getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
+import { formatRangeWindow, getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
 import { toLocalDateKey } from '@/lib/dateMath'
 import { getErrorMessage } from '@/lib/errorMessages'
 import type { SessionWithTask, TimeRange } from '@/types'
@@ -21,28 +20,6 @@ function getNavigationFloor() {
   floor.setFullYear(floor.getFullYear() - 5, 0, 1)
   floor.setHours(0, 0, 0, 0)
   return floor
-}
-
-function formatRangeWindow(range: TimeRange, from: Date, to: Date) {
-  if (range === 'day') {
-    return from.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
-  if (range === 'week') {
-    const startLabel = from.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    const endLabel = to.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    return `${startLabel} - ${endLabel}`
-  }
-
-  if (range === 'month') {
-    return from.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  }
-
-  return from.toLocaleDateString('en-US', { year: 'numeric' })
 }
 
 export function StatsPage() {
@@ -148,7 +125,7 @@ export function StatsPage() {
               aria-label="Previous period"
               className={
                 canGoPrevious
-                  ? 'border border-ink-secondary bg-surface-overlay text-ink-primary shadow-[0_0_0_1px_rgba(240,237,232,0.08)] hover:border-ink-primary hover:bg-surface-raised disabled:opacity-100'
+                  ? 'border border-ink-secondary bg-surface-overlay text-ink-primary hover:border-ink-primary hover:bg-surface-raised disabled:opacity-100'
                   : 'border border-surface-border/40 bg-transparent text-ink-tertiary/40 disabled:opacity-100'
               }
               disabled={!canGoPrevious}
@@ -167,7 +144,7 @@ export function StatsPage() {
               aria-label="Next period"
               className={
                 canGoNext
-                  ? 'border border-ink-secondary bg-surface-overlay text-ink-primary shadow-[0_0_0_1px_rgba(240,237,232,0.08)] hover:border-ink-primary hover:bg-surface-raised disabled:opacity-100'
+                  ? 'border border-ink-secondary bg-surface-overlay text-ink-primary hover:border-ink-primary hover:bg-surface-raised disabled:opacity-100'
                   : 'border border-surface-border/40 bg-transparent text-ink-tertiary/40 disabled:opacity-100'
               }
               disabled={!canGoNext}
@@ -227,12 +204,29 @@ export function StatsPage() {
 
       <section>
         <h2 className="mb-2 text-sm text-ink-secondary">Time by category</h2>
-        <CategoryBreakdown data={stats.byCategory} />
+        <BreakdownChart
+          data={stats.byCategory.map((item) => ({
+            color: item.color,
+            key: item.categoryId ?? item.categoryName,
+            name: item.categoryName,
+            sessionCount: item.sessionCount,
+            totalSeconds: item.totalSeconds,
+          }))}
+        />
       </section>
 
       <section>
         <h2 className="mb-2 text-sm text-ink-secondary">Time by task</h2>
-        <TaskBreakdown data={stats.byTask} />
+        <BreakdownChart
+          data={stats.byTask.map((item) => ({
+            color: item.color,
+            detail: item.categoryName ?? 'Uncategorized',
+            key: item.taskId ?? item.taskName,
+            name: item.taskName,
+            sessionCount: item.sessionCount,
+            totalSeconds: item.totalSeconds,
+          }))}
+        />
       </section>
     </section>
   )

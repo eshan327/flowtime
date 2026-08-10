@@ -40,7 +40,7 @@ export function TimerPage() {
 
   const { user } = useUser()
   const userId = user?.id
-  const { tasks, addTask, isLoading: tasksLoading, error: tasksError } = useTasks()
+  const { activeTasks: tasks, addTask, isLoading: tasksLoading, error: tasksError } = useTasks()
   const { updateSession, softDeleteSession } = useSessionMutations()
 
   const {

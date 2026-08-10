@@ -34,7 +34,6 @@ export interface SessionExportPayload {
   content: string
   mimeType: string
   fileName: string
-  sessionCount: number
 }
 
 interface SessionExportMetadata {
@@ -223,7 +222,6 @@ export function createSessionExportPayload({
     content,
     mimeType: format === 'csv' ? 'text/csv;charset=utf-8' : 'application/json;charset=utf-8',
     fileName: buildSessionExportFileName(format, scope, range, exportFrom, exportTo),
-    sessionCount: records.length,
   }
 }
 

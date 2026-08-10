@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { AddTaskForm } from '@/features/tasks/components/AddTaskForm'
 import { TaskItem } from '@/features/tasks/components/TaskItem'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
+import { sortByPositionAndCreatedAt } from '@/lib/ordering'
 import type { Category, TaskWithCategory } from '@/types'
 
 interface TaskListProps {
@@ -32,19 +33,13 @@ interface TaskSection {
   isArchivedCategory?: boolean
 }
 
-function sortByPosition<T extends { position: number; created_at: string }>(items: T[]) {
-  return [...items].sort(
-    (a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at)
-  )
-}
-
 function buildSections(
   tasks: TaskWithCategory[],
   categories: Category[],
   activeTab: string
 ): TaskSection[] {
-  const sortedCategories = sortByPosition(categories)
-  const sortedTasks = sortByPosition(tasks)
+  const sortedCategories = sortByPositionAndCreatedAt(categories)
+  const sortedTasks = sortByPositionAndCreatedAt(tasks)
   const categoriesById = new Map(sortedCategories.map((category) => [category.id, category]))
 
   if (activeTab !== 'all') {

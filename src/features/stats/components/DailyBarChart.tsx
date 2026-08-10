@@ -149,7 +149,7 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
           margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
         >
           <CartesianGrid
-            stroke="#2e2c29"
+            stroke="#494d64"
             strokeDasharray="3 3"
             verticalCoordinatesGenerator={verticalCoordinatesGenerator}
           />
@@ -158,11 +158,11 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
             interval={range === 'day' ? 0 : 'preserveStartEnd'}
             minTickGap={range === 'day' ? 0 : 8}
             padding={{ left: 0, right: 0 }}
-            tick={{ fill: '#9e9a94', fontSize: 11 }}
+            tick={{ fill: '#b8c0e0', fontSize: 11 }}
             tickMargin={8}
           />
           <YAxis
-            tick={{ fill: '#9e9a94', fontSize: 11 }}
+            tick={{ fill: '#b8c0e0', fontSize: 11 }}
             tickFormatter={(value) => formatDuration(Math.round(Number(value)))}
             type="number"
             allowDecimals={false}

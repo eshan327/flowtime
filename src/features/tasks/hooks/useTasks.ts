@@ -279,7 +279,6 @@ export function useTasks() {
   }, [allTasks])
 
   return {
-    tasks: activeTasks,
     activeTasks,
     completedTasks,
     isLoading: tasksQuery.isLoading,

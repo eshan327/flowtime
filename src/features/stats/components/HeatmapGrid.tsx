@@ -37,7 +37,7 @@ function hexToRgba(hex: string, alpha: number) {
 
 function getHeatmapColor(day: HeatmapDay) {
   if (!day.dominantColor || day.totalSeconds === 0) {
-    return '#2e2c29'
+    return '#494d64'
   }
 
   const minutes = day.totalSeconds / 60
@@ -226,11 +226,11 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
                       hoveredMonthRange &&
                       weekIndex >= hoveredMonthRange.startIndex &&
                       weekIndex <= hoveredMonthRange.endIndex
-                        ? 'ring-1 ring-ink-secondary/30 shadow-[0_0_8px_rgba(240,237,232,0.2)]'
+                        ? 'ring-1 ring-ink-secondary/30'
                         : ''
                     } ${
                       selectedDate === day.date
-                        ? 'ring-1 ring-ink-primary shadow-[0_0_10px_rgba(240,237,232,0.3)]'
+                        ? 'ring-1 ring-ink-primary'
                         : ''
                     }`}
                     key={day.date}

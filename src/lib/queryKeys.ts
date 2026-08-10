@@ -3,7 +3,6 @@ import type { TimeRange } from '@/types'
 export const queryKeys = {
   categories: (userId?: string) => ['categories', userId] as const,
   tasks: (userId?: string) => ['tasks', userId] as const,
-  subtasksRoot: () => ['subtasks'] as const,
   subtasks: (taskId?: string) => ['subtasks', taskId] as const,
   sessions: (userId?: string) => ['sessions', userId] as const,
   sessionsTodaySummary: (userId: string | undefined, dayIso: string) =>

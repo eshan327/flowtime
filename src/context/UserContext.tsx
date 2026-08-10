@@ -1,6 +1,8 @@
-import { createContext, useEffect, useState } from 'react'
+import { createContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
+import { useTimerStore } from '@/features/timer/stores/timerStore'
+import { queryClient } from '@/lib/queryClient'
 import { supabase } from '@/lib/supabaseClient'
 
 interface UserContextValue {
@@ -13,9 +15,25 @@ export const UserContext = createContext<UserContextValue>({ user: null, loading
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const previousUserIdRef = useRef<string | null | undefined>(undefined)
 
   const setSessionUser = (session: { user: User } | null) => {
-    setUser(session?.user ?? null)
+    const nextUser = session?.user ?? null
+    const nextUserId = nextUser?.id ?? null
+    const previousUserId = previousUserIdRef.current
+    const timerOwnerUserId = useTimerStore.getState().ownerUserId
+
+    if (
+      nextUserId === null ||
+      (previousUserId !== undefined && previousUserId !== nextUserId) ||
+      (timerOwnerUserId !== null && timerOwnerUserId !== nextUserId)
+    ) {
+      queryClient.clear()
+      useTimerStore.getState().clearUserState()
+    }
+
+    previousUserIdRef.current = nextUserId
+    setUser(nextUser)
     setLoading(false)
   }
 

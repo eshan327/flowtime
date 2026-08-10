@@ -53,19 +53,17 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-surface-base px-6 text-ink-primary">
-      <section className="w-full max-w-md rounded-2xl border border-surface-border bg-surface-raised p-8">
-        <h1 className="text-5xl font-light tracking-tight">Flowtime</h1>
-        <p className="mt-3 text-sm text-ink-secondary">
-          Focus until you stop, then take the break you earn.
-        </p>
+    <main className="grid min-h-screen place-items-center px-6 text-ink-primary">
+      <section className="w-full max-w-sm rounded-2xl border border-surface-border bg-surface-raised p-8">
+        <h1 className="text-3xl font-medium tracking-tight">Flowtime</h1>
+        <p className="mt-2 text-sm text-ink-secondary">Focus. Rest. Repeat.</p>
 
         <Button
           className="mt-8 w-full gap-2"
           disabled={isSubmitting}
           loading={isSubmitting}
           onClick={handleContinueWithGoogle}
-          variant="outlined"
+          variant="filled"
         >
           {!isSubmitting ? <GoogleIcon /> : null}
           <span>{isSubmitting ? 'Connecting...' : 'Continue with Google'}</span>

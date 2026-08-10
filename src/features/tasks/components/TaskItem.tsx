@@ -14,11 +14,8 @@ import { ColorPicker } from '@/features/tasks/components/ColorPicker'
 import { SubtaskList } from '@/features/tasks/components/SubtaskList'
 import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
 import {
-  canStartDrag,
-  clearDragIntentId,
   getVerticalDropPlacement,
   resolveDraggedId,
-  setDragIntentId,
   TASK_DRAG_MIME,
 } from '@/features/tasks/lib/dragReorder'
 import {
@@ -185,7 +182,7 @@ export function TaskItem({
         }`}
         draggable
         onDragEnd={() => {
-          clearDragIntentId(dragIntentTaskIdRef)
+          dragIntentTaskIdRef.current = null
           setDropPlacement(null)
         }}
         onDragOver={(event) => {
@@ -206,7 +203,7 @@ export function TaskItem({
           setDropPlacement(placement)
         }}
         onDragStart={(event) => {
-          if (!canStartDrag(dragIntentTaskIdRef, task.id)) {
+          if (dragIntentTaskIdRef.current !== task.id) {
             event.preventDefault()
             return
           }
@@ -233,13 +230,13 @@ export function TaskItem({
             aria-label={`Reorder ${task.name}`}
             className="cursor-grab p-0 text-ink-tertiary transition hover:text-ink-secondary"
             onPointerCancel={() => {
-              clearDragIntentId(dragIntentTaskIdRef)
+              dragIntentTaskIdRef.current = null
             }}
             onPointerDown={() => {
-              setDragIntentId(dragIntentTaskIdRef, task.id)
+              dragIntentTaskIdRef.current = task.id
             }}
             onPointerUp={() => {
-              clearDragIntentId(dragIntentTaskIdRef)
+              dragIntentTaskIdRef.current = null
             }}
             size="icon"
             variant="ghost"

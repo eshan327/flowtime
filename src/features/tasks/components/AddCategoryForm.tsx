@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { COLOR_PRESETS } from '@/features/tasks/constants'
+import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
 import { getErrorMessage } from '@/lib/errorMessages'
 
@@ -15,13 +15,13 @@ interface AddCategoryFormProps {
 export function AddCategoryForm({ isOpen, onClose, onCreate }: AddCategoryFormProps) {
   const nameInputRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState('')
-  const [color, setColor] = useState<string>(COLOR_PRESETS[0])
+  const [color, setColor] = useState(DEFAULT_TASK_COLOR)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleClose = useCallback(() => {
     setName('')
-    setColor(COLOR_PRESETS[0])
+    setColor(DEFAULT_TASK_COLOR)
     setIsSubmitting(false)
     setError(null)
     onClose()

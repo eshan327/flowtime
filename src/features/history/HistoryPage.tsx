@@ -18,7 +18,7 @@ import {
 import { useHistorySessions } from '@/features/history/hooks/useHistorySessions'
 import { useCategories } from '@/features/tasks/hooks/useCategories'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
-import { getRangeDatesForAnchor } from '@/lib/dateRange'
+import { formatRangeWindow, getRangeDatesForAnchor } from '@/lib/dateRange'
 import { toEndOfDay, toStartOfDay } from '@/lib/dateMath'
 import { getErrorMessage } from '@/lib/errorMessages'
 import {
@@ -58,28 +58,6 @@ function toParsedDate(value: string) {
   }
 
   return parsed
-}
-
-function formatHistoryWindow(range: TimeRange, from: Date, to: Date) {
-  if (range === 'day') {
-    return from.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
-  if (range === 'week') {
-    const startLabel = from.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    const endLabel = to.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    return `${startLabel} - ${endLabel}`
-  }
-
-  if (range === 'month') {
-    return from.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  }
-
-  return from.toLocaleDateString('en-US', { year: 'numeric' })
 }
 
 function getHistoryWindow(
@@ -145,7 +123,7 @@ function getHistoryWindow(
   return {
     from,
     to,
-    label: formatHistoryWindow(range, from, to),
+    label: formatRangeWindow(range, from, to),
     isValid: true,
     exportRange: range,
   }

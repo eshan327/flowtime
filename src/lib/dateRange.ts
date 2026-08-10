@@ -52,3 +52,23 @@ export function shiftRangeAnchor(range: TimeRange, anchorDate: Date, direction: 
   next.setFullYear(next.getFullYear() + direction)
   return next
 }
+
+export function formatRangeWindow(range: TimeRange, from: Date, to: Date) {
+  if (range === 'day') {
+    return from.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
+
+  if (range === 'week') {
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+    return `${from.toLocaleDateString('en-US', options)} – ${to.toLocaleDateString('en-US', options)}`
+  }
+
+  return from.toLocaleDateString(
+    'en-US',
+    range === 'month' ? { month: 'long', year: 'numeric' } : { year: 'numeric' }
+  )
+}

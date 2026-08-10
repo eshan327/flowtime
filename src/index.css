@@ -4,8 +4,13 @@
 
 @layer base {
   html {
-    background-color: #0f0e0d;
-    color: #f0ede8;
+    background-color: #24273a;
+    color: #cad3f5;
+  }
+
+  body {
+    min-height: 100vh;
+    background: #24273a;
   }
 
   * {
@@ -21,7 +26,7 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #2e2c29;
+    background: #494d64;
     border-radius: 9999px;
   }
 
@@ -52,124 +57,22 @@
     animation: modal-in 150ms ease-out;
   }
 
-  @keyframes focus-blob-main {
-    0% {
-      transform: translate3d(-8%, -6%, 0) scale(0.92) rotate(-3deg);
-      border-radius: 42% 58% 60% 40% / 45% 42% 58% 55%;
-      opacity: 0.56;
-    }
-
-    35% {
-      transform: translate3d(7%, -4%, 0) scale(1.08) rotate(11deg);
-      border-radius: 61% 39% 44% 56% / 56% 42% 58% 44%;
-      opacity: 0.72;
-    }
-
-    70% {
-      transform: translate3d(-5%, 7%, 0) scale(0.96) rotate(-10deg);
-      border-radius: 44% 56% 36% 64% / 38% 61% 39% 62%;
-      opacity: 0.62;
-    }
-
-    100% {
-      transform: translate3d(-8%, -6%, 0) scale(0.92) rotate(-3deg);
-      border-radius: 42% 58% 60% 40% / 45% 42% 58% 55%;
-      opacity: 0.56;
-    }
+  .timer-progress {
+    appearance: none;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: #363a4f;
   }
 
-  @keyframes focus-blob-accent {
-    0% {
-      transform: translate3d(4%, 5%, 0) scale(0.93) rotate(2deg);
-      border-radius: 58% 42% 41% 59% / 61% 48% 52% 39%;
-      opacity: 0.42;
-    }
-
-    45% {
-      transform: translate3d(-5%, -6%, 0) scale(1.08) rotate(-14deg);
-      border-radius: 34% 66% 60% 40% / 43% 64% 36% 57%;
-      opacity: 0.56;
-    }
-
-    100% {
-      transform: translate3d(4%, 5%, 0) scale(0.93) rotate(2deg);
-      border-radius: 58% 42% 41% 59% / 61% 48% 52% 39%;
-      opacity: 0.42;
-    }
+  .timer-progress::-webkit-progress-bar {
+    background: #363a4f;
   }
 
-  .animate-focus-blob-main {
-    animation: focus-blob-main 9.2s ease-in-out infinite;
+  .timer-progress::-webkit-progress-value {
+    background: var(--timer-accent);
   }
 
-  .animate-focus-blob-accent {
-    animation: focus-blob-accent 11.4s ease-in-out infinite;
-  }
-
-  @keyframes focus-blob-halo {
-    0% {
-      transform: scale(0.9);
-      opacity: 0.22;
-    }
-
-    50% {
-      transform: scale(1.12);
-      opacity: 0.44;
-    }
-
-    100% {
-      transform: scale(0.9);
-      opacity: 0.22;
-    }
-  }
-
-  .animate-focus-blob-halo {
-    animation: focus-blob-halo 6.6s ease-in-out infinite;
-  }
-
-  @keyframes liquid-wave-terracotta {
-    0% {
-      transform: translateX(-4%) translateY(0) scaleX(1.01);
-    }
-
-    50% {
-      transform: translateX(4%) translateY(-1px) scaleX(1.03);
-    }
-
-    100% {
-      transform: translateX(-4%) translateY(0) scaleX(1.01);
-    }
-  }
-
-  @keyframes liquid-wave-terracotta-reverse {
-    0% {
-      transform: translateX(3%) translateY(0) scaleX(0.99);
-    }
-
-    50% {
-      transform: translateX(-3%) translateY(1px) scaleX(1.02);
-    }
-
-    100% {
-      transform: translateX(3%) translateY(0) scaleX(0.99);
-    }
-  }
-
-  .animate-liquid-wave-terracotta {
-    animation: liquid-wave-terracotta 7.4s ease-in-out infinite;
-  }
-
-  .animate-liquid-wave-terracotta-reverse {
-    animation: liquid-wave-terracotta-reverse 9.2s ease-in-out infinite;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .animate-focus-blob-main,
-    .animate-focus-blob-accent,
-    .animate-focus-blob-halo,
-    .animate-liquid-wave-terracotta,
-    .animate-liquid-wave-terracotta-reverse {
-      animation: none;
-    }
+  .timer-progress::-moz-progress-bar {
+    background: var(--timer-accent);
   }
 }
