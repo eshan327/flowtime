@@ -36,21 +36,23 @@ export function TimerClock({
 
   return (
     <div
-      className="relative mx-auto flex h-56 w-full max-w-[23rem] flex-col items-center justify-center overflow-hidden rounded-xl border border-surface-border bg-surface-raised px-8"
+      className="mx-auto flex w-full flex-col items-center justify-center py-10 md:py-14"
       style={{ '--timer-accent': accent } as CSSProperties}
     >
-      <p className="relative text-7xl font-light tabular-nums tracking-[-0.06em] text-ink-primary md:text-8xl">
-        {formatClock(seconds)}
-      </p>
-      <p className="relative mt-4 text-xs uppercase tracking-[0.2em] text-ink-tertiary">
+      <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-accent-primary">
         {phase === 'working' ? 'Focus' : phase === 'breaking' ? 'Recover' : 'Ready'}
       </p>
-      <progress
-        aria-label={phase === 'breaking' ? 'Break progress' : 'Focus timer active'}
-        className="timer-progress relative mt-5 h-1.5 w-full"
-        max={phase === 'breaking' ? breakTotal : undefined}
-        value={progress}
-      />
+      <p className="mt-4 text-7xl font-extralight tabular-nums tracking-[-0.07em] text-ink-primary md:text-8xl">
+        {formatClock(seconds)}
+      </p>
+      {phase === 'breaking' ? (
+        <progress
+          aria-label="Break progress"
+          className="timer-progress mt-8 h-1 w-40"
+          max={breakTotal}
+          value={progress}
+        />
+      ) : null}
     </div>
   )
 }

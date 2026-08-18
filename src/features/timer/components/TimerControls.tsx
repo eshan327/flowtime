@@ -18,7 +18,7 @@ export function TimerControls({
 }: TimerControlsProps) {
   if (phase === 'working') {
     return (
-      <Button onClick={onStopWork} variant="outlined">
+      <Button className="min-w-40" onClick={onStopWork} variant="outlined">
         Done, take a break
       </Button>
     )
@@ -26,14 +26,19 @@ export function TimerControls({
 
   if (phase === 'breaking') {
     return (
-      <Button onClick={onSkipBreak} variant="ghost">
+      <Button className="min-w-40" onClick={onSkipBreak} variant="ghost">
         Skip break
       </Button>
     )
   }
 
   return (
-    <Button disabled={!canStartWork} onClick={onStartWork} variant="filled">
+    <Button
+      className="min-w-40"
+      disabled={!canStartWork}
+      onClick={onStartWork}
+      variant={canStartWork ? 'filled' : 'outlined'}
+    >
       Start working
     </Button>
   )

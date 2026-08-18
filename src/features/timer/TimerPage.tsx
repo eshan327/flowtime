@@ -359,42 +359,43 @@ export function TimerPage() {
   })
 
   return (
-    <section className="mx-auto flex min-h-[75vh] w-full max-w-3xl flex-col justify-center">
+    <section className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-xl flex-col justify-center">
       <div className="mx-auto w-full max-w-md">
-        <div className="mb-3 flex justify-end">
+        <div className="flex items-center gap-2">
+          <TaskSelector
+            disabled={focusModeLock && phase === 'working'}
+            isLoading={tasksLoading}
+            onQuickAddTask={async (name) => {
+              const createdTask = await addTask.mutateAsync({ name, categoryId: null })
+              return createdTask.id
+            }}
+            onSelectTask={(taskId) => setSelectedTask(taskId, userId)}
+            selectedTaskId={selectedTaskId}
+            shortcutsBlocked={isSettingsOpen || isSessionEditOpen}
+            shortcutsEnabled={shortcutsEnabled}
+            tasks={selectableTasks}
+          />
+
           <Button
-            className="gap-2"
+            aria-label="Timer settings"
+            className="shrink-0"
             onClick={() => setIsSettingsOpen(true)}
-            size="sm"
+            size="icon"
+            title="Timer settings"
             variant="ghost"
           >
             <Settings2 className="h-4 w-4" />
-            Timer settings
           </Button>
         </div>
 
         {tasksError ? (
-          <p className="mb-3 rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
+          <p className="mt-3 rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
             {getErrorMessage(tasksError, 'Unable to load tasks right now.')} Pick a task before
             starting a timer session.
           </p>
         ) : null}
 
-        <TaskSelector
-          disabled={focusModeLock && phase === 'working'}
-          isLoading={tasksLoading}
-          onQuickAddTask={async (name) => {
-            const createdTask = await addTask.mutateAsync({ name, categoryId: null })
-            return createdTask.id
-          }}
-          onSelectTask={(taskId) => setSelectedTask(taskId, userId)}
-          selectedTaskId={selectedTaskId}
-          shortcutsBlocked={isSettingsOpen || isSessionEditOpen}
-          shortcutsEnabled={shortcutsEnabled}
-          tasks={selectableTasks}
-        />
-
-        <div className="mt-8 flex flex-col items-center">
+        <div className="flex flex-col items-center">
           <TimerClock
             accentColor={selectedTaskColor}
             breakEndAt={breakEndAt}
@@ -402,7 +403,7 @@ export function TimerPage() {
             phase={phase}
             workSeconds={workSeconds}
           />
-          <p className="mt-3 text-sm text-ink-secondary">{secondaryText}</p>
+          <p className="text-sm text-ink-secondary">{secondaryText}</p>
 
           <div className="mt-6">
             <TimerControls
@@ -523,14 +524,14 @@ export function TimerPage() {
       />
 
       {todaySummary.isError ? (
-        <p className="mx-auto mt-4 text-sm text-red-300">Unable to load today's summary.</p>
+        <p className="mx-auto mt-8 text-xs text-red-300">Unable to load today's summary.</p>
       ) : todaySummary.isLoading ? (
-        <div className="mx-auto mt-4 flex items-center gap-2 text-sm text-ink-secondary">
+        <div className="mx-auto mt-8 flex items-center gap-2 text-xs text-ink-tertiary">
           <Spinner />
           Loading today's summary...
         </div>
       ) : (
-        <p className="mx-auto mt-4 text-sm text-ink-secondary">
+        <p className="mx-auto mt-8 text-xs text-ink-tertiary">
           Today: {todaySummary.data?.count ?? 0} sessions ·{' '}
           {formatDuration(todaySummary.data?.totalWorkSeconds ?? 0)}
         </p>

@@ -1,20 +1,37 @@
 import { createContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { User } from '@supabase/supabase-js'
+import type { Session, User } from '@supabase/supabase-js'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
 import { queryClient } from '@/lib/queryClient'
 import { supabase } from '@/lib/supabaseClient'
 
 interface UserContextValue {
   user: User | null
-  loading: boolean
 }
 
-export const UserContext = createContext<UserContextValue>({ user: null, loading: true })
+export const UserContext = createContext<UserContextValue>({ user: null })
+
+let anonymousSessionPromise: Promise<Session | null> | null = null
+
+async function getOrCreateSession() {
+  const { data } = await supabase.auth.getSession()
+  if (data.session) return data.session
+
+  anonymousSessionPromise ??= supabase.auth
+    .signInAnonymously()
+    .then(({ data: anonymousData, error }) => {
+      if (error) throw error
+      return anonymousData.session
+    })
+    .finally(() => {
+      anonymousSessionPromise = null
+    })
+
+  return anonymousSessionPromise
+}
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
   const previousUserIdRef = useRef<string | null | undefined>(undefined)
 
   const setSessionUser = (session: { user: User } | null) => {
@@ -34,17 +51,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     previousUserIdRef.current = nextUserId
     setUser(nextUser)
-    setLoading(false)
   }
 
   useEffect(() => {
     let isActive = true
 
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
+    getOrCreateSession()
+      .then((session) => {
         if (!isActive) return
-        setSessionUser(data.session)
+        setSessionUser(session)
       })
       .catch(() => {
         if (!isActive) return
@@ -53,8 +68,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSessionUser(session)
+
+      if (event === 'SIGNED_OUT') {
+        window.setTimeout(() => {
+          void getOrCreateSession()
+            .then((nextSession) => {
+              if (isActive) setSessionUser(nextSession)
+            })
+            .catch(() => {
+              if (isActive) setSessionUser(null)
+            })
+        }, 0)
+      }
     })
 
     return () => {
@@ -63,5 +90,5 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  return <UserContext.Provider value={{ user, loading }}>{children}</UserContext.Provider>
+  return <UserContext.Provider value={{ user }}>{children}</UserContext.Provider>
 }

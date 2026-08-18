@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { Archive, BarChart3, CheckSquare, Home, LogOut } from 'lucide-react'
+import { Archive, BarChart3, CheckSquare, Home, LogIn, LogOut } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useUser } from '@/hooks/useUser'
@@ -8,10 +8,10 @@ import { supabase } from '@/lib/supabaseClient'
 
 function desktopNavClassName(isActive: boolean) {
   return [
-    'flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors',
+    'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-primary/70',
     isActive
-      ? 'border-surface-border bg-surface-overlay/80 text-ink-primary [&>svg]:text-accent-primary'
-      : 'border-transparent text-ink-secondary hover:bg-surface-overlay/50 hover:text-ink-primary',
+      ? 'bg-surface-overlay/60 text-ink-primary [&>svg]:text-accent-primary'
+      : 'text-ink-secondary hover:bg-surface-overlay/40 hover:text-ink-primary',
   ].join(' ')
 }
 
@@ -48,50 +48,51 @@ function getInitials(label: string) {
   return 'U'
 }
 
-function formatJoinedDate(createdAt: string | null | undefined) {
-  if (typeof createdAt !== 'string' || createdAt.length === 0) {
-    return null
-  }
-
-  const parsed = new Date(createdAt)
-  if (Number.isNaN(parsed.getTime())) {
-    return null
-  }
-
-  return parsed.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
 export function Layout({ children }: { children: ReactNode }) {
   const { user } = useUser()
-  const [isSigningOut, setIsSigningOut] = useState(false)
-  const [signOutError, setSignOutError] = useState<string | null>(null)
+  const [isAuthPending, setIsAuthPending] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const isGuest = !user || user.is_anonymous
 
   const displayName = getUserDisplayName(
     user?.email,
     user?.user_metadata?.full_name ?? user?.user_metadata?.name
   )
   const initials = getInitials(displayName)
-  const joinedDate = formatJoinedDate(user?.created_at)
+
+  const handleSignIn = async () => {
+    setIsAuthPending(true)
+    setAuthError(null)
+
+    const credentials = {
+      provider: 'google' as const,
+      options: { redirectTo: window.location.origin },
+    }
+    const { error } = user?.is_anonymous
+      ? await supabase.auth.linkIdentity(credentials)
+      : await supabase.auth.signInWithOAuth(credentials)
+
+    if (error) {
+      setAuthError(error.message)
+      setIsAuthPending(false)
+    }
+  }
 
   const handleSignOut = async () => {
-    setIsSigningOut(true)
-    setSignOutError(null)
+    setIsAuthPending(true)
+    setAuthError(null)
 
     const { error } = await supabase.auth.signOut()
     if (error) {
-      setSignOutError(error.message)
-      setIsSigningOut(false)
+      setAuthError(error.message)
     }
+    setIsAuthPending(false)
   }
 
   return (
     <div className="min-h-screen text-ink-primary">
-      <div className="mx-auto flex min-h-screen max-w-7xl md:flex-row">
-        <aside className="hidden border-r border-surface-border-subtle bg-surface-raised px-5 py-7 md:sticky md:top-0 md:flex md:h-screen md:w-72 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
+      <div className="flex min-h-screen md:flex-row">
+        <aside className="hidden border-r border-surface-border-subtle bg-surface-raised px-6 py-8 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
           <p className="text-base font-medium tracking-wide text-ink-primary">Flowtime</p>
 
           <nav className="mt-8 grid gap-1.5">
@@ -113,32 +114,31 @@ export function Layout({ children }: { children: ReactNode }) {
             </NavLink>
           </nav>
 
-          <div className="mt-auto border-t border-surface-border/70 pt-6">
-            <div className="mb-3 flex items-center gap-3 rounded-lg border border-surface-border bg-surface-raised px-3 py-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-surface-border bg-surface-overlay text-sm font-medium text-ink-primary">
-                {initials}
-              </span>
+          <div className="mt-auto border-t border-surface-border-subtle pt-5">
+            {!isGuest ? (
+              <div className="flex items-center gap-3 px-2 py-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-overlay text-sm font-medium text-ink-primary">
+                  {initials}
+                </span>
 
-              <div className="min-w-0">
-                <p className="truncate text-sm text-ink-primary">{displayName}</p>
-                <p className="truncate text-xs text-ink-tertiary">{user?.email ?? 'Signed in'}</p>
-                {joinedDate ? (
-                  <p className="truncate text-[11px] text-ink-tertiary">Joined {joinedDate}</p>
-                ) : null}
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-ink-primary">{displayName}</p>
+                  <p className="truncate text-xs text-ink-tertiary">{user?.email ?? 'Signed in'}</p>
+                </div>
               </div>
-            </div>
+            ) : null}
 
             <Button
-              className="w-full gap-2"
-              disabled={isSigningOut}
-              onClick={handleSignOut}
-              variant="outlined"
+              className="mt-1 w-full justify-start gap-3 px-2"
+              disabled={isAuthPending}
+              onClick={isGuest ? handleSignIn : handleSignOut}
+              variant="ghost"
             >
-              <LogOut className="h-4 w-4" />
-              {isSigningOut ? 'Signing out...' : 'Sign out'}
+              {isGuest ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+              {isAuthPending ? 'Please wait...' : isGuest ? 'Sign in' : 'Sign out'}
             </Button>
 
-            {signOutError ? <p className="mt-2 text-sm text-red-300">{signOutError}</p> : null}
+            {authError ? <p className="mt-2 text-sm text-red-300">{authError}</p> : null}
           </div>
         </aside>
 
@@ -146,30 +146,35 @@ export function Layout({ children }: { children: ReactNode }) {
           <header className="flex items-center justify-between border-b border-surface-border-subtle bg-surface-raised px-4 py-3 md:hidden">
             <div>
               <p className="text-sm font-medium tracking-wide text-ink-primary">Flowtime</p>
-              <p className="mt-1 max-w-[200px] truncate text-xs text-ink-secondary">
-                {displayName}
-              </p>
+              {!isGuest ? (
+                <p className="mt-1 max-w-[200px] truncate text-xs text-ink-secondary">
+                  {displayName}
+                </p>
+              ) : null}
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-surface-border bg-surface-overlay text-xs font-medium text-ink-primary">
-                {initials}
-              </span>
+              {!isGuest ? (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-overlay text-xs font-medium text-ink-primary">
+                  {initials}
+                </span>
+              ) : null}
               <Button
-                aria-label="Sign out"
-                disabled={isSigningOut}
-                onClick={handleSignOut}
-                size="icon"
-                variant="outlined"
+                aria-label={isGuest ? 'Sign in' : 'Sign out'}
+                disabled={isAuthPending}
+                onClick={isGuest ? handleSignIn : handleSignOut}
+                size="sm"
+                variant="ghost"
               >
-                <LogOut className="h-4 w-4" />
+                {isGuest ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+                {isAuthPending ? 'Please wait...' : isGuest ? 'Sign in' : 'Sign out'}
               </Button>
             </div>
           </header>
 
-          {signOutError ? (
+          {authError ? (
             <p className="border-b border-surface-border px-4 py-2 text-sm text-red-300 md:hidden">
-              {signOutError}
+              {authError}
             </p>
           ) : null}
 
