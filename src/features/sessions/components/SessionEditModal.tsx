@@ -113,7 +113,7 @@ function SessionEditModalContent({
         <div>
           <p className="mb-2 text-xs uppercase tracking-[0.1em] text-ink-tertiary">Task</p>
           <select
-            className="h-10 w-full rounded-lg border border-surface-border bg-surface-overlay px-3 text-sm text-ink-primary outline-none transition focus:border-ink-secondary"
+            className="h-10 w-full rounded-lg border border-surface-border-subtle bg-surface-sidebar px-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
             onChange={(event) => setTaskId(event.target.value)}
             value={taskId}
           >
@@ -170,7 +170,7 @@ function SessionEditModalContent({
         <div>
           <p className="mb-2 text-xs uppercase tracking-[0.1em] text-ink-tertiary">Notes</p>
           <textarea
-            className="min-h-[96px] w-full rounded-lg border border-surface-border bg-surface-overlay px-3 py-2 text-sm text-ink-primary outline-none transition focus:border-ink-secondary"
+            className="min-h-[96px] w-full rounded-lg border border-surface-border-subtle bg-surface-sidebar px-3 py-2 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
             onChange={(event) => setNotes(event.target.value)}
             placeholder="Optional session notes"
             value={notes}

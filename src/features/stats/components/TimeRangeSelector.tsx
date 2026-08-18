@@ -16,7 +16,7 @@ export function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps) {
   return (
     <select
       aria-label="Focus time range"
-      className="rounded border border-surface-border bg-surface-overlay px-2 py-1 text-sm text-ink-primary"
+      className="rounded-lg border border-surface-border-subtle bg-surface-sidebar px-2 py-1 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
       onChange={(event) => onChange(event.target.value as TimeRange)}
       value={value}
     >

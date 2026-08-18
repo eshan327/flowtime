@@ -175,7 +175,7 @@ export function TaskItem({
       ) : null}
 
       <div
-        className={`border-b border-surface-border-subtle transition-all duration-300 transform-gpu ${
+        className={`border-b border-surface-border-subtle/70 transition-all duration-300 transform-gpu hover:bg-surface-hover/25 ${
           isCompleting || isDeleting
             ? 'max-h-0 -translate-x-2 overflow-hidden opacity-0'
             : 'max-h-[1000px] translate-x-0 opacity-100'
@@ -246,7 +246,7 @@ export function TaskItem({
 
           <Button
             aria-label={`Complete ${task.name}`}
-            className="h-5 w-5 rounded-full p-0 text-ink-tertiary transition hover:text-ink-primary"
+            className="h-5 w-5 rounded-full border-ink-tertiary/70 p-0 text-ink-secondary transition hover:border-accent-primary hover:text-accent-primary"
             onClick={() => {
               setIsCompleting(true)
               window.setTimeout(() => {
@@ -342,11 +342,11 @@ export function TaskItem({
             {isMenuOpen ? (
               <div
                 aria-label={`${task.name} options`}
-                className="absolute right-0 z-20 mt-1 w-52 rounded-lg border border-surface-border bg-surface-overlay p-1 shadow-xl"
+                className="absolute right-0 z-20 mt-1 w-52 rounded-xl border border-surface-border-subtle bg-surface-panel p-1 shadow-xl"
                 role="menu"
               >
                 <Button
-                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
                   onClick={() => {
                     setIsEditing(true)
                     setDraftName(task.name)
@@ -359,7 +359,7 @@ export function TaskItem({
                 </Button>
 
                 <Button
-                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
                   disabled={getStepMovePosition(tasksInGroup, task.id, -1) === null}
                   onClick={() => {
                     void moveTaskByStep(-1)
@@ -372,7 +372,7 @@ export function TaskItem({
                 </Button>
 
                 <Button
-                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
                   disabled={getStepMovePosition(tasksInGroup, task.id, 1) === null}
                   onClick={() => {
                     void moveTaskByStep(1)
@@ -385,7 +385,7 @@ export function TaskItem({
                 </Button>
 
                 <Button
-                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
                   onClick={() => {
                     setShowMoveMenu((current) => !current)
                     setShowColorPicker(false)
@@ -399,7 +399,7 @@ export function TaskItem({
                 {showMoveMenu ? (
                   <div className="mt-1 space-y-1 border-t border-surface-border pt-1">
                     <Button
-                      className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                      className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
                       onClick={() => {
                         void onMoveTask({ id: task.id, categoryId: null })
                         closeMenu()
@@ -412,7 +412,7 @@ export function TaskItem({
 
                     {categories.map((category) => (
                       <Button
-                        className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                        className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
                         key={category.id}
                         onClick={() => {
                           void onMoveTask({ id: task.id, categoryId: category.id })
@@ -433,7 +433,7 @@ export function TaskItem({
 
                 {task.category_id === null ? (
                   <Button
-                    className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-raised hover:text-ink-primary"
+                    className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
                     onClick={() => {
                       setShowColorPicker((current) => !current)
                       setShowMoveMenu(false)
@@ -446,7 +446,7 @@ export function TaskItem({
                 ) : null}
 
                 <Button
-                  className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-raised"
+                  className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-hover"
                   onClick={() => {
                     const confirmed = window.confirm(
                       `Delete ${task.name} permanently? Its session history will be preserved.`

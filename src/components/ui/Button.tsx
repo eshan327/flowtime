@@ -6,11 +6,11 @@ type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'
 
 const variantClasses: Record<ButtonVariant, string> = {
   filled:
-    'border border-accent-primary bg-accent-primary text-[#181926] hover:border-[#b7bdf8] hover:bg-[#b7bdf8] focus-visible:ring-accent-primary',
+    'border border-accent-primary bg-accent-primary text-surface-sidebar hover:border-accent-primary-hover hover:bg-accent-primary-hover focus-visible:ring-accent-primary',
   outlined:
-    'border border-surface-border bg-transparent text-ink-primary hover:border-[#5b6078] hover:bg-surface-overlay focus-visible:ring-accent-primary',
+    'border border-surface-border-subtle bg-transparent text-ink-primary hover:border-surface-border hover:bg-surface-hover focus-visible:ring-accent-primary',
   ghost:
-    'border border-transparent text-ink-secondary hover:bg-surface-overlay hover:text-ink-primary focus-visible:ring-accent-primary',
+    'border border-transparent text-ink-secondary hover:bg-surface-hover hover:text-ink-primary focus-visible:ring-accent-primary',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -42,7 +42,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-base disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center gap-2 rounded-lg transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-hover/30 disabled:text-ink-tertiary/50 disabled:opacity-100',
         variantClasses[variant],
         sizeClasses[size],
         className

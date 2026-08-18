@@ -2,6 +2,7 @@ import { useMemo, type ComponentProps } from 'react'
 import { BarChart3 } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { CHART_GRID_COLOR, CHART_TEXT_COLOR } from '@/lib/colors'
 import { formatDuration } from '@/lib/formatting'
 import type { DaySummary, TimeRange } from '@/types'
 
@@ -84,7 +85,7 @@ function CustomTooltip({ active, payload, label }: DailyTooltipProps) {
     typeof payload[0]?.payload?.totalSeconds === 'number' ? payload[0].payload.totalSeconds : 0
 
   return (
-    <div className="rounded-lg border border-surface-border bg-surface-overlay p-3 text-xs text-ink-secondary">
+    <div className="rounded-lg border border-surface-border-subtle bg-surface-panel p-3 text-xs text-ink-secondary shadow-xl">
       <p className="text-ink-primary">{label}</p>
       <p className="mt-1">Total: {formatDuration(totalSeconds)}</p>
       <div className="mt-2 space-y-1">
@@ -129,7 +130,7 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
     }
   }, [data, range])
 
-  if (data.length === 0) {
+  if (!data.some((day) => day.totalSeconds > 0)) {
     return (
       <EmptyState
         description="Complete a few timer sessions in this range to populate the chart."
@@ -149,7 +150,8 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
           margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
         >
           <CartesianGrid
-            stroke="#494d64"
+            stroke={CHART_GRID_COLOR}
+            strokeOpacity={0.6}
             strokeDasharray="3 3"
             verticalCoordinatesGenerator={verticalCoordinatesGenerator}
           />
@@ -158,12 +160,16 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
             interval={range === 'day' ? 0 : 'preserveStartEnd'}
             minTickGap={range === 'day' ? 0 : 8}
             padding={{ left: 0, right: 0 }}
-            tick={{ fill: '#b8c0e0', fontSize: 11 }}
+            axisLine={false}
+            tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
             tickMargin={8}
+            tickLine={false}
           />
           <YAxis
-            tick={{ fill: '#b8c0e0', fontSize: 11 }}
+            axisLine={false}
+            tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
             tickFormatter={(value) => formatDuration(Math.round(Number(value)))}
+            tickLine={false}
             type="number"
             allowDecimals={false}
             width={56}

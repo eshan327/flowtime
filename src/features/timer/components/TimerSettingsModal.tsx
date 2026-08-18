@@ -27,7 +27,7 @@ function ToggleRow({
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-surface-border bg-surface-base p-3">
+    <label className="flex cursor-pointer items-start justify-between gap-5 py-3">
       <div>
         <p className="text-sm text-ink-primary">{label}</p>
         <p className="mt-1 text-xs text-ink-secondary">{description}</p>
@@ -35,10 +35,11 @@ function ToggleRow({
 
       <input
         checked={checked}
-        className="mt-1 h-4 w-4 accent-ink-primary"
+        className="peer sr-only"
         onChange={(event) => onChange(event.target.checked)}
         type="checkbox"
       />
+      <span className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-surface-hover transition-colors duration-150 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-ink-secondary after:transition-transform after:duration-150 peer-checked:bg-accent-primary peer-checked:after:translate-x-4 peer-checked:after:bg-surface-sidebar peer-focus-visible:ring-2 peer-focus-visible:ring-accent-primary peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface-panel" />
     </label>
   )
 }
@@ -76,32 +77,34 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
     DONE_CHIME_OPTIONS[0]
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Timer Settings">
-      <div className="space-y-4">
-        <Input
-          defaultValue={String(breakDivisor)}
-          label="Break divisor"
-          inputMode="numeric"
-          key={breakDivisor}
-          onBlur={(event) => {
-            commitBreakDivisorInput(event.target.value)
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter') return
-            event.preventDefault()
-            commitBreakDivisorInput(event.currentTarget.value)
-            event.currentTarget.blur()
-          }}
-          step={1}
-          type="text"
-        />
+    <Modal className="max-w-lg" isOpen={isOpen} onClose={onClose} title="Timer Settings">
+      <div>
+        <div className="flex items-end justify-between gap-4 border-b border-surface-border-subtle pb-4">
+          <Input
+            containerClassName="max-w-32"
+            defaultValue={String(breakDivisor)}
+            label="Break divisor"
+            inputMode="numeric"
+            key={breakDivisor}
+            onBlur={(event) => {
+              commitBreakDivisorInput(event.target.value)
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') return
+              event.preventDefault()
+              commitBreakDivisorInput(event.currentTarget.value)
+              event.currentTarget.blur()
+            }}
+            step={1}
+            type="text"
+          />
 
-        <p className="text-xs text-ink-secondary">
-          Break length is calculated as work time / divisor. Use any whole number of 1 or more.
-          Default is {DEFAULT_BREAK_DIVISOR}.
-        </p>
+          <p className="max-w-xs pb-2 text-right text-xs text-ink-secondary">
+            Work time ÷ divisor. Default: {DEFAULT_BREAK_DIVISOR}.
+          </p>
+        </div>
 
-        <div className="space-y-2">
+        <div className="divide-y divide-surface-border-subtle">
           <ToggleRow
             checked={focusModeLock}
             description="Lock task switching while actively working."
@@ -130,7 +133,7 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
             onChange={setChimeEnabled}
           />
 
-          <div className="rounded-lg border border-surface-border bg-surface-base p-3">
+          <div className="py-4">
             <label
               className="block text-xs uppercase tracking-[0.1em] text-ink-tertiary"
               htmlFor="chime-sound"
@@ -138,52 +141,64 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
               Chime sound
             </label>
 
-            <select
-              className="mt-2 w-full rounded-lg border border-surface-border bg-surface-overlay px-3 py-2 text-sm text-ink-primary outline-none transition focus:border-ink-secondary disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={!chimeEnabled}
-              id="chime-sound"
-              onChange={(event) => setChimeId(sanitizeChimeId(event.target.value))}
-              value={selectedChime.id}
-            >
-              {DONE_CHIME_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
+            <div className="mt-2 flex gap-2">
+              <select
+                className="min-w-0 flex-1 rounded-lg border border-surface-border-subtle bg-surface-sidebar px-3 py-2 text-sm text-ink-primary outline-none transition-colors duration-150 focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!chimeEnabled}
+                id="chime-sound"
+                onChange={(event) => setChimeId(sanitizeChimeId(event.target.value))}
+                value={selectedChime.id}
+              >
+                {DONE_CHIME_OPTIONS.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
 
-            <p className="mt-2 text-xs text-ink-secondary">{selectedChime.description}</p>
-
-            <div className="mt-3 flex justify-end">
               <Button
+                disabled={!chimeEnabled}
                 onClick={() => {
                   playDoneChime(selectedChime.id)
                 }}
                 size="sm"
                 variant="outlined"
               >
-                Preview sound
+                Preview
               </Button>
+            </div>
+
+            <p className="mt-2 text-xs text-ink-secondary">{selectedChime.description}</p>
+          </div>
+
+          <div className="py-4">
+            <p className="text-xs uppercase tracking-[0.1em] text-ink-tertiary">Shortcut map</p>
+            <div className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs text-ink-secondary">
+              {[
+                ['S', 'Start work'],
+                ['D', 'Stop work / take break'],
+                ['B', 'Skip break'],
+                ['R', 'Replay last session'],
+                ['T', 'Open task selector'],
+                [',', 'Open timer settings'],
+              ].map(([key, action]) => (
+                <div className="contents" key={key}>
+                  <kbd className="min-w-6 rounded bg-surface-sidebar px-1.5 py-0.5 text-center font-mono text-[11px] text-ink-primary">
+                    {key}
+                  </kbd>
+                  <span>{action}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="rounded-lg border border-surface-border bg-surface-base p-3">
-            <p className="text-xs uppercase tracking-[0.1em] text-ink-tertiary">Shortcut map</p>
-            <p className="mt-2 text-xs text-ink-secondary">S: Start work</p>
-            <p className="text-xs text-ink-secondary">D: Stop work / take break</p>
-            <p className="text-xs text-ink-secondary">B: Skip break</p>
-            <p className="text-xs text-ink-secondary">R: Replay last session</p>
-            <p className="text-xs text-ink-secondary">T: Open task selector</p>
-            <p className="text-xs text-ink-secondary">,: Open timer settings</p>
-          </div>
-
-          <p className="text-xs text-ink-secondary">
+          <p className="py-3 text-xs text-ink-tertiary">
             Defaults: focus lock {DEFAULT_FOCUS_MODE_LOCK ? 'on' : 'off'}, shortcuts{' '}
             {DEFAULT_SHORTCUTS_ENABLED ? 'on' : 'off'}.
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-2 pt-1">
+        <div className="flex items-center justify-between gap-2 border-t border-surface-border-subtle pt-4">
           <Button onClick={resetSettings} variant="ghost">
             Reset defaults
           </Button>

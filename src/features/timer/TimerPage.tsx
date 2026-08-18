@@ -359,8 +359,8 @@ export function TimerPage() {
   })
 
   return (
-    <section className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-xl flex-col justify-center">
-      <div className="mx-auto w-full max-w-md">
+    <section className="flex min-h-[calc(100vh-8rem)] w-full flex-col items-center pt-[clamp(2.5rem,8vh,6rem)]">
+      <div className="w-full max-w-lg">
         <div className="flex items-center gap-2">
           <TaskSelector
             disabled={focusModeLock && phase === 'working'}
@@ -403,7 +403,7 @@ export function TimerPage() {
             phase={phase}
             workSeconds={workSeconds}
           />
-          <p className="text-sm text-ink-secondary">{secondaryText}</p>
+          <p className="text-center text-sm text-ink-secondary">{secondaryText}</p>
 
           <div className="mt-6">
             <TimerControls
@@ -524,14 +524,14 @@ export function TimerPage() {
       />
 
       {todaySummary.isError ? (
-        <p className="mx-auto mt-8 text-xs text-red-300">Unable to load today's summary.</p>
+        <p className="mx-auto mt-6 text-xs text-red-300">Unable to load today's summary.</p>
       ) : todaySummary.isLoading ? (
-        <div className="mx-auto mt-8 flex items-center gap-2 text-xs text-ink-tertiary">
+        <div className="mx-auto mt-6 flex items-center gap-2 text-xs text-ink-tertiary">
           <Spinner />
           Loading today's summary...
         </div>
       ) : (
-        <p className="mx-auto mt-8 text-xs text-ink-tertiary">
+        <p className="mx-auto mt-6 text-xs text-ink-tertiary">
           Today: {todaySummary.data?.count ?? 0} sessions ·{' '}
           {formatDuration(todaySummary.data?.totalWorkSeconds ?? 0)}
         </p>

@@ -25,7 +25,7 @@ export function SessionSummary({
   isDeletingSession = false,
 }: SessionSummaryProps) {
   return (
-    <section className="w-full max-w-md rounded-xl border border-surface-border bg-surface-raised p-4">
+    <section className="w-full max-w-md rounded-xl bg-surface-panel p-4">
       <p className="text-sm text-ink-secondary">Session complete</p>
 
       <p className="mt-2 text-sm text-ink-primary">

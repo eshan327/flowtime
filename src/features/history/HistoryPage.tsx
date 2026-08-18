@@ -334,7 +334,7 @@ export function HistoryPage() {
 
   if (loadError) {
     return (
-      <section className="mx-auto max-w-5xl rounded-xl border border-surface-border bg-surface-raised p-6">
+      <section className="rounded-xl bg-surface-panel p-6">
         <p className="text-sm text-red-300">
           {getErrorMessage(loadError, 'Unable to load history right now.')}
         </p>
@@ -343,21 +343,23 @@ export function HistoryPage() {
   }
 
   return (
-    <section className="mx-auto max-w-5xl space-y-6">
+    <section className="space-y-7">
       <header>
-        <h1 className="text-3xl font-light tracking-tight">Archive</h1>
+        <h1 className="text-2xl font-medium tracking-tight">History</h1>
       </header>
 
-      <section className="border-t border-surface-border-subtle pt-5">
+      <section>
         <p className="text-sm text-ink-secondary">Export range</p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 inline-flex max-w-full flex-wrap gap-0.5 rounded-lg bg-surface-sidebar/70 p-1">
           {HISTORY_RANGE_OPTIONS.map((option) => (
             <Button
-              className="min-w-[74px]"
+              className={`min-w-[74px] ${
+                range === option.value ? 'bg-surface-hover text-ink-primary' : ''
+              }`}
               key={option.value}
               onClick={() => setRange(option.value)}
               size="sm"
-              variant={range === option.value ? 'outlined' : 'ghost'}
+              variant="ghost"
             >
               {option.label}
             </Button>
@@ -390,30 +392,40 @@ export function HistoryPage() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <article className="rounded-xl bg-surface-raised p-4">
-          <p className="text-xs uppercase tracking-[0.08em] text-ink-tertiary">
-            Archived categories
-          </p>
-          <p className="mt-2 text-2xl font-light tabular-nums">
+        <article className="flex min-h-24 flex-col justify-between rounded-xl bg-surface-panel p-4">
+          <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.archivedCategories}
           </p>
-          <p className="mt-1 text-xs text-ink-tertiary">In the selected window</p>
+          <div className="mt-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+              Archived categories
+            </p>
+            <p className="mt-1 text-xs text-ink-tertiary">In the selected window</p>
+          </div>
         </article>
 
-        <article className="rounded-xl bg-surface-raised p-4">
-          <p className="text-xs uppercase tracking-[0.08em] text-ink-tertiary">Completed tasks</p>
-          <p className="mt-2 text-2xl font-light tabular-nums">{archiveSummary.completedTasks}</p>
-          <p className="mt-1 text-xs text-ink-tertiary">In the selected window</p>
-        </article>
-
-        <article className="rounded-xl bg-surface-raised p-4">
-          <p className="text-xs uppercase tracking-[0.08em] text-ink-tertiary">
-            Exportable sessions
+        <article className="flex min-h-24 flex-col justify-between rounded-xl bg-surface-panel p-4">
+          <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
+            {archiveSummary.completedTasks}
           </p>
-          <p className="mt-2 text-2xl font-light tabular-nums">
+          <div className="mt-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+              Completed tasks
+            </p>
+            <p className="mt-1 text-xs text-ink-tertiary">In the selected window</p>
+          </div>
+        </article>
+
+        <article className="flex min-h-24 flex-col justify-between rounded-xl bg-surface-panel p-4">
+          <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.exportableSessions}
           </p>
-          <p className="mt-1 text-xs text-ink-tertiary">In the current export window</p>
+          <div className="mt-3">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+              Exportable sessions
+            </p>
+            <p className="mt-1 text-xs text-ink-tertiary">In the current export window</p>
+          </div>
         </article>
       </section>
 
@@ -424,36 +436,36 @@ export function HistoryPage() {
             <p className="mt-1 text-xs text-ink-tertiary">{historyWindow.label}</p>
           </div>
 
-          {lastDeletedSession ? (
-            <div className="flex items-center gap-2" role="status">
-              <p className="text-xs text-ink-secondary">Session deleted.</p>
-              <Button
-                loading={restoreSession.isPending}
-                onClick={handleUndoSessionDelete}
-                size="sm"
-                variant="outlined"
-              >
-                Undo
-              </Button>
-            </div>
-          ) : null}
+          <div className="w-full max-w-sm">
+            <Input
+              aria-label="Search sessions"
+              onChange={(event) => setSessionSearch(event.target.value)}
+              placeholder="Search task, category, note, or date"
+              type="search"
+              value={sessionSearch}
+            />
+            {sessionSearch.trim() ? (
+              <p className="mt-2 text-xs text-ink-tertiary" role="status">
+                {filteredSessions.length} matching{' '}
+                {filteredSessions.length === 1 ? 'session' : 'sessions'}
+              </p>
+            ) : null}
+          </div>
         </div>
 
-        <div className="mb-4 max-w-sm">
-          <Input
-            label="Search sessions"
-            onChange={(event) => setSessionSearch(event.target.value)}
-            placeholder="Task, category, note, or date"
-            type="search"
-            value={sessionSearch}
-          />
-          {sessionSearch.trim() ? (
-            <p className="mt-2 text-xs text-ink-tertiary" role="status">
-              {filteredSessions.length} matching{' '}
-              {filteredSessions.length === 1 ? 'session' : 'sessions'}
-            </p>
-          ) : null}
-        </div>
+        {lastDeletedSession ? (
+          <div className="mb-4 flex items-center justify-end gap-2" role="status">
+            <p className="text-xs text-ink-secondary">Session deleted.</p>
+            <Button
+              loading={restoreSession.isPending}
+              onClick={handleUndoSessionDelete}
+              size="sm"
+              variant="outlined"
+            >
+              Undo
+            </Button>
+          </div>
+        ) : null}
 
         {sessionsLoading ? (
           <div className="flex items-center gap-2 text-sm text-ink-secondary">

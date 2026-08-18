@@ -18,7 +18,13 @@ export function CompletedTasksSection({
   onDeleteTask,
 }: CompletedTasksSectionProps) {
   return (
-    <section className="border-t border-surface-border-subtle pt-3">
+    <section
+      className={
+        isExpanded
+          ? 'rounded-xl bg-surface-panel p-4'
+          : 'border-t border-surface-border-subtle pt-3'
+      }
+    >
       <Button
         className="h-auto w-full justify-between px-1 text-sm"
         onClick={onToggle}

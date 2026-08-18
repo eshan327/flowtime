@@ -179,7 +179,7 @@ export function TaskList({
           </div>
 
           {section.isArchivedCategory ? (
-            <div className="space-y-2 rounded-lg border border-surface-border/70 bg-surface-base/40 p-3">
+            <div className="space-y-2 rounded-lg bg-surface-panel p-3">
               <p className="text-xs text-ink-tertiary">
                 This category is archived. Restore it or move its active tasks elsewhere.
               </p>
@@ -200,7 +200,7 @@ export function TaskList({
                 ) : null}
 
                 <select
-                  className="h-8 rounded-lg border border-surface-border bg-surface-overlay px-2 text-sm text-ink-primary"
+                  className="h-8 rounded-lg border border-surface-border-subtle bg-surface-sidebar px-2 text-sm text-ink-primary"
                   onChange={(event) => {
                     setArchivedMoveTargets((current) => ({
                       ...current,

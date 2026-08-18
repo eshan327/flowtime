@@ -30,7 +30,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
     <dialog
       aria-labelledby={title ? titleId : undefined}
       className={cn(
-        'animate-modal-in m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-surface-border bg-surface-overlay p-5 text-ink-primary shadow-2xl backdrop:bg-black/50',
+        'animate-modal-in m-auto max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border border-surface-border-subtle bg-surface-panel p-5 text-ink-primary shadow-2xl backdrop:bg-black/55',
         className
       )}
       onCancel={onClose}
@@ -48,13 +48,13 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
       ref={dialogRef}
     >
       {title ? (
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-5 flex items-center justify-between gap-3">
           <h2 className="text-lg font-medium text-ink-primary" id={titleId}>
             {title}
           </h2>
           <button
             aria-label="Close modal"
-            className="rounded p-1 text-ink-tertiary transition hover:text-ink-primary"
+            className="rounded-lg p-1.5 text-ink-tertiary transition-colors duration-150 hover:bg-surface-hover hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
             onClick={onClose}
             type="button"
           >

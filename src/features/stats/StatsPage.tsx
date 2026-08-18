@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { BarChart3, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
 import { BreakdownChart } from '@/features/stats/components/BreakdownChart'
 import { DailyBarChart } from '@/features/stats/components/DailyBarChart'
@@ -44,6 +45,7 @@ export function StatsPage() {
   const canGoPrevious = previousWindow.to.getTime() >= navigationFloor.getTime()
   const canGoNext = selectedWindow.from.getTime() < currentWindow.from.getTime()
   const selectedWindowLabel = formatRangeWindow(range, selectedWindow.from, selectedWindow.to)
+  const hasRangeData = stats.totalSessions > 0
 
   const selectedHeatmapDay = useMemo(() => {
     if (!selectedHeatmapDate) {
@@ -84,7 +86,7 @@ export function StatsPage() {
 
   if (stats.error) {
     return (
-      <section className="mx-auto max-w-5xl rounded-xl border border-surface-border bg-surface-raised p-6">
+      <section className="rounded-xl bg-surface-panel p-6">
         <p className="text-sm text-red-300">
           {getErrorMessage(stats.error, 'Unable to load stats right now.')}
         </p>
@@ -93,9 +95,9 @@ export function StatsPage() {
   }
 
   return (
-    <section className="mx-auto max-w-5xl space-y-6">
+    <section className="space-y-7">
       <header>
-        <h1 className="text-3xl font-light tracking-tight">Insights</h1>
+        <h1 className="text-2xl font-medium tracking-tight">Insights</h1>
       </header>
 
       <SummaryCards
@@ -122,15 +124,10 @@ export function StatsPage() {
 
             <Button
               aria-label="Previous period"
-              className={
-                canGoPrevious
-                  ? 'border border-ink-secondary bg-surface-overlay text-ink-primary hover:border-ink-primary hover:bg-surface-raised disabled:opacity-100'
-                  : 'border border-surface-border/40 bg-transparent text-ink-tertiary/40 disabled:opacity-100'
-              }
               disabled={!canGoPrevious}
               onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, -1))}
               size="icon"
-              variant="ghost"
+              variant="outlined"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -141,22 +138,28 @@ export function StatsPage() {
 
             <Button
               aria-label="Next period"
-              className={
-                canGoNext
-                  ? 'border border-ink-secondary bg-surface-overlay text-ink-primary hover:border-ink-primary hover:bg-surface-raised disabled:opacity-100'
-                  : 'border border-surface-border/40 bg-transparent text-ink-tertiary/40 disabled:opacity-100'
-              }
               disabled={!canGoNext}
               onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, 1))}
               size="icon"
-              variant="ghost"
+              variant="outlined"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        <DailyBarChart data={stats.byDay} range={range} />
+        {hasRangeData ? (
+          <DailyBarChart data={stats.byDay} range={range} />
+        ) : (
+          <div className="rounded-xl bg-surface-panel">
+            <EmptyState
+              className="py-5"
+              description="Complete a timer session or choose another range to see your focus patterns."
+              icon={<BarChart3 className="h-5 w-5" />}
+              title="No sessions in this range"
+            />
+          </div>
+        )}
       </section>
 
       <section>
@@ -170,7 +173,7 @@ export function StatsPage() {
         />
 
         {selectedHeatmapDay ? (
-          <div className="mt-3 rounded-lg border border-surface-border bg-surface-raised/40 p-3">
+          <div className="mt-3 rounded-xl bg-surface-panel p-4">
             <div className="mb-3">
               <div>
                 <p className="text-sm text-ink-primary">
@@ -201,32 +204,36 @@ export function StatsPage() {
         )}
       </section>
 
-      <section>
-        <h2 className="mb-2 text-sm text-ink-secondary">Time by category</h2>
-        <BreakdownChart
-          data={stats.byCategory.map((item) => ({
-            color: item.color,
-            key: item.categoryId ?? item.categoryName,
-            name: item.categoryName,
-            sessionCount: item.sessionCount,
-            totalSeconds: item.totalSeconds,
-          }))}
-        />
-      </section>
+      {hasRangeData ? (
+        <>
+          <section>
+            <h2 className="mb-2 text-sm text-ink-secondary">Time by category</h2>
+            <BreakdownChart
+              data={stats.byCategory.map((item) => ({
+                color: item.color,
+                key: item.categoryId ?? item.categoryName,
+                name: item.categoryName,
+                sessionCount: item.sessionCount,
+                totalSeconds: item.totalSeconds,
+              }))}
+            />
+          </section>
 
-      <section>
-        <h2 className="mb-2 text-sm text-ink-secondary">Time by task</h2>
-        <BreakdownChart
-          data={stats.byTask.map((item) => ({
-            color: item.color,
-            detail: item.categoryName ?? 'Uncategorized',
-            key: item.taskId ?? item.taskName,
-            name: item.taskName,
-            sessionCount: item.sessionCount,
-            totalSeconds: item.totalSeconds,
-          }))}
-        />
-      </section>
+          <section>
+            <h2 className="mb-2 text-sm text-ink-secondary">Time by task</h2>
+            <BreakdownChart
+              data={stats.byTask.map((item) => ({
+                color: item.color,
+                detail: item.categoryName ?? 'Uncategorized',
+                key: item.taskId ?? item.taskName,
+                name: item.taskName,
+                sessionCount: item.sessionCount,
+                totalSeconds: item.totalSeconds,
+              }))}
+            />
+          </section>
+        </>
+      ) : null}
     </section>
   )
 }

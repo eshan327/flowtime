@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Archive, ArrowLeft, ArrowRight, Plus, Settings2, Trash2 } from 'lucide-react'
+import { Archive, ArrowDown, ArrowUp, Plus, Settings2, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
@@ -89,12 +89,12 @@ export function CategoryTabs({
   return (
     <>
       <div className="flex flex-col gap-3 border-b border-surface-border-subtle pb-4 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto rounded-lg bg-surface-sidebar/60 p-1">
           <button
-            className={`shrink-0 rounded-lg px-4 py-2 text-sm transition-colors ${
+            className={`shrink-0 rounded-lg px-3 py-1.5 text-sm transition-colors duration-150 ${
               activeTab === 'all'
-                ? 'bg-surface-overlay text-ink-primary'
-                : 'text-ink-secondary hover:bg-surface-overlay hover:text-ink-primary'
+                ? 'bg-surface-hover text-ink-primary'
+                : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
             }`}
             onClick={() => onChangeTab('all')}
             type="button"
@@ -106,10 +106,10 @@ export function CategoryTabs({
             const isActive = activeTab === category.id
             return (
               <button
-                className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors duration-150 ${
                   isActive
-                    ? 'border-surface-border bg-surface-overlay text-ink-primary'
-                    : 'border-transparent text-ink-secondary hover:bg-surface-overlay hover:text-ink-primary'
+                    ? 'bg-surface-hover text-ink-primary'
+                    : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
                 }`}
                 key={category.id}
                 onClick={() => onChangeTab(category.id)}
@@ -130,8 +130,9 @@ export function CategoryTabs({
             <Settings2 className="h-4 w-4" />
             Organize
           </Button>
-          <Button aria-label="Add category" onClick={onAddCategory} size="icon" variant="outlined">
+          <Button onClick={onAddCategory} size="sm" variant="outlined">
             <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">New category</span>
           </Button>
         </div>
       </div>
@@ -158,14 +159,14 @@ export function CategoryTabs({
             </Button>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
-            <div className="space-y-1 rounded-xl border border-surface-border bg-surface-base/30 p-2">
+          <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr] md:divide-x md:divide-surface-border-subtle">
+            <div className="space-y-1 p-1 md:pr-4">
               {orderedCategories.map((category) => (
                 <button
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${
                     selectedId === category.id
-                      ? 'bg-surface-overlay text-ink-primary'
-                      : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
+                      ? 'bg-surface-hover text-ink-primary'
+                      : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
                   }`}
                   key={category.id}
                   onClick={() => {
@@ -185,7 +186,7 @@ export function CategoryTabs({
             </div>
 
             {selectedCategory ? (
-              <div className="rounded-xl border border-surface-border bg-surface-raised p-4">
+              <div className="p-1 md:pl-4">
                 <Input
                   disabled={isSaving}
                   error={error ?? undefined}
@@ -219,7 +220,7 @@ export function CategoryTabs({
 
                 <div className="mt-5 flex gap-2">
                   <Button
-                    aria-label="Move category earlier"
+                    aria-label="Move category up"
                     disabled={
                       isSaving ||
                       getStepMovePosition(orderedCategories, selectedCategory.id, -1) === null
@@ -228,10 +229,10 @@ export function CategoryTabs({
                     size="sm"
                     variant="outlined"
                   >
-                    <ArrowLeft className="h-4 w-4" /> Earlier
+                    <ArrowUp className="h-4 w-4" /> Move up
                   </Button>
                   <Button
-                    aria-label="Move category later"
+                    aria-label="Move category down"
                     disabled={
                       isSaving ||
                       getStepMovePosition(orderedCategories, selectedCategory.id, 1) === null
@@ -240,11 +241,11 @@ export function CategoryTabs({
                     size="sm"
                     variant="outlined"
                   >
-                    Later <ArrowRight className="h-4 w-4" />
+                    <ArrowDown className="h-4 w-4" /> Move down
                   </Button>
                 </div>
 
-                <div className="mt-6 border-t border-surface-border pt-4">
+                <div className="mt-6 border-t border-surface-border-subtle pt-4">
                   <div className="flex flex-wrap gap-2">
                     <Button
                       disabled={isSaving}

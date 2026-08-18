@@ -172,7 +172,7 @@ export function TaskSelector({
       </Button>
 
       {isOpen && !disabled ? (
-        <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-lg border border-surface-border bg-surface-overlay p-1 shadow-xl">
+        <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-surface-border-subtle bg-surface-panel p-1 shadow-xl">
           {onQuickAddTask ? (
             <div className="mb-2 flex items-center gap-2 border-b border-surface-border px-2 pb-2">
               <Input
@@ -205,8 +205,8 @@ export function TaskSelector({
               aria-selected={selectedTaskId === null}
               className={`flex w-full items-center justify-start gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
                 selectedTaskId === null
-                  ? 'bg-surface-raised text-ink-primary'
-                  : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
+                  ? 'bg-surface-hover text-ink-primary'
+                  : 'text-ink-secondary hover:bg-surface-hover hover:text-ink-primary'
               }`}
               onClick={() => selectAndClose(null)}
               role="option"
@@ -231,8 +231,8 @@ export function TaskSelector({
                       aria-selected={selectedTaskId === task.id}
                       className={`flex w-full items-center justify-start gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
                         selectedTaskId === task.id
-                          ? 'bg-surface-raised text-ink-primary'
-                          : 'text-ink-secondary hover:bg-surface-raised hover:text-ink-primary'
+                          ? 'bg-surface-hover text-ink-primary'
+                          : 'text-ink-secondary hover:bg-surface-hover hover:text-ink-primary'
                       }`}
                       key={task.id}
                       onClick={() => selectAndClose(task.id)}

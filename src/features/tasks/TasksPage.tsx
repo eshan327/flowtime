@@ -70,7 +70,7 @@ export function TasksPage() {
 
   if (error) {
     return (
-      <section className="mx-auto max-w-3xl rounded-xl border border-surface-border bg-surface-raised p-6">
+      <section className="rounded-xl bg-surface-panel p-6">
         <p className="text-sm text-red-300">
           {getErrorMessage(error, 'Unable to load tasks right now.')}
         </p>
@@ -79,9 +79,9 @@ export function TasksPage() {
   }
 
   return (
-    <section className="mx-auto max-w-3xl space-y-5">
+    <section className="space-y-6">
       <header>
-        <h1 className="text-3xl font-light tracking-tight">Task Manager</h1>
+        <h1 className="text-2xl font-medium tracking-tight">Tasks</h1>
       </header>
 
       <CategoryTabs

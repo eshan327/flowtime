@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { DEFAULT_NEUTRAL_COLOR, EMPTY_HEATMAP_COLOR } from '@/lib/colors'
 import { formatDuration } from '@/lib/formatting'
 import type { HeatmapDay } from '@/types'
 
@@ -37,7 +38,7 @@ function hexToRgba(hex: string, alpha: number) {
 
 function getHeatmapColor(day: HeatmapDay) {
   if (!day.dominantColor || day.totalSeconds === 0) {
-    return '#494d64'
+    return EMPTY_HEATMAP_COLOR
   }
 
   const minutes = day.totalSeconds / 60
@@ -145,6 +146,7 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
 
     return { left, top }
   }, [tooltip])
+  const legendColor = data.find((day) => day.dominantColor)?.dominantColor ?? DEFAULT_NEUTRAL_COLOR
 
   const setTooltipFromEvent = (
     event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>,
@@ -222,17 +224,13 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
                 return (
                   <button
                     aria-label={`${day.date}: ${formatDuration(day.totalSeconds)}`}
-                    className={`aspect-square w-full rounded-[2px] outline-none transition-transform hover:scale-105 focus-visible:ring-1 focus-visible:ring-ink-primary ${
+                    className={`aspect-square w-full rounded-[2px] outline-none transition-transform hover:scale-105 focus-visible:ring-1 focus-visible:ring-accent-primary ${
                       hoveredMonthRange &&
                       weekIndex >= hoveredMonthRange.startIndex &&
                       weekIndex <= hoveredMonthRange.endIndex
                         ? 'ring-1 ring-ink-secondary/30'
                         : ''
-                    } ${
-                      selectedDate === day.date
-                        ? 'ring-1 ring-ink-primary'
-                        : ''
-                    }`}
+                    } ${selectedDate === day.date ? 'ring-1 ring-accent-primary' : ''}`}
                     key={day.date}
                     onBlur={() => setTooltip(null)}
                     onClick={() => {
@@ -251,9 +249,27 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
         </div>
       </div>
 
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-3 text-[11px] text-ink-tertiary">
+        <span>Color = top category</span>
+        <span
+          className="flex items-center gap-1"
+          aria-label="Higher intensity means more focus time"
+        >
+          <span>Less</span>
+          {[0.25, 0.5, 0.75, 1].map((opacity) => (
+            <span
+              className="h-2.5 w-2.5 rounded-[2px]"
+              key={opacity}
+              style={{ backgroundColor: legendColor, opacity }}
+            />
+          ))}
+          <span>More focus</span>
+        </span>
+      </div>
+
       {tooltip && tooltipPosition ? (
         <div
-          className="pointer-events-none fixed z-50 max-w-[280px] rounded-lg border border-surface-border bg-surface-overlay p-3 text-xs text-ink-secondary shadow-xl"
+          className="pointer-events-none fixed z-50 max-w-[280px] rounded-lg border border-surface-border-subtle bg-surface-panel p-3 text-xs text-ink-secondary shadow-xl"
           style={{ left: tooltipPosition.left, top: tooltipPosition.top }}
         >
           <p className="text-ink-primary">{tooltip.date}</p>

@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
+import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import type { TimerPhase } from '@/features/timer/stores/timerStore'
 import { formatClock } from '@/lib/formatting'
 
@@ -32,23 +33,23 @@ export function TimerClock({
         ? Math.max(0, Math.ceil((breakEndAt.getTime() - now) / 1000))
         : 0
   const progress = phase === 'breaking' && breakTotal > 0 ? breakTotal - seconds : undefined
-  const accent = accentColor ?? '#8bd5ca'
+  const accent = accentColor ?? DEFAULT_TASK_COLOR
 
   return (
     <div
-      className="mx-auto flex w-full flex-col items-center justify-center py-10 md:py-14"
+      className="mx-auto flex w-full flex-col items-center justify-center py-7 md:py-8"
       style={{ '--timer-accent': accent } as CSSProperties}
     >
       <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-accent-primary">
         {phase === 'working' ? 'Focus' : phase === 'breaking' ? 'Recover' : 'Ready'}
       </p>
-      <p className="mt-4 text-7xl font-extralight tabular-nums tracking-[-0.07em] text-ink-primary md:text-8xl">
+      <p className="mt-3 text-[80px] font-extralight leading-none tabular-nums tracking-[-0.07em] text-ink-primary sm:text-[88px] md:text-[96px]">
         {formatClock(seconds)}
       </p>
       {phase === 'breaking' ? (
         <progress
           aria-label="Break progress"
-          className="timer-progress mt-8 h-1 w-40"
+          className="timer-progress mt-6 h-1 w-40"
           max={breakTotal}
           value={progress}
         />

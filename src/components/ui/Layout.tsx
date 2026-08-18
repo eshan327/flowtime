@@ -8,10 +8,10 @@ import { supabase } from '@/lib/supabaseClient'
 
 function desktopNavClassName(isActive: boolean) {
   return [
-    'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-primary/70',
+    'flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70',
     isActive
-      ? 'bg-surface-overlay/60 text-ink-primary [&>svg]:text-accent-primary'
-      : 'text-ink-secondary hover:bg-surface-overlay/40 hover:text-ink-primary',
+      ? 'border-accent-primary bg-surface-hover/50 text-ink-primary [&>svg]:text-accent-primary'
+      : 'border-transparent text-ink-secondary hover:bg-surface-hover/35 hover:text-ink-primary',
   ].join(' ')
 }
 
@@ -92,10 +92,10 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen text-ink-primary">
       <div className="flex min-h-screen md:flex-row">
-        <aside className="hidden border-r border-surface-border-subtle bg-surface-raised px-6 py-8 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
-          <p className="text-base font-medium tracking-wide text-ink-primary">Flowtime</p>
+        <aside className="hidden border-r border-surface-border-subtle bg-surface-sidebar px-4 py-6 md:sticky md:top-0 md:flex md:h-screen md:w-56 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
+          <p className="px-3 text-base font-semibold tracking-wide text-ink-primary">Flowtime</p>
 
-          <nav className="mt-8 grid gap-1.5">
+          <nav className="mt-7 grid gap-1">
             <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/">
               <Home className="h-4 w-4" />
               Timer
@@ -117,7 +117,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="mt-auto border-t border-surface-border-subtle pt-5">
             {!isGuest ? (
               <div className="flex items-center gap-3 px-2 py-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-overlay text-sm font-medium text-ink-primary">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-hover text-sm font-medium text-ink-primary">
                   {initials}
                 </span>
 
@@ -143,7 +143,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </aside>
 
         <div className="flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
-          <header className="flex items-center justify-between border-b border-surface-border-subtle bg-surface-raised px-4 py-3 md:hidden">
+          <header className="flex items-center justify-between border-b border-surface-border-subtle bg-surface-sidebar px-4 py-3 md:hidden">
             <div>
               <p className="text-sm font-medium tracking-wide text-ink-primary">Flowtime</p>
               {!isGuest ? (
@@ -155,7 +155,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
             <div className="flex items-center gap-2">
               {!isGuest ? (
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-overlay text-xs font-medium text-ink-primary">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-hover text-xs font-medium text-ink-primary">
                   {initials}
                 </span>
               ) : null}
@@ -178,11 +178,13 @@ export function Layout({ children }: { children: ReactNode }) {
             </p>
           ) : null}
 
-          <main className="flex-1 px-4 py-7 md:px-10 md:py-10">{children}</main>
+          <main className="flex-1 px-4 py-7 md:px-8 md:py-9">
+            <div className="mx-auto w-full max-w-5xl">{children}</div>
+          </main>
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-border-subtle bg-surface-raised md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-border-subtle bg-surface-sidebar md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-4">
           <NavLink
             aria-label="Timer"

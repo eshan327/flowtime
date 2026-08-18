@@ -8,8 +8,10 @@ interface SummaryCardsProps {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-surface-raised p-4">
-      <p className="text-[32px] font-normal leading-none tabular-nums text-ink-primary">{value}</p>
+    <div className="flex min-h-24 flex-col justify-between rounded-xl bg-surface-panel p-4">
+      <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight text-ink-primary">
+        {value}
+      </p>
       <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
         {label}
       </p>

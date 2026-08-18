@@ -10,20 +10,21 @@ export default {
       },
       colors: {
         surface: {
-          base: '#24273a',
-          raised: '#1e2030',
-          overlay: '#363a4f',
-          border: '#494d64',
-          'border-subtle': '#363a4f',
+          page: 'rgb(var(--surface-page) / <alpha-value>)',
+          sidebar: 'rgb(var(--surface-sidebar) / <alpha-value>)',
+          panel: 'rgb(var(--surface-panel) / <alpha-value>)',
+          hover: 'rgb(var(--surface-hover) / <alpha-value>)',
+          border: 'rgb(var(--surface-border) / <alpha-value>)',
+          'border-subtle': 'rgb(var(--surface-border-subtle) / <alpha-value>)',
         },
         ink: {
-          primary: '#cad3f5',
-          secondary: '#b8c0e0',
-          tertiary: '#8087a2',
+          primary: 'rgb(var(--ink-primary) / <alpha-value>)',
+          secondary: 'rgb(var(--ink-secondary) / <alpha-value>)',
+          tertiary: 'rgb(var(--ink-tertiary) / <alpha-value>)',
         },
         accent: {
-          primary: '#c6a0f6',
-          secondary: '#8bd5ca',
+          primary: 'rgb(var(--accent-primary) / <alpha-value>)',
+          'primary-hover': 'rgb(var(--accent-primary-hover) / <alpha-value>)',
           warning: '#eed49f',
         },
         red: {
