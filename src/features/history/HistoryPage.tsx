@@ -345,14 +345,10 @@ export function HistoryPage() {
   return (
     <section className="mx-auto max-w-5xl space-y-6">
       <header>
-        <p className="text-xs uppercase tracking-[0.14em] text-ink-tertiary">History</p>
-        <h1 className="mt-2 text-2xl font-light">Archive</h1>
-        <p className="mt-2 max-w-2xl text-sm text-ink-secondary">
-          Review and correct focus sessions, manage archived work, and export any date range.
-        </p>
+        <h1 className="text-3xl font-light tracking-tight">Archive</h1>
       </header>
 
-      <section className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+      <section className="border-t border-surface-border-subtle pt-5">
         <p className="text-sm text-ink-secondary">Export range</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {HISTORY_RANGE_OPTIONS.map((option) => (
@@ -394,30 +390,34 @@ export function HistoryPage() {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <article className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+        <article className="rounded-xl bg-surface-raised p-4">
           <p className="text-xs uppercase tracking-[0.08em] text-ink-tertiary">
             Archived categories
           </p>
-          <p className="mt-2 text-2xl font-light">{archiveSummary.archivedCategories}</p>
+          <p className="mt-2 text-2xl font-light tabular-nums">
+            {archiveSummary.archivedCategories}
+          </p>
           <p className="mt-1 text-xs text-ink-tertiary">In the selected window</p>
         </article>
 
-        <article className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+        <article className="rounded-xl bg-surface-raised p-4">
           <p className="text-xs uppercase tracking-[0.08em] text-ink-tertiary">Completed tasks</p>
-          <p className="mt-2 text-2xl font-light">{archiveSummary.completedTasks}</p>
+          <p className="mt-2 text-2xl font-light tabular-nums">{archiveSummary.completedTasks}</p>
           <p className="mt-1 text-xs text-ink-tertiary">In the selected window</p>
         </article>
 
-        <article className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+        <article className="rounded-xl bg-surface-raised p-4">
           <p className="text-xs uppercase tracking-[0.08em] text-ink-tertiary">
             Exportable sessions
           </p>
-          <p className="mt-2 text-2xl font-light">{archiveSummary.exportableSessions}</p>
+          <p className="mt-2 text-2xl font-light tabular-nums">
+            {archiveSummary.exportableSessions}
+          </p>
           <p className="mt-1 text-xs text-ink-tertiary">In the current export window</p>
         </article>
       </section>
 
-      <section className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+      <section className="border-t border-surface-border-subtle pt-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm text-ink-secondary">Session log</h2>
@@ -474,7 +474,7 @@ export function HistoryPage() {
         )}
       </section>
 
-      <section className="rounded-xl border border-surface-border bg-surface-raised/50 p-4">
+      <section className="border-t border-surface-border-subtle pt-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm text-ink-secondary">Session export</h2>

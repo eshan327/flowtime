@@ -360,7 +360,7 @@ export function TimerPage() {
 
   return (
     <section className="mx-auto flex min-h-[75vh] w-full max-w-3xl flex-col justify-center">
-      <div className="mx-auto w-full max-w-md rounded-2xl border border-surface-border bg-surface-raised p-6">
+      <div className="mx-auto w-full max-w-md">
         <div className="mb-3 flex justify-end">
           <Button
             className="gap-2"

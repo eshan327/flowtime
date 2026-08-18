@@ -175,7 +175,7 @@ export function TaskItem({
       ) : null}
 
       <div
-        className={`rounded-lg border border-surface-border transition-all duration-300 transform-gpu ${
+        className={`border-b border-surface-border-subtle transition-all duration-300 transform-gpu ${
           isCompleting || isDeleting
             ? 'max-h-0 -translate-x-2 overflow-hidden opacity-0'
             : 'max-h-[1000px] translate-x-0 opacity-100'

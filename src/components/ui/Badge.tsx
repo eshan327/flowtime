@@ -11,7 +11,7 @@ export function Badge({ color, label, className }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border border-surface-border bg-surface-raised px-2.5 py-1 text-xs text-ink-secondary',
+        'inline-flex items-center gap-2 text-xs font-medium text-ink-secondary',
         className
       )}
     >

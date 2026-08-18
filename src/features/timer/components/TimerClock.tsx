@@ -32,14 +32,14 @@ export function TimerClock({
         ? Math.max(0, Math.ceil((breakEndAt.getTime() - now) / 1000))
         : 0
   const progress = phase === 'breaking' && breakTotal > 0 ? breakTotal - seconds : undefined
-  const accent = accentColor ?? '#69b7aa'
+  const accent = accentColor ?? '#8bd5ca'
 
   return (
     <div
-      className="relative mx-auto flex h-56 w-full max-w-[23rem] flex-col items-center justify-center overflow-hidden rounded-2xl border border-surface-border bg-surface-raised px-8"
+      className="relative mx-auto flex h-56 w-full max-w-[23rem] flex-col items-center justify-center overflow-hidden rounded-xl border border-surface-border bg-surface-raised px-8"
       style={{ '--timer-accent': accent } as CSSProperties}
     >
-      <p className="relative text-7xl font-light tracking-[-0.06em] text-ink-primary md:text-8xl">
+      <p className="relative text-7xl font-light tabular-nums tracking-[-0.06em] text-ink-primary md:text-8xl">
         {formatClock(seconds)}
       </p>
       <p className="relative mt-4 text-xs uppercase tracking-[0.2em] text-ink-tertiary">

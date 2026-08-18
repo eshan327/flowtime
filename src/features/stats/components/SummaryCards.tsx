@@ -9,7 +9,7 @@ interface SummaryCardsProps {
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl bg-surface-raised p-4">
-      <p className="text-[32px] font-normal leading-none text-ink-primary">{value}</p>
+      <p className="text-[32px] font-normal leading-none tabular-nums text-ink-primary">{value}</p>
       <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
         {label}
       </p>

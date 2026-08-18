@@ -54,12 +54,11 @@ export function LoginPage() {
 
   return (
     <main className="grid min-h-screen place-items-center px-6 text-ink-primary">
-      <section className="w-full max-w-sm rounded-2xl border border-surface-border bg-surface-raised p-8">
+      <section className="w-full max-w-sm rounded-xl border border-surface-border bg-surface-raised p-8">
         <h1 className="text-3xl font-medium tracking-tight">Flowtime</h1>
-        <p className="mt-2 text-sm text-ink-secondary">Focus. Rest. Repeat.</p>
 
         <Button
-          className="mt-8 w-full gap-2"
+          className="mt-6 w-full gap-2"
           disabled={isSubmitting}
           loading={isSubmitting}
           onClick={handleContinueWithGoogle}

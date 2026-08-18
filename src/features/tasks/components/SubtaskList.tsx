@@ -128,7 +128,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-surface-border bg-surface-base p-3">
+    <div className="space-y-2 p-1">
       {isLoading && subtasks.length === 0 ? (
         <p className="text-sm text-ink-tertiary">Loading subtasks...</p>
       ) : null}
@@ -144,7 +144,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
             ) : null}
 
             <div
-              className={`rounded-md border border-surface-border transition-all duration-300 transform-gpu ${
+              className={`border-b border-surface-border-subtle transition-all duration-300 transform-gpu ${
                 isCompleting
                   ? 'max-h-0 -translate-x-2 overflow-hidden opacity-0'
                   : 'max-h-20 translate-x-0 opacity-100'

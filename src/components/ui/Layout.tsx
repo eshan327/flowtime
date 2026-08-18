@@ -8,17 +8,17 @@ import { supabase } from '@/lib/supabaseClient'
 
 function desktopNavClassName(isActive: boolean) {
   return [
-    'flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition',
+    'flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors',
     isActive
-      ? 'border-surface-border bg-surface-overlay text-ink-primary shadow-[inset_3px_0_0_#c6a0f6]'
-      : 'border-transparent text-ink-secondary hover:bg-surface-overlay/70 hover:text-ink-primary',
+      ? 'border-surface-border bg-surface-overlay/80 text-ink-primary [&>svg]:text-accent-primary'
+      : 'border-transparent text-ink-secondary hover:bg-surface-overlay/50 hover:text-ink-primary',
   ].join(' ')
 }
 
 function mobileNavClassName(isActive: boolean) {
   return [
-    'flex flex-col items-center justify-center py-2 text-xs transition',
-    isActive ? 'text-ink-primary' : 'text-ink-tertiary hover:text-ink-secondary',
+    'flex flex-col items-center justify-center py-2 text-xs transition-colors',
+    isActive ? 'text-accent-primary' : 'text-ink-tertiary hover:text-ink-secondary',
   ].join(' ')
 }
 
@@ -91,7 +91,7 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen text-ink-primary">
       <div className="mx-auto flex min-h-screen max-w-7xl md:flex-row">
-        <aside className="hidden border-r border-surface-border/70 bg-surface-raised/45 px-5 py-7 backdrop-blur-xl md:sticky md:top-0 md:flex md:h-screen md:w-72 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
+        <aside className="hidden border-r border-surface-border-subtle bg-surface-raised px-5 py-7 md:sticky md:top-0 md:flex md:h-screen md:w-72 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
           <p className="text-base font-medium tracking-wide text-ink-primary">Flowtime</p>
 
           <nav className="mt-8 grid gap-1.5">
@@ -143,7 +143,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </aside>
 
         <div className="flex min-h-screen flex-1 flex-col pb-16 md:pb-0">
-          <header className="flex items-center justify-between border-b border-surface-border/70 bg-surface-raised/55 px-4 py-3 backdrop-blur-xl md:hidden">
+          <header className="flex items-center justify-between border-b border-surface-border-subtle bg-surface-raised px-4 py-3 md:hidden">
             <div>
               <p className="text-sm font-medium tracking-wide text-ink-primary">Flowtime</p>
               <p className="mt-1 max-w-[200px] truncate text-xs text-ink-secondary">
@@ -177,7 +177,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-border bg-surface-raised/90 backdrop-blur-xl md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-border-subtle bg-surface-raised md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-4">
           <NavLink
             aria-label="Timer"

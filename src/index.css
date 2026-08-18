@@ -6,15 +6,23 @@
   html {
     background-color: #24273a;
     color: #cad3f5;
+    color-scheme: dark;
   }
 
   body {
     min-height: 100vh;
     background: #24273a;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
   * {
     font-family: system-ui, sans-serif;
+  }
+
+  ::selection {
+    background: #c6a0f6;
+    color: #181926;
   }
 
   ::-webkit-scrollbar {

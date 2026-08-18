@@ -81,8 +81,7 @@ export function TasksPage() {
   return (
     <section className="mx-auto max-w-3xl space-y-5">
       <header>
-        <p className="text-xs uppercase tracking-[0.14em] text-ink-tertiary">Tasks</p>
-        <h1 className="mt-2 text-2xl font-light">Task Manager</h1>
+        <h1 className="text-3xl font-light tracking-tight">Task Manager</h1>
       </header>
 
       <CategoryTabs

@@ -88,10 +88,10 @@ export function CategoryTabs({
 
   return (
     <>
-      <div className="flex flex-col gap-3 rounded-2xl border border-surface-border bg-surface-raised p-2 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 border-b border-surface-border-subtle pb-4 sm:flex-row sm:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           <button
-            className={`shrink-0 rounded-xl px-4 py-2 text-sm transition ${
+            className={`shrink-0 rounded-lg px-4 py-2 text-sm transition-colors ${
               activeTab === 'all'
                 ? 'bg-surface-overlay text-ink-primary'
                 : 'text-ink-secondary hover:bg-surface-overlay hover:text-ink-primary'
@@ -106,7 +106,7 @@ export function CategoryTabs({
             const isActive = activeTab === category.id
             return (
               <button
-                className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
+                className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
                   isActive
                     ? 'border-surface-border bg-surface-overlay text-ink-primary'
                     : 'border-transparent text-ink-secondary hover:bg-surface-overlay hover:text-ink-primary'
@@ -125,7 +125,7 @@ export function CategoryTabs({
           })}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 border-t border-surface-border/70 pt-2 sm:border-l sm:border-t-0 sm:pl-2 sm:pt-0">
+        <div className="flex shrink-0 items-center gap-1 sm:border-l sm:border-surface-border-subtle sm:pl-3">
           <Button onClick={openManager} size="sm" variant="ghost">
             <Settings2 className="h-4 w-4" />
             Organize

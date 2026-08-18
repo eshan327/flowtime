@@ -95,8 +95,7 @@ export function StatsPage() {
   return (
     <section className="mx-auto max-w-5xl space-y-6">
       <header>
-        <p className="text-xs uppercase tracking-[0.14em] text-ink-tertiary">Stats</p>
-        <h1 className="mt-2 text-2xl font-light">Insights</h1>
+        <h1 className="text-3xl font-light tracking-tight">Insights</h1>
       </header>
 
       <SummaryCards

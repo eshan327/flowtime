@@ -18,7 +18,7 @@ export function ArchivedCategoriesSection({
   onDeleteCategory,
 }: ArchivedCategoriesSectionProps) {
   return (
-    <section className="rounded-xl border border-surface-border bg-surface-raised/60 p-3">
+    <section className="border-t border-surface-border-subtle pt-3">
       <Button
         className="h-auto w-full justify-between px-1 text-sm"
         onClick={onToggle}
@@ -36,7 +36,7 @@ export function ArchivedCategoriesSection({
           <div className="mt-2 space-y-2">
             {categories.map((category) => (
               <div
-                className="flex items-center justify-between gap-2 rounded-lg border border-surface-border px-3 py-2"
+                className="flex items-center justify-between gap-2 border-b border-surface-border-subtle px-1 py-3"
                 key={category.id}
               >
                 <div className="flex min-w-0 items-center gap-2">
