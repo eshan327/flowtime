@@ -163,13 +163,15 @@ export function StatsPage() {
 
       <section>
         <h2 className="mb-2 text-sm text-ink-secondary">Activity heatmap</h2>
-        <HeatmapGrid
-          data={stats.allDays}
-          onSelectDay={(day) => {
-            setSelectedHeatmapDate((current) => (current === day.date ? null : day.date))
-          }}
-          selectedDate={selectedHeatmapDate}
-        />
+        <div className="rounded-xl bg-surface-panel p-4">
+          <HeatmapGrid
+            data={stats.allDays}
+            onSelectDay={(day) => {
+              setSelectedHeatmapDate((current) => (current === day.date ? null : day.date))
+            }}
+            selectedDate={selectedHeatmapDate}
+          />
+        </div>
 
         {selectedHeatmapDay ? (
           <div className="mt-3 rounded-xl bg-surface-panel p-4">
@@ -197,8 +199,8 @@ export function StatsPage() {
       </section>
 
       {hasRangeData ? (
-        <>
-          <section>
+        <div className="grid items-start gap-5 lg:grid-cols-2">
+          <section className="rounded-xl bg-surface-panel p-4">
             <h2 className="mb-2 text-sm text-ink-secondary">Time by category</h2>
             <BreakdownChart
               data={stats.byCategory.map((item) => ({
@@ -211,7 +213,7 @@ export function StatsPage() {
             />
           </section>
 
-          <section>
+          <section className="rounded-xl bg-surface-panel p-4">
             <h2 className="mb-2 text-sm text-ink-secondary">Time by task</h2>
             <BreakdownChart
               data={stats.byTask.map((item) => ({
@@ -224,7 +226,7 @@ export function StatsPage() {
               }))}
             />
           </section>
-        </>
+        </div>
       ) : null}
     </section>
   )

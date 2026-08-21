@@ -21,12 +21,6 @@ interface HeatmapTooltipState {
   y: number
 }
 
-interface MonthRange {
-  label: string
-  startIndex: number
-  endIndex: number
-}
-
 function hexToRgba(hex: string, alpha: number) {
   const sanitized = hex.replace('#', '')
   const r = Number.parseInt(sanitized.slice(0, 2), 16)
@@ -59,7 +53,6 @@ function getHeatmapColor(day: HeatmapDay) {
 
 export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapGridProps) {
   const [tooltip, setTooltip] = useState<HeatmapTooltipState | null>(null)
-  const [hoveredMonthRange, setHoveredMonthRange] = useState<MonthRange | null>(null)
 
   const { weeks, monthRanges } = useMemo(() => {
     const map = new Map(data.map((entry) => [entry.date, entry]))
@@ -109,14 +102,10 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
       nextWeeks.push(weekDays)
     }
 
-    const ranges = labels.map((entry, index) => {
-      const next = labels[index + 1]
-      return {
-        label: entry.label,
-        startIndex: entry.index,
-        endIndex: next ? next.index - 1 : 51,
-      }
-    })
+    const ranges = labels.map((entry) => ({
+      label: entry.label,
+      startIndex: entry.index,
+    }))
 
     return { weeks: nextWeeks, monthRanges: ranges }
   }, [data])
@@ -177,75 +166,70 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-[20px_1fr] gap-2">
-        <div />
+      <div className="-mx-1 min-w-0 overflow-x-auto px-1 pb-1">
+        <div className="grid min-w-[42rem] grid-cols-[20px_1fr] gap-2">
+          <div />
 
-        <div className="relative min-h-4">
-          {monthRanges.map((month) => (
-            <button
-              className="absolute top-0 whitespace-nowrap text-[10px] text-ink-tertiary transition hover:text-ink-primary"
-              key={`${month.label}-${month.startIndex}`}
-              onBlur={() => setHoveredMonthRange(null)}
-              onFocus={() => setHoveredMonthRange(month)}
-              onMouseEnter={() => setHoveredMonthRange(month)}
-              onMouseLeave={() => setHoveredMonthRange(null)}
-              style={{ left: `${(month.startIndex / 52) * 100}%` }}
-              type="button"
-            >
-              {month.label}
-            </button>
-          ))}
-        </div>
+          <div className="relative min-h-4">
+            {monthRanges.map((month) => (
+              <span
+                className="absolute top-0 whitespace-nowrap text-[10px] text-ink-tertiary"
+                key={`${month.label}-${month.startIndex}`}
+                style={{ left: `${(month.startIndex / 52) * 100}%` }}
+              >
+                {month.label}
+              </span>
+            ))}
+          </div>
 
-        <div className="grid grid-rows-7 gap-[2px] text-[10px] text-ink-tertiary">
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, index) => (
-            <div className="flex items-center" key={`${label}-${index}`}>
-              {label}
-            </div>
-          ))}
-        </div>
+          <div className="grid grid-rows-7 gap-[2px] text-[10px] text-ink-tertiary">
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, index) => (
+              <div className="flex items-center" key={`${label}-${index}`}>
+                {label}
+              </div>
+            ))}
+          </div>
 
-        <div
-          className="grid gap-[2px]"
-          style={{ gridTemplateColumns: 'repeat(52, minmax(0, 1fr))' }}
-        >
-          {weeks.map((week, weekIndex) => (
-            <div className="grid grid-rows-7 gap-[2px]" key={`week-${weekIndex}`}>
-              {week.map((day) => {
-                if (day.isFuture) {
+          <div
+            className="grid gap-[2px]"
+            style={{ gridTemplateColumns: 'repeat(52, minmax(0, 1fr))' }}
+          >
+            {weeks.map((week, weekIndex) => (
+              <div className="grid grid-rows-7 gap-[2px]" key={`week-${weekIndex}`}>
+                {week.map((day) => {
+                  if (day.isFuture) {
+                    return (
+                      <div
+                        className="aspect-square w-full rounded-[2px] bg-transparent"
+                        key={day.date}
+                      />
+                    )
+                  }
+
                   return (
-                    <div
-                      className="aspect-square w-full rounded-[2px] bg-transparent"
+                    <button
+                      aria-label={`${day.date}: ${formatDuration(day.totalSeconds)}`}
+                      className={`aspect-square w-full rounded-[2px] outline-none transition-transform hover:scale-105 focus-visible:ring-1 focus-visible:ring-accent-primary ${
+                        selectedDate === day.date
+                          ? 'ring-2 ring-accent-primary ring-offset-1 ring-offset-surface-panel'
+                          : ''
+                      }`}
                       key={day.date}
+                      onBlur={() => setTooltip(null)}
+                      onClick={() => {
+                        onSelectDay?.(day)
+                      }}
+                      onFocus={(event) => setTooltipFromEvent(event, day)}
+                      onMouseEnter={(event) => setTooltipFromEvent(event, day)}
+                      onMouseLeave={() => setTooltip(null)}
+                      style={{ backgroundColor: getHeatmapColor(day) }}
+                      type="button"
                     />
                   )
-                }
-
-                return (
-                  <button
-                    aria-label={`${day.date}: ${formatDuration(day.totalSeconds)}`}
-                    className={`aspect-square w-full rounded-[2px] outline-none transition-transform hover:scale-105 focus-visible:ring-1 focus-visible:ring-accent-primary ${
-                      hoveredMonthRange &&
-                      weekIndex >= hoveredMonthRange.startIndex &&
-                      weekIndex <= hoveredMonthRange.endIndex
-                        ? 'ring-1 ring-ink-secondary/30'
-                        : ''
-                    } ${selectedDate === day.date ? 'ring-1 ring-accent-primary' : ''}`}
-                    key={day.date}
-                    onBlur={() => setTooltip(null)}
-                    onClick={() => {
-                      onSelectDay?.(day)
-                    }}
-                    onFocus={(event) => setTooltipFromEvent(event, day)}
-                    onMouseEnter={(event) => setTooltipFromEvent(event, day)}
-                    onMouseLeave={() => setTooltip(null)}
-                    style={{ backgroundColor: getHeatmapColor(day) }}
-                    type="button"
-                  />
-                )
-              })}
-            </div>
-          ))}
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

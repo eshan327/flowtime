@@ -8,11 +8,11 @@ interface SummaryCardsProps {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-h-24 flex-col justify-between rounded-xl bg-surface-panel p-4">
-      <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight text-ink-primary">
+    <div className="min-w-0 px-3 py-4 sm:px-5">
+      <p className="truncate text-[28px] font-medium leading-none tabular-nums tracking-tight text-ink-primary sm:text-[32px]">
         {value}
       </p>
-      <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+      <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.08em] text-ink-tertiary sm:text-[11px]">
         {label}
       </p>
     </div>
@@ -25,7 +25,7 @@ export function SummaryCards({
   currentStreak,
 }: SummaryCardsProps) {
   return (
-    <div className="grid gap-3 md:grid-cols-3">
+    <div className="grid grid-cols-3 divide-x divide-surface-border-subtle overflow-hidden rounded-xl bg-surface-panel">
       <SummaryCard label="Sessions" value={String(totalSessions)} />
       <SummaryCard label="Focus Time" value={formatDuration(totalWorkSeconds)} />
       <SummaryCard

@@ -1,5 +1,14 @@
 import { BarChart3 } from 'lucide-react'
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  Bar,
+  BarChart,
+  Cell,
+  LabelList,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CHART_TEXT_COLOR } from '@/lib/colors'
 import { formatDuration } from '@/lib/formatting'
@@ -42,23 +51,26 @@ export function BreakdownChart({ data }: BreakdownChartProps) {
     return <EmptyState icon={<BarChart3 className="h-5 w-5" />} title="No focus data yet" />
   }
 
-  const chartData = data.map((item) => ({
-    ...item,
-    hours: Number((item.totalSeconds / 3600).toFixed(2)),
-  }))
-
   return (
-    <div className="w-full" style={{ height: Math.max(180, data.length * 40) }}>
+    <div
+      aria-label="Focus time ranking"
+      className="w-full"
+      role="group"
+      style={{ height: Math.max(180, data.length * 40) }}
+    >
+      <ul className="sr-only">
+        {data.map((item) => (
+          <li key={item.key}>
+            {item.name}: {formatDuration(item.totalSeconds)}, {item.sessionCount} sessions
+          </li>
+        ))}
+      </ul>
       <ResponsiveContainer>
-        <BarChart
-          data={chartData}
-          layout="vertical"
-          margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
-        >
+        <BarChart data={data} layout="vertical" margin={{ top: 8, right: 72, left: 8, bottom: 8 }}>
           <XAxis
             axisLine={false}
             tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
-            tickFormatter={(value) => `${value}h`}
+            tickFormatter={(value) => formatDuration(Math.round(Number(value)))}
             tickLine={false}
             type="number"
           />
@@ -71,10 +83,17 @@ export function BreakdownChart({ data }: BreakdownChartProps) {
             width={120}
           />
           <Tooltip content={<BreakdownTooltip />} />
-          <Bar dataKey="hours" radius={[0, 6, 6, 0]}>
-            {chartData.map((entry) => (
+          <Bar dataKey="totalSeconds" radius={[0, 6, 6, 0]}>
+            {data.map((entry) => (
               <Cell fill={entry.color} key={entry.key} />
             ))}
+            <LabelList
+              dataKey="totalSeconds"
+              fill={CHART_TEXT_COLOR}
+              fontSize={11}
+              formatter={(value) => formatDuration(Math.round(Number(value)))}
+              position="right"
+            />
           </Bar>
         </BarChart>
       </ResponsiveContainer>

@@ -135,52 +135,73 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
   }
 
   return (
-    <div className="h-[220px] w-full">
-      <ResponsiveContainer>
-        <BarChart
-          barCategoryGap="0%"
-          barGap={0}
-          data={chartData}
-          margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid
-            stroke={CHART_GRID_COLOR}
-            strokeOpacity={0.6}
-            strokeDasharray="3 3"
-            verticalCoordinatesGenerator={verticalCoordinatesGenerator}
-          />
-          <XAxis
-            dataKey="label"
-            interval={range === 'day' ? 0 : 'preserveStartEnd'}
-            minTickGap={range === 'day' ? 0 : 8}
-            padding={{ left: 0, right: 0 }}
-            axisLine={false}
-            tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
-            tickMargin={8}
-            tickLine={false}
-          />
-          <YAxis
-            axisLine={false}
-            tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
-            tickFormatter={(value) => formatDuration(Math.round(Number(value)))}
-            tickLine={false}
-            type="number"
-            allowDecimals={false}
-            width={56}
-          />
-          <Tooltip content={<CustomTooltip />} />
-
-          {categories.map((category) => (
-            <Bar
-              dataKey={category.key}
-              fill={category.color}
-              key={category.key}
-              name={category.name}
-              stackId="total"
+    <div className="rounded-xl bg-surface-panel p-4">
+      <ul aria-label="Category colors" className="mb-3 flex flex-wrap gap-x-4 gap-y-2">
+        {categories.map((category) => (
+          <li className="flex items-center gap-1.5 text-xs text-ink-secondary" key={category.key}>
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: category.color }}
             />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
+            {category.name}
+          </li>
+        ))}
+      </ul>
+
+      <div aria-label={`Focus time by ${range}`} className="h-[220px] w-full" role="group">
+        <p className="sr-only">
+          {data
+            .filter((day) => day.totalSeconds > 0)
+            .map((day) => `${formatLabel(day.date, range)}: ${formatDuration(day.totalSeconds)}`)
+            .join(', ')}
+        </p>
+        <ResponsiveContainer>
+          <BarChart
+            barCategoryGap="0%"
+            barGap={0}
+            data={chartData}
+            margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
+          >
+            <CartesianGrid
+              stroke={CHART_GRID_COLOR}
+              strokeOpacity={0.6}
+              strokeDasharray="3 3"
+              verticalCoordinatesGenerator={verticalCoordinatesGenerator}
+            />
+            <XAxis
+              dataKey="label"
+              interval={range === 'day' ? 2 : 'preserveStartEnd'}
+              minTickGap={8}
+              padding={{ left: 0, right: 0 }}
+              axisLine={false}
+              tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
+              tickMargin={8}
+              tickLine={false}
+            />
+            <YAxis
+              axisLine={false}
+              tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
+              tickFormatter={(value) => formatDuration(Math.round(Number(value)))}
+              tickLine={false}
+              type="number"
+              allowDecimals={false}
+              width={56}
+            />
+            <Tooltip content={<CustomTooltip />} />
+
+            {categories.map((category) => (
+              <Bar
+                dataKey={category.key}
+                fill={category.color}
+                key={category.key}
+                name={category.name}
+                stackId="total"
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   )
 }
