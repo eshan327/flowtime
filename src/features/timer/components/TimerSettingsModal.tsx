@@ -2,13 +2,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { DONE_CHIME_OPTIONS, playDoneChime } from '@/lib/audio'
-import {
-  DEFAULT_BREAK_DIVISOR,
-  DEFAULT_FOCUS_MODE_LOCK,
-  DEFAULT_SHORTCUTS_ENABLED,
-  sanitizeChimeId,
-  useTimerSettingsStore,
-} from '@/features/timer/stores/timerSettingsStore'
+import { sanitizeChimeId, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 
 interface TimerSettingsModalProps {
   isOpen: boolean
@@ -18,20 +12,15 @@ interface TimerSettingsModalProps {
 function ToggleRow({
   checked,
   label,
-  description,
   onChange,
 }: {
   checked: boolean
   label: string
-  description: string
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="flex cursor-pointer items-start justify-between gap-5 py-3">
-      <div>
-        <p className="text-sm text-ink-primary">{label}</p>
-        <p className="mt-1 text-xs text-ink-secondary">{description}</p>
-      </div>
+    <label className="flex cursor-pointer items-center justify-between gap-5 py-3.5">
+      <span className="text-sm text-ink-primary">{label}</span>
 
       <input
         checked={checked}
@@ -39,7 +28,7 @@ function ToggleRow({
         onChange={(event) => onChange(event.target.checked)}
         type="checkbox"
       />
-      <span className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-surface-hover transition-colors duration-150 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-ink-secondary after:transition-transform after:duration-150 peer-checked:bg-accent-primary peer-checked:after:translate-x-4 peer-checked:after:bg-surface-sidebar peer-focus-visible:ring-2 peer-focus-visible:ring-accent-primary peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface-panel" />
+      <span className="relative h-5 w-9 shrink-0 rounded-full bg-surface-hover transition-colors duration-150 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-ink-secondary after:transition-transform after:duration-150 peer-checked:bg-accent-primary peer-checked:after:translate-x-4 peer-checked:after:bg-surface-sidebar peer-focus-visible:ring-2 peer-focus-visible:ring-accent-primary peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface-panel" />
     </label>
   )
 }
@@ -77,13 +66,13 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
     DONE_CHIME_OPTIONS[0]
 
   return (
-    <Modal className="max-w-lg" isOpen={isOpen} onClose={onClose} title="Timer Settings">
+    <Modal className="max-w-lg" isOpen={isOpen} onClose={onClose} title="Timer settings">
       <div>
-        <div className="flex items-end justify-between gap-4 border-b border-surface-border-subtle pb-4">
+        <div className="border-b border-surface-border-subtle pb-4">
           <Input
-            containerClassName="max-w-32"
+            containerClassName="max-w-48"
             defaultValue={String(breakDivisor)}
-            label="Break divisor"
+            label="Work minutes per break minute"
             inputMode="numeric"
             key={breakDivisor}
             onBlur={(event) => {
@@ -98,37 +87,25 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
             step={1}
             type="text"
           />
-
-          <p className="max-w-xs pb-2 text-right text-xs text-ink-secondary">
-            Work time ÷ divisor. Default: {DEFAULT_BREAK_DIVISOR}.
-          </p>
         </div>
 
         <div className="divide-y divide-surface-border-subtle">
-          <ToggleRow
-            checked={focusModeLock}
-            description="Lock task switching while actively working."
-            label="Focus mode lock"
-            onChange={setFocusModeLock}
-          />
+          <ToggleRow checked={focusModeLock} label="Focus mode lock" onChange={setFocusModeLock} />
 
           <ToggleRow
             checked={shortcutsEnabled}
-            description="Enable keyboard shortcuts for timer controls and panel actions."
             label="Keyboard shortcuts"
             onChange={setShortcutsEnabled}
           />
 
           <ToggleRow
             checked={notificationsEnabled}
-            description="Show a desktop notification when your break ends."
             label="Desktop notifications"
             onChange={setNotificationsEnabled}
           />
 
           <ToggleRow
             checked={chimeEnabled}
-            description="Play a short chime when your break ends."
             label="Break completion chime"
             onChange={setChimeEnabled}
           />
@@ -167,35 +144,7 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
                 Preview
               </Button>
             </div>
-
-            <p className="mt-2 text-xs text-ink-secondary">{selectedChime.description}</p>
           </div>
-
-          <div className="py-4">
-            <p className="text-xs uppercase tracking-[0.1em] text-ink-tertiary">Shortcut map</p>
-            <div className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs text-ink-secondary">
-              {[
-                ['S', 'Start work'],
-                ['D', 'Stop work / take break'],
-                ['B', 'Skip break'],
-                ['R', 'Replay last session'],
-                ['T', 'Open task selector'],
-                [',', 'Open timer settings'],
-              ].map(([key, action]) => (
-                <div className="contents" key={key}>
-                  <kbd className="min-w-6 rounded bg-surface-sidebar px-1.5 py-0.5 text-center font-mono text-[11px] text-ink-primary">
-                    {key}
-                  </kbd>
-                  <span>{action}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <p className="py-3 text-xs text-ink-tertiary">
-            Defaults: focus lock {DEFAULT_FOCUS_MODE_LOCK ? 'on' : 'off'}, shortcuts{' '}
-            {DEFAULT_SHORTCUTS_ENABLED ? 'on' : 'off'}.
-          </p>
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t border-surface-border-subtle pt-4">

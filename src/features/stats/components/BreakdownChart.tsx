@@ -39,13 +39,7 @@ function BreakdownTooltip({
 
 export function BreakdownChart({ data }: BreakdownChartProps) {
   if (data.length === 0) {
-    return (
-      <EmptyState
-        description="Complete a few focused sessions in this range to reveal the pattern."
-        icon={<BarChart3 className="h-5 w-5" />}
-        title="No focus data yet"
-      />
-    )
+    return <EmptyState icon={<BarChart3 className="h-5 w-5" />} title="No focus data yet" />
   }
 
   const chartData = data.map((item) => ({

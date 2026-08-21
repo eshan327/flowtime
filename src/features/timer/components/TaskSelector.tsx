@@ -143,12 +143,12 @@ export function TaskSelector({
   }
 
   return (
-    <div className="relative w-full max-w-md" ref={containerRef}>
+    <div className="relative w-full" ref={containerRef}>
       <Button
         aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="w-full justify-between px-3"
+        className="h-11 w-full justify-between px-3 text-base"
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
         onKeyDown={(event) => {

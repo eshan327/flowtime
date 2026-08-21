@@ -179,7 +179,7 @@ export function Layout({ children }: { children: ReactNode }) {
           ) : null}
 
           <main className="flex-1 px-4 py-7 md:px-8 md:py-9">
-            <div className="mx-auto w-full max-w-5xl">{children}</div>
+            <div className="mx-auto w-full max-w-6xl">{children}</div>
           </main>
         </div>
       </div>

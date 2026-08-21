@@ -345,11 +345,11 @@ export function HistoryPage() {
   return (
     <section className="space-y-7">
       <header>
-        <h1 className="text-2xl font-medium tracking-tight">History</h1>
+        <h1 className="text-3xl font-medium tracking-tight">History</h1>
       </header>
 
       <section>
-        <p className="text-sm text-ink-secondary">Export range</p>
+        <p className="text-sm text-ink-secondary">Range</p>
         <div className="mt-3 inline-flex max-w-full flex-wrap gap-0.5 rounded-lg bg-surface-sidebar/70 p-1">
           {HISTORY_RANGE_OPTIONS.map((option) => (
             <Button
@@ -385,7 +385,7 @@ export function HistoryPage() {
           </div>
         ) : null}
 
-        <p className="mt-3 text-xs text-ink-tertiary">Export window: {historyWindow.label}</p>
+        <p className="mt-3 text-xs text-ink-tertiary">{historyWindow.label}</p>
         {!historyWindow.isValid ? (
           <p className="mt-2 text-sm text-red-300">Pick a valid custom start/end date range.</p>
         ) : null}
@@ -396,45 +396,33 @@ export function HistoryPage() {
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.archivedCategories}
           </p>
-          <div className="mt-3">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
-              Archived categories
-            </p>
-            <p className="mt-1 text-xs text-ink-tertiary">In the selected window</p>
-          </div>
+          <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+            Archived categories
+          </p>
         </article>
 
         <article className="flex min-h-24 flex-col justify-between rounded-xl bg-surface-panel p-4">
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.completedTasks}
           </p>
-          <div className="mt-3">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
-              Completed tasks
-            </p>
-            <p className="mt-1 text-xs text-ink-tertiary">In the selected window</p>
-          </div>
+          <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+            Completed tasks
+          </p>
         </article>
 
         <article className="flex min-h-24 flex-col justify-between rounded-xl bg-surface-panel p-4">
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.exportableSessions}
           </p>
-          <div className="mt-3">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
-              Exportable sessions
-            </p>
-            <p className="mt-1 text-xs text-ink-tertiary">In the current export window</p>
-          </div>
+          <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+            Exportable sessions
+          </p>
         </article>
       </section>
 
       <section className="border-t border-surface-border-subtle pt-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm text-ink-secondary">Session log</h2>
-            <p className="mt-1 text-xs text-ink-tertiary">{historyWindow.label}</p>
-          </div>
+          <h2 className="text-sm text-ink-secondary">Session log</h2>
 
           <div className="w-full max-w-sm">
             <Input
@@ -490,14 +478,6 @@ export function HistoryPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm text-ink-secondary">Session export</h2>
-            <p className="mt-1 text-xs text-ink-tertiary">
-              {isAllTimeRange
-                ? 'Export all sessions as CSV/JSON.'
-                : 'Export sessions in the selected range as CSV/JSON.'}
-            </p>
-            <p className="mt-1 text-xs text-ink-secondary">
-              Scope: {historyWindow.isValid ? historyWindow.label : 'Invalid custom range'}
-            </p>
             {sessionsLoading ? (
               <p className="mt-1 text-xs text-ink-tertiary">Loading sessions for export...</p>
             ) : null}

@@ -196,15 +196,11 @@ export function TimerPage() {
   }, [phase, selectedTask, selectedTaskColor, setSelectedTaskSnapshot])
 
   const secondaryText =
-    phase === 'idle'
-      ? selectedTask
-        ? selectedTask.name
-        : 'Select a task to begin'
-      : phase === 'working'
-        ? `Break earned: ${formatClock(getBreakSeconds(workSeconds, breakDivisor))}`
-        : phase === 'breaking'
-          ? `You earned ${formatClock(breakTotal)} - take it easy`
-          : 'Break complete - ready for the next session'
+    phase === 'working'
+      ? `Break earned: ${formatClock(getBreakSeconds(workSeconds, breakDivisor))}`
+      : phase === 'breaking'
+        ? `${formatClock(breakTotal)} break earned`
+        : null
 
   const replayTask = useMemo(() => {
     const replayTaskId = lastSavedSession?.task_id_snapshot ?? lastSavedSession?.task_id
@@ -359,9 +355,9 @@ export function TimerPage() {
   })
 
   return (
-    <section className="flex min-h-[calc(100vh-8rem)] w-full flex-col items-center pt-[clamp(2.5rem,8vh,6rem)]">
-      <div className="w-full max-w-lg">
-        <div className="flex items-center gap-2">
+    <section className="flex min-h-[calc(100vh-8rem)] w-full flex-col items-center justify-center py-4 md:py-6">
+      <div className="w-full max-w-2xl rounded-3xl bg-surface-sidebar/40 px-4 py-6 ring-1 ring-surface-border-subtle/60 sm:p-8 md:p-10">
+        <div className="mx-auto flex max-w-lg items-center gap-2">
           <TaskSelector
             disabled={focusModeLock && phase === 'working'}
             isLoading={tasksLoading}
@@ -389,9 +385,8 @@ export function TimerPage() {
         </div>
 
         {tasksError ? (
-          <p className="mt-3 rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
-            {getErrorMessage(tasksError, 'Unable to load tasks right now.')} Pick a task before
-            starting a timer session.
+          <p className="mx-auto mt-3 max-w-lg rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
+            {getErrorMessage(tasksError, 'Unable to load tasks right now.')}
           </p>
         ) : null}
 
@@ -403,7 +398,9 @@ export function TimerPage() {
             phase={phase}
             workSeconds={workSeconds}
           />
-          <p className="text-center text-sm text-ink-secondary">{secondaryText}</p>
+          {secondaryText ? (
+            <p className="text-center text-sm text-ink-secondary">{secondaryText}</p>
+          ) : null}
 
           <div className="mt-6">
             <TimerControls
@@ -505,6 +502,23 @@ export function TimerPage() {
             </div>
           ) : null}
         </div>
+
+        <div className="mx-auto mt-8 flex min-h-5 items-center justify-center gap-3 border-t border-surface-border-subtle pt-4 text-xs text-ink-tertiary">
+          {todaySummary.isError ? (
+            <p className="text-red-300">Unable to load today's summary.</p>
+          ) : todaySummary.isLoading ? (
+            <>
+              <Spinner />
+              <span>Loading today...</span>
+            </>
+          ) : (
+            <>
+              <span className="font-medium uppercase tracking-[0.1em]">Today</span>
+              <span>{todaySummary.data?.count ?? 0} sessions</span>
+              <span>{formatDuration(todaySummary.data?.totalWorkSeconds ?? 0)} focus</span>
+            </>
+          )}
+        </div>
       </div>
 
       <TimerSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
@@ -522,20 +536,6 @@ export function TimerPage() {
         session={lastSavedSession}
         tasks={selectableTasks}
       />
-
-      {todaySummary.isError ? (
-        <p className="mx-auto mt-6 text-xs text-red-300">Unable to load today's summary.</p>
-      ) : todaySummary.isLoading ? (
-        <div className="mx-auto mt-6 flex items-center gap-2 text-xs text-ink-tertiary">
-          <Spinner />
-          Loading today's summary...
-        </div>
-      ) : (
-        <p className="mx-auto mt-6 text-xs text-ink-tertiary">
-          Today: {todaySummary.data?.count ?? 0} sessions ·{' '}
-          {formatDuration(todaySummary.data?.totalWorkSeconds ?? 0)}
-        </p>
-      )}
     </section>
   )
 }

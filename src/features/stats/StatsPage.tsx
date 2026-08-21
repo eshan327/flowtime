@@ -97,7 +97,7 @@ export function StatsPage() {
   return (
     <section className="space-y-7">
       <header>
-        <h1 className="text-2xl font-medium tracking-tight">Insights</h1>
+        <h1 className="text-3xl font-medium tracking-tight">Insights</h1>
       </header>
 
       <SummaryCards
@@ -154,7 +154,6 @@ export function StatsPage() {
           <div className="rounded-xl bg-surface-panel">
             <EmptyState
               className="py-5"
-              description="Complete a timer session or choose another range to see your focus patterns."
               icon={<BarChart3 className="h-5 w-5" />}
               title="No sessions in this range"
             />
@@ -189,19 +188,12 @@ export function StatsPage() {
                   {selectedHeatmapSessions.length} sessions ·{' '}
                   {formatDuration(selectedHeatmapDay.totalSeconds)} focused
                 </p>
-                <p className="mt-1 text-xs text-ink-tertiary">
-                  Click the same heatmap tile again to close this detail view.
-                </p>
               </div>
             </div>
 
             <SessionLog pageSize={6} sessions={selectedHeatmapSessions} />
           </div>
-        ) : (
-          <p className="mt-3 text-sm text-ink-tertiary">
-            Click a heatmap tile to inspect sessions from that day.
-          </p>
-        )}
+        ) : null}
       </section>
 
       {hasRangeData ? (

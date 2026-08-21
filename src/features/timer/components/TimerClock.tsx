@@ -37,13 +37,13 @@ export function TimerClock({
 
   return (
     <div
-      className="mx-auto flex w-full flex-col items-center justify-center py-7 md:py-8"
+      className="mx-auto flex w-full flex-col items-center justify-center py-10 md:py-12"
       style={{ '--timer-accent': accent } as CSSProperties}
     >
       <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-accent-primary">
         {phase === 'working' ? 'Focus' : phase === 'breaking' ? 'Recover' : 'Ready'}
       </p>
-      <p className="mt-3 text-[80px] font-extralight leading-none tabular-nums tracking-[-0.07em] text-ink-primary sm:text-[88px] md:text-[96px]">
+      <p className="mt-4 text-[88px] font-extralight leading-none tabular-nums tracking-[-0.07em] text-ink-primary sm:text-[104px] md:text-[120px]">
         {formatClock(seconds)}
       </p>
       {phase === 'breaking' ? (

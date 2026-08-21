@@ -149,11 +149,7 @@ export function TaskList({
   return (
     <div className="space-y-5">
       {!hasAnyTasks ? (
-        <EmptyState
-          description="Add your first task below to start logging focused work."
-          icon={<ListTodo className="h-5 w-5" />}
-          title="No active tasks"
-        />
+        <EmptyState icon={<ListTodo className="h-5 w-5" />} title="No active tasks" />
       ) : null}
 
       {sections.map((section) => (

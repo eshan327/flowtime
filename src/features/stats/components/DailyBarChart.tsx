@@ -131,13 +131,7 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
   }, [data, range])
 
   if (!data.some((day) => day.totalSeconds > 0)) {
-    return (
-      <EmptyState
-        description="Complete a few timer sessions in this range to populate the chart."
-        icon={<BarChart3 className="h-5 w-5" />}
-        title="No sessions in this range"
-      />
-    )
+    return <EmptyState icon={<BarChart3 className="h-5 w-5" />} title="No sessions in this range" />
   }
 
   return (
