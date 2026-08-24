@@ -1,4 +1,4 @@
-import { createContext, useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
@@ -10,6 +10,10 @@ interface UserContextValue {
 }
 
 export const UserContext = createContext<UserContextValue>({ user: null })
+
+export function useUser() {
+  return useContext(UserContext)
+}
 
 let anonymousSessionPromise: Promise<Session | null> | null = null
 

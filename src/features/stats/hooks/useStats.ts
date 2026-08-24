@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchSessionRows, fetchStreakRows } from '@/features/sessions/api/sessionQueries'
-import { useUser } from '@/hooks/useUser'
+import { useUser } from '@/context/UserContext'
 import { queryKeys } from '@/lib/queryKeys'
 import {
   aggregateByCategory,

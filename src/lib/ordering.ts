@@ -35,36 +35,6 @@ export function sortByPositionAndCreatedAt<T extends PositionedItem>(items: T[])
   )
 }
 
-export function applyOptimisticReorder<T extends PositionedItem>(
-  items: T[],
-  movedId: string,
-  newPosition: number
-) {
-  return sortByPositionAndCreatedAt(
-    items.map((item) => (item.id === movedId ? { ...item, position: newPosition } : item))
-  )
-}
-
-export function shouldRenormalizeById<T extends { id: string; position: number }>(
-  items: T[],
-  movedId: string,
-  threshold: number
-) {
-  const movedIndex = items.findIndex((item) => item.id === movedId)
-  if (movedIndex === -1) return false
-
-  const moved = items[movedIndex]
-  const previous = items[movedIndex - 1]
-  const next = items[movedIndex + 1]
-
-  const previousGap = previous
-    ? Math.abs(moved.position - previous.position)
-    : Number.POSITIVE_INFINITY
-  const nextGap = next ? Math.abs(next.position - moved.position) : Number.POSITIVE_INFINITY
-
-  return Math.min(previousGap, nextGap) < threshold
-}
-
 export function getDropInsertPosition<T extends { id: string; position: number }>(
   items: T[],
   draggedId: string,

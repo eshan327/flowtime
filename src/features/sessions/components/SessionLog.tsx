@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { formatDuration } from '@/lib/formatting'
-import { getSessionTaskName } from '@/lib/sessionSnapshot'
+import { snapshotSession } from '@/lib/sessionSnapshot'
 import type { SessionWithTask } from '@/types'
 
 interface SessionLogProps {
@@ -10,14 +10,6 @@ interface SessionLogProps {
   onDelete?: (session: SessionWithTask) => void
   deletingSessionId?: string | null
   pageSize?: number
-}
-
-interface SessionEntry {
-  session: SessionWithTask
-  dateLabel: string
-  timeLabel: string
-  taskName: string
-  notes: string | null
 }
 
 function toDateLabel(isoString: string) {
@@ -45,22 +37,15 @@ export function SessionLog({
 }: SessionLogProps) {
   const [page, setPage] = useState(1)
 
-  const entries = useMemo<SessionEntry[]>(() => {
-    return [...sessions]
-      .sort((a, b) => b.started_at.localeCompare(a.started_at))
-      .map((session) => ({
-        session,
-        dateLabel: toDateLabel(session.started_at),
-        timeLabel: `${toTimeLabel(session.started_at)} - ${toTimeLabel(session.ended_at)}`,
-        taskName: getSessionTaskName(session) ?? 'No task',
-        notes: session.notes,
-      }))
-  }, [sessions])
+  const sortedSessions = useMemo(
+    () => [...sessions].sort((a, b) => b.started_at.localeCompare(a.started_at)),
+    [sessions]
+  )
 
-  const totalPages = Math.max(1, Math.ceil(entries.length / pageSize))
+  const totalPages = Math.max(1, Math.ceil(sortedSessions.length / pageSize))
   const activePage = Math.min(page, totalPages)
 
-  if (entries.length === 0) {
+  if (sortedSessions.length === 0) {
     return (
       <p aria-live="polite" className="text-sm text-ink-tertiary">
         No sessions in this range yet.
@@ -69,13 +54,14 @@ export function SessionLog({
   }
 
   const pageStart = (activePage - 1) * pageSize
-  const pageEntries = entries.slice(pageStart, pageStart + pageSize)
+  const pageSessions = sortedSessions.slice(pageStart, pageStart + pageSize)
 
   return (
     <div className="space-y-3">
-      {pageEntries.map(({ session, dateLabel, timeLabel, taskName, notes }, index) => {
-        const previousEntry = pageEntries[index - 1]
-        const showDateHeader = !previousEntry || previousEntry.dateLabel !== dateLabel
+      {pageSessions.map((session, index) => {
+        const dateLabel = toDateLabel(session.started_at)
+        const showDateHeader =
+          index === 0 || toDateLabel(pageSessions[index - 1].started_at) !== dateLabel
 
         return (
           <div className="space-y-2" key={session.id}>
@@ -86,14 +72,20 @@ export function SessionLog({
             <div className="border-b border-surface-border-subtle px-1 pb-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
-                  <p className="truncate text-sm text-ink-primary">{taskName}</p>
-                  <p className="text-xs text-ink-tertiary">{timeLabel}</p>
+                  <p className="truncate text-sm text-ink-primary">
+                    {snapshotSession(session).taskNameSnapshot ?? 'No task'}
+                  </p>
+                  <p className="text-xs text-ink-tertiary">
+                    {toTimeLabel(session.started_at)} - {toTimeLabel(session.ended_at)}
+                  </p>
                   <p className="text-xs text-ink-secondary">
                     Work {formatDuration(session.work_seconds)} · Break{' '}
                     {formatDuration(session.break_seconds)}
                   </p>
-                  {notes ? (
-                    <p className="whitespace-pre-wrap text-xs text-ink-secondary">Note: {notes}</p>
+                  {session.notes ? (
+                    <p className="whitespace-pre-wrap text-xs text-ink-secondary">
+                      Note: {session.notes}
+                    </p>
                   ) : null}
                 </div>
 

@@ -1,22 +1,10 @@
 import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { POSITION_RENORMALIZE_THRESHOLD } from '@/features/tasks/constants'
-import { useUser } from '@/hooks/useUser'
-import {
-  applyOptimisticReorder,
-  getNextPosition,
-  requireUserId,
-  shouldRenormalizeById,
-  sortByPositionAndCreatedAt,
-} from '@/lib/ordering'
+import { useUser } from '@/context/UserContext'
+import { getNextPosition, requireUserId, sortByPositionAndCreatedAt } from '@/lib/ordering'
 import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabaseClient'
 import type { Category } from '@/types'
-
-interface ReorderCategoryContext {
-  previous: Category[]
-  userId: string
-}
 
 export function useCategories() {
   const queryClient = useQueryClient()
@@ -62,29 +50,26 @@ export function useCategories() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) }),
   })
 
-  const renameCategory = useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+  const updateCategory = useMutation({
+    mutationFn: async ({
+      id,
+      name,
+      color,
+      archivedAt,
+    }: {
+      id: string
+      name?: string
+      color?: string
+      archivedAt?: string | null
+    }) => {
       const userId = requireCurrentUserId()
+      const updates: Partial<Pick<Category, 'name' | 'color' | 'archived_at'>> = {}
+      if (name !== undefined) updates.name = name.trim()
+      if (color !== undefined) updates.color = color
+      if (archivedAt !== undefined) updates.archived_at = archivedAt
       const { error } = await supabase
         .from('categories')
-        .update({ name: name.trim() })
-        .eq('id', id)
-        .eq('user_id', userId)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
-      return queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) })
-    },
-  })
-
-  const recolorCategory = useMutation({
-    mutationFn: async ({ id, color }: { id: string; color: string }) => {
-      const userId = requireCurrentUserId()
-      const { error } = await supabase
-        .from('categories')
-        .update({ color })
+        .update(updates)
         .eq('id', id)
         .eq('user_id', userId)
 
@@ -117,88 +102,17 @@ export function useCategories() {
     mutationFn: async ({ id, newPosition }: { id: string; newPosition: number }) => {
       const userId = requireCurrentUserId()
 
-      const { error } = await supabase
-        .from('categories')
-        .update({ position: newPosition })
-        .eq('id', id)
-        .eq('user_id', userId)
-
-      if (error) throw error
-
       const cached = queryClient.getQueryData<Category[]>(queryKeys.categories(userId)) ?? []
       const activeCategories = cached.filter((category) => category.archived_at === null)
-
-      const reordered = applyOptimisticReorder(activeCategories, id, newPosition)
-
-      if (!shouldRenormalizeById(reordered, id, POSITION_RENORMALIZE_THRESHOLD)) return
-
-      const renormalized = reordered.map((category, index) => ({
-        ...category,
-        position: index,
-      }))
-
-      const { error: renormalizeError } = await supabase
-        .from('categories')
-        .upsert(renormalized, { onConflict: 'id' })
-
-      if (renormalizeError) throw renormalizeError
-    },
-    onMutate: async ({ id, newPosition }): Promise<ReorderCategoryContext> => {
-      const userId = requireCurrentUserId()
-      await queryClient.cancelQueries({ queryKey: queryKeys.categories(userId) })
-
-      const previous = queryClient.getQueryData<Category[]>(queryKeys.categories(userId)) ?? []
-      const optimistic = sortByPositionAndCreatedAt(
-        applyOptimisticReorder(previous, id, newPosition)
-      )
-
-      queryClient.setQueryData(queryKeys.categories(userId), optimistic)
-
-      return { previous, userId }
-    },
-    onError: (_error, _variables, context) => {
-      if (!context) return
-      queryClient.setQueryData(queryKeys.categories(context.userId), context.previous)
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) })
-    },
-  })
-
-  const archiveCategory = useMutation({
-    mutationFn: async (id: string) => {
-      const userId = requireCurrentUserId()
-      const archivedAt = new Date().toISOString()
-      const { error } = await supabase
-        .from('categories')
-        .update({ archived_at: archivedAt })
-        .eq('id', id)
-        .eq('user_id', userId)
-
-      if (error) throw error
-      return { id, archivedAt }
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
-      return queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) })
-    },
-  })
-
-  const unarchiveCategory = useMutation({
-    mutationFn: async (id: string) => {
-      const userId = requireCurrentUserId()
-      const { error } = await supabase
-        .from('categories')
-        .update({ archived_at: null })
-        .eq('id', id)
-        .eq('user_id', userId)
-
+      const reordered = sortByPositionAndCreatedAt(
+        activeCategories.map((category) =>
+          category.id === id ? { ...category, position: newPosition } : category
+        )
+      ).map((category, position) => ({ ...category, position }))
+      const { error } = await supabase.from('categories').upsert(reordered, { onConflict: 'id' })
       if (error) throw error
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
-      return queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) }),
   })
 
   const allCategories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data])
@@ -227,10 +141,7 @@ export function useCategories() {
     isLoading: categoriesQuery.isLoading,
     error: categoriesQuery.error,
     addCategory,
-    renameCategory,
-    recolorCategory,
-    archiveCategory,
-    unarchiveCategory,
+    updateCategory,
     deleteCategory,
     reorderCategory,
   }

@@ -5,7 +5,7 @@ import {
   queueSession,
   removeQueuedSession,
 } from '@/features/sessions/lib/sessionOutbox'
-import { toSessionWithTask } from '@/lib/sessionSnapshot'
+import { hydrateSession } from '@/lib/sessionSnapshot'
 import type { SessionSnapshotInput } from '@/lib/sessionSnapshot'
 import type { Session, SessionWithTask } from '@/types'
 
@@ -49,7 +49,7 @@ export function useTimerSessionPipeline({
   const commitSavedSession = useCallback(
     (savedSession: Session, snapshot: SessionSnapshotInput) => {
       setLastSessionId(savedSession.id)
-      setLastSavedSession(toSessionWithTask(savedSession, snapshot))
+      setLastSavedSession(hydrateSession(savedSession, snapshot))
     },
     [setLastSessionId, setLastSavedSession]
   )

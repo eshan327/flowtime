@@ -1,11 +1,19 @@
-import { useState } from 'react'
-import type { ReactNode } from 'react'
-import { Archive, BarChart3, CheckSquare, ChevronRight, Home, LogIn, LogOut } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import type { ChangeEvent, ReactNode } from 'react'
+import {
+  Archive,
+  BarChart3,
+  Camera,
+  CheckSquare,
+  ChevronRight,
+  Home,
+  LogIn,
+  LogOut,
+} from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { useUser } from '@/hooks/useUser'
+import { useUser } from '@/context/UserContext'
 import { supabase } from '@/lib/supabaseClient'
 
 const NAV_ITEMS = [
@@ -14,6 +22,9 @@ const NAV_ITEMS = [
   { to: '/stats', label: 'Stats', icon: BarChart3 },
   { to: '/history', label: 'History', icon: Archive },
 ]
+
+const AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024
 
 function desktopNavClassName(isActive: boolean) {
   return [
@@ -88,9 +99,9 @@ export function Layout({ children }: { children: ReactNode }) {
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const [isAccountOpen, setIsAccountOpen] = useState(false)
-  const [photoUrl, setPhotoUrl] = useState('')
   const [profileMessage, setProfileMessage] = useState<string | null>(null)
   const [accountAgeMonths, setAccountAgeMonths] = useState<number | null>(null)
+  const [customAvatarUrl, setCustomAvatarUrl] = useState<string | null>(null)
   const isGuest = !user || user.is_anonymous
 
   const displayName = getUserDisplayName(
@@ -98,10 +109,37 @@ export function Layout({ children }: { children: ReactNode }) {
     user?.user_metadata?.full_name ?? user?.user_metadata?.name
   )
   const initials = getInitials(displayName)
-  const avatarUrl = user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture
+  const avatarPath = user?.user_metadata?.avatar_path
+  const avatarVersion = user?.user_metadata?.avatar_version
+  const avatarUrl =
+    (typeof avatarPath === 'string' ? customAvatarUrl : null) ??
+    user?.user_metadata?.avatar_url ??
+    user?.user_metadata?.picture
+
+  useEffect(() => {
+    let active = true
+    let objectUrl: string | null = null
+
+    if (typeof avatarPath !== 'string') {
+      return
+    }
+
+    void supabase.storage
+      .from('avatars')
+      .download(avatarPath)
+      .then(({ data }) => {
+        if (!data || !active) return
+        objectUrl = URL.createObjectURL(data)
+        setCustomAvatarUrl(objectUrl)
+      })
+
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [avatarPath, avatarVersion])
 
   const openAccount = () => {
-    setPhotoUrl(typeof avatarUrl === 'string' ? avatarUrl : '')
     setAccountAgeMonths(
       user?.created_at
         ? Math.max(0, Math.floor((Date.now() - Date.parse(user.created_at)) / 2_629_746_000))
@@ -141,13 +179,38 @@ export function Layout({ children }: { children: ReactNode }) {
     setIsAuthPending(false)
   }
 
-  const handlePhotoUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const handlePhotoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || !user) return
+
+    if (!AVATAR_TYPES.has(file.type)) {
+      setProfileMessage('Choose a JPG, PNG, or WebP image.')
+      return
+    }
+    if (file.size > MAX_AVATAR_SIZE) {
+      setProfileMessage('Choose an image smaller than 5 MB.')
+      return
+    }
+
     setIsAuthPending(true)
     setProfileMessage(null)
 
+    const path = `${user.id}/avatar`
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, {
+      cacheControl: '3600',
+      contentType: file.type,
+      upsert: true,
+    })
+
+    if (uploadError) {
+      setProfileMessage(uploadError.message)
+      setIsAuthPending(false)
+      return
+    }
+
     const { error } = await supabase.auth.updateUser({
-      data: { avatar_url: photoUrl.trim() || null },
+      data: { avatar_path: path, avatar_version: Date.now() },
     })
 
     setProfileMessage(error ? error.message : 'Profile photo updated.')
@@ -262,32 +325,30 @@ export function Layout({ children }: { children: ReactNode }) {
           <UserAvatar className="h-16 w-16 text-lg" initials={initials} url={avatarUrl} />
           <div className="min-w-0">
             <p className="truncate text-lg font-medium text-ink-primary">{displayName}</p>
-            <p className="truncate text-sm text-ink-tertiary">{user?.email}</p>
+            <label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary focus-within:ring-2 focus-within:ring-accent-primary/70">
+              <Camera className="h-4 w-4" />
+              {isAuthPending ? 'Uploading...' : 'Change photo'}
+              <input
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={isAuthPending}
+                onChange={handlePhotoUpload}
+                type="file"
+              />
+            </label>
           </div>
         </div>
 
-        <form className="mt-6" onSubmit={handlePhotoUpdate}>
-          <Input
-            label="Profile photo URL"
-            onChange={(event) => setPhotoUrl(event.target.value)}
-            placeholder="https://example.com/photo.jpg"
-            type="url"
-            value={photoUrl}
-          />
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <p
-              className={`text-sm ${profileMessage?.endsWith('updated.') ? 'text-ink-secondary' : 'text-red-300'}`}
-              role="status"
-            >
-              {profileMessage}
-            </p>
-            <Button loading={isAuthPending} size="sm" type="submit">
-              Save photo
-            </Button>
-          </div>
-        </form>
+        {profileMessage ? (
+          <p
+            className={`mt-3 text-sm ${profileMessage.endsWith('updated.') ? 'text-ink-secondary' : 'text-red-300'}`}
+            role="status"
+          >
+            {profileMessage}
+          </p>
+        ) : null}
 
-        <dl className="mt-6 divide-y divide-surface-border-subtle border-y border-surface-border-subtle text-sm">
+        <dl className="mt-5 divide-y divide-surface-border-subtle border-y border-surface-border-subtle text-sm">
           <div className="flex items-center justify-between gap-4 py-3">
             <dt className="text-ink-tertiary">Email</dt>
             <dd className="min-w-0 truncate text-ink-primary">{user?.email}</dd>

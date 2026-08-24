@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { getSessionTaskName } from '@/lib/sessionSnapshot'
+import { snapshotSession } from '@/lib/sessionSnapshot'
 import type { SessionWithTask, TaskWithCategory } from '@/types'
 
 export interface SessionEditValues {
@@ -98,7 +98,7 @@ function SessionEditModalContent({
     if (!session.task_id) return null
     if (tasks.some((task) => task.id === session.task_id)) return null
 
-    const fallbackTaskName = getSessionTaskName(session)
+    const fallbackTaskName = snapshotSession(session).taskNameSnapshot
     if (!fallbackTaskName) return null
 
     return {

@@ -22,14 +22,15 @@ import { getBreakSeconds, useTimerSettingsStore } from '@/features/timer/stores/
 import { useTimerStore } from '@/features/timer/stores/timerStore'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
-import { useUser } from '@/hooks/useUser'
+import { useUser } from '@/context/UserContext'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { formatClock, formatDuration } from '@/lib/formatting'
 import { requestNotificationPermission } from '@/lib/notifications'
 import {
-  createSessionSnapshotForTaskId,
-  createSessionSnapshotFromSelection,
-  toSessionWithTask,
+  EMPTY_SESSION_SNAPSHOT,
+  hydrateSession,
+  snapshotSession,
+  snapshotTask,
 } from '@/lib/sessionSnapshot'
 import type { Session, SessionWithTask } from '@/types'
 
@@ -152,14 +153,16 @@ export function TimerPage() {
 
   const buildSessionSnapshot = useCallback(
     () =>
-      createSessionSnapshotFromSelection(selectedTask ?? null, {
-        taskId: selectedTaskId,
-        taskName: selectedTaskName,
-        taskColor: selectedTaskColorSnapshot,
-        categoryId: selectedCategoryId,
-        categoryName: selectedCategoryName,
-        categoryColor: selectedCategoryColor,
-      }),
+      selectedTask
+        ? snapshotTask(selectedTask)
+        : {
+            taskIdSnapshot: selectedTaskId,
+            taskNameSnapshot: selectedTaskName,
+            taskColorSnapshot: selectedTaskColorSnapshot,
+            categoryIdSnapshot: selectedCategoryId,
+            categoryNameSnapshot: selectedCategoryName,
+            categoryColorSnapshot: selectedCategoryColor,
+          },
     [
       selectedTask,
       selectedTaskId,
@@ -285,11 +288,11 @@ export function TimerPage() {
       const selectedEditTask = values.taskId
         ? (selectableTasks.find((task) => task.id === values.taskId) ?? null)
         : null
-      const snapshot = createSessionSnapshotForTaskId(
-        values.taskId,
-        selectedEditTask,
-        lastSavedSession
-      )
+      const snapshot = !values.taskId
+        ? EMPTY_SESSION_SNAPSHOT
+        : selectedEditTask
+          ? snapshotTask(selectedEditTask)
+          : { ...snapshotSession(lastSavedSession), taskIdSnapshot: values.taskId }
 
       await updateSession.mutateAsync({
         id: values.id,
@@ -313,7 +316,7 @@ export function TimerPage() {
           ended_at: values.endedAt,
           notes: values.notes,
         }
-        return toSessionWithTask(updated, snapshot)
+        return hydrateSession(updated, snapshot)
       })
       setIsSessionEditOpen(false)
     },

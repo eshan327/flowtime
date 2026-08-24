@@ -1,22 +1,11 @@
 import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { DEFAULT_TASK_COLOR, POSITION_RENORMALIZE_THRESHOLD } from '@/features/tasks/constants'
-import { useUser } from '@/hooks/useUser'
-import {
-  applyOptimisticReorder,
-  getNextPosition,
-  requireUserId,
-  shouldRenormalizeById,
-  sortByPositionAndCreatedAt,
-} from '@/lib/ordering'
+import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
+import { useUser } from '@/context/UserContext'
+import { getNextPosition, requireUserId, sortByPositionAndCreatedAt } from '@/lib/ordering'
 import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabaseClient'
 import type { Task, TaskWithCategory } from '@/types'
-
-interface ReorderTaskContext {
-  previous: TaskWithCategory[]
-  userId: string
-}
 
 const TASK_WITH_CATEGORY_SELECT =
   'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at)'
@@ -81,9 +70,23 @@ export function useTasks() {
   })
 
   const updateTask = useMutation({
-    mutationFn: async ({ id, name, color }: { id: string; name?: string; color?: string }) => {
+    mutationFn: async ({
+      id,
+      name,
+      color,
+      categoryId,
+      completedAt,
+    }: {
+      id: string
+      name?: string
+      color?: string | null
+      categoryId?: string | null
+      completedAt?: string | null
+    }) => {
       const userId = requireCurrentUserId()
-      const updates: Partial<Pick<Task, 'name' | 'color'>> = {}
+      const updates: Partial<
+        Pick<Task, 'name' | 'color' | 'category_id' | 'position' | 'completed_at'>
+      > = {}
 
       if (name !== undefined) {
         updates.name = name.trim()
@@ -91,6 +94,20 @@ export function useTasks() {
 
       if (color !== undefined) {
         updates.color = color
+      }
+
+      if (completedAt !== undefined) {
+        updates.completed_at = completedAt
+      }
+
+      if (categoryId !== undefined) {
+        const existing = queryClient.getQueryData<TaskWithCategory[]>(queryKeys.tasks(userId)) ?? []
+        const currentTask = existing.find((task) => task.id === id)
+        updates.category_id = categoryId
+        updates.position = getNextPosition(
+          existing.filter((task) => task.id !== id && task.category_id === categoryId)
+        )
+        updates.color = categoryId === null ? (currentTask?.color ?? DEFAULT_TASK_COLOR) : null
       }
 
       const { error } = await supabase
@@ -101,23 +118,9 @@ export function useTasks() {
 
       if (error) throw error
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
-  })
-
-  const completeTask = useMutation({
-    mutationFn: async (id: string) => {
-      const userId = requireCurrentUserId()
-      const completedAt = new Date().toISOString()
-      const { error } = await supabase
-        .from('tasks')
-        .update({ completed_at: completedAt })
-        .eq('id', id)
-        .eq('user_id', userId)
-
-      if (error) throw error
-    },
-    onSuccess: (_result, id) => {
-      queryClient.removeQueries({ queryKey: queryKeys.subtasks(id) })
+    onSuccess: (_result, variables) => {
+      if (variables.completedAt)
+        queryClient.removeQueries({ queryKey: queryKeys.subtasks(variables.id) })
       return queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
     },
   })
@@ -135,65 +138,9 @@ export function useTasks() {
     },
   })
 
-  const restoreTask = useMutation({
-    mutationFn: async (id: string) => {
-      const userId = requireCurrentUserId()
-      const { error } = await supabase
-        .from('tasks')
-        .update({ completed_at: null })
-        .eq('id', id)
-        .eq('user_id', userId)
-
-      if (error) throw error
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
-  })
-
-  const moveTask = useMutation({
-    mutationFn: async ({ id, categoryId }: { id: string; categoryId: string | null }) => {
-      const userId = requireCurrentUserId()
-      const existing = queryClient.getQueryData<TaskWithCategory[]>(queryKeys.tasks(userId)) ?? []
-      const currentTask = existing.find((task) => task.id === id)
-      const tasksInTargetCategory = existing.filter(
-        (task) => task.id !== id && task.category_id === categoryId
-      )
-      const nextPosition = getNextPosition(tasksInTargetCategory)
-
-      const updates: Partial<Pick<Task, 'category_id' | 'position' | 'color'>> = {
-        category_id: categoryId,
-        position: nextPosition,
-      }
-
-      if (categoryId !== null) {
-        updates.color = null
-      }
-
-      if (categoryId === null && !currentTask?.color) {
-        updates.color = DEFAULT_TASK_COLOR
-      }
-
-      const { error } = await supabase
-        .from('tasks')
-        .update(updates)
-        .eq('id', id)
-        .eq('user_id', userId)
-
-      if (error) throw error
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
-  })
-
   const reorderTask = useMutation({
     mutationFn: async ({ id, newPosition }: { id: string; newPosition: number }) => {
       const userId = requireCurrentUserId()
-
-      const { error } = await supabase
-        .from('tasks')
-        .update({ position: newPosition })
-        .eq('id', id)
-        .eq('user_id', userId)
-
-      if (error) throw error
 
       const cached = queryClient.getQueryData<TaskWithCategory[]>(queryKeys.tasks(userId)) ?? []
       const movedTask = cached.find((task) => task.id === id)
@@ -206,50 +153,15 @@ export function useTasks() {
           task.user_id === movedTask.user_id
       )
 
-      const reordered = applyOptimisticReorder(bucket, id, newPosition)
-
-      if (!shouldRenormalizeById(reordered, id, POSITION_RENORMALIZE_THRESHOLD)) return
-
-      const renormalized = reordered.map((task, index) => toTaskRow(task, index))
-      const { error: renormalizeError } = await supabase.from('tasks').upsert(renormalized, {
+      const reordered = sortByPositionAndCreatedAt(
+        bucket.map((task) => (task.id === id ? { ...task, position: newPosition } : task))
+      ).map((task, index) => toTaskRow(task, index))
+      const { error } = await supabase.from('tasks').upsert(reordered, {
         onConflict: 'id',
       })
-
-      if (renormalizeError) throw renormalizeError
+      if (error) throw error
     },
-    onMutate: async ({ id, newPosition }): Promise<ReorderTaskContext> => {
-      const userId = requireCurrentUserId()
-      await queryClient.cancelQueries({ queryKey: queryKeys.tasks(userId) })
-
-      const previous = queryClient.getQueryData<TaskWithCategory[]>(queryKeys.tasks(userId)) ?? []
-      const movedTask = previous.find((task) => task.id === id)
-      if (!movedTask) {
-        return { previous, userId }
-      }
-
-      const bucket = previous.filter(
-        (task) =>
-          task.completed_at === null &&
-          task.category_id === movedTask.category_id &&
-          task.user_id === movedTask.user_id
-      )
-      const optimisticBucket = applyOptimisticReorder(bucket, id, newPosition)
-      const optimisticBucketById = new Map(optimisticBucket.map((task) => [task.id, task]))
-
-      const optimistic = sortByPositionAndCreatedAt(
-        previous.map((task) => optimisticBucketById.get(task.id) ?? task)
-      )
-
-      queryClient.setQueryData(queryKeys.tasks(userId), optimistic)
-      return { previous, userId }
-    },
-    onError: (_error, _variables, context) => {
-      if (!context) return
-      queryClient.setQueryData(queryKeys.tasks(context.userId), context.previous)
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
   })
 
   const allTasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data])
@@ -285,10 +197,7 @@ export function useTasks() {
     error: tasksQuery.error,
     addTask,
     updateTask,
-    completeTask,
-    restoreTask,
     deleteTask,
-    moveTask,
     reorderTask,
   }
 }

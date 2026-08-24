@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useUser } from '@/hooks/useUser'
+import { useUser } from '@/context/UserContext'
 import { queryKeys } from '@/lib/queryKeys'
-import { toSessionSnapshotColumns } from '@/lib/sessionSnapshot'
+import { snapshotColumns } from '@/lib/sessionSnapshot'
 import type { SessionSnapshotInput } from '@/lib/sessionSnapshot'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -31,7 +31,7 @@ export function useSessionMutations() {
         .from('sessions')
         .update({
           task_id: payload.taskId,
-          ...toSessionSnapshotColumns(payload.snapshot),
+          ...snapshotColumns(payload.snapshot),
           work_seconds: payload.workSeconds,
           break_seconds: payload.breakSeconds,
           started_at: payload.startedAt,

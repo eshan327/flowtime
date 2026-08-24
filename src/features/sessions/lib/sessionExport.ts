@@ -1,11 +1,4 @@
-import {
-  getSessionCategoryColor,
-  getSessionCategoryId,
-  getSessionCategoryName,
-  getSessionTaskColor,
-  getSessionTaskId,
-  getSessionTaskName,
-} from '@/lib/sessionSnapshot'
+import { snapshotSession } from '@/lib/sessionSnapshot'
 import type { SessionWithTask, TimeRange } from '@/types'
 
 export type SessionExportScope = 'range' | 'history'
@@ -88,6 +81,7 @@ function getDefaultExportWindow(sessions: SessionWithTask[]) {
 }
 
 function toSessionExportRecord(session: SessionWithTask): SessionExportRecord {
+  const snapshot = snapshotSession(session)
   return {
     id: session.id,
     startedAt: session.started_at,
@@ -96,12 +90,12 @@ function toSessionExportRecord(session: SessionWithTask): SessionExportRecord {
     breakSeconds: session.break_seconds,
     workMinutes: Number((session.work_seconds / 60).toFixed(2)),
     breakMinutes: Number((session.break_seconds / 60).toFixed(2)),
-    taskId: getSessionTaskId(session),
-    taskName: getSessionTaskName(session),
-    taskColor: getSessionTaskColor(session),
-    categoryId: getSessionCategoryId(session),
-    categoryName: getSessionCategoryName(session),
-    categoryColor: getSessionCategoryColor(session),
+    taskId: snapshot.taskIdSnapshot,
+    taskName: snapshot.taskNameSnapshot,
+    taskColor: snapshot.taskColorSnapshot ?? snapshot.categoryColorSnapshot,
+    categoryId: snapshot.categoryIdSnapshot,
+    categoryName: snapshot.categoryNameSnapshot ?? 'Uncategorized',
+    categoryColor: snapshot.categoryColorSnapshot,
     notes: session.notes,
     editedAt: session.edited_at,
   }
@@ -127,57 +121,38 @@ function buildSessionExportFileName(
   return `flowtime-sessions-${scopePart}-${windowPart}.${format}`
 }
 
-export function buildSessionExportRecords(sessions: SessionWithTask[]): SessionExportRecord[] {
+function buildSessionExportRecords(sessions: SessionWithTask[]): SessionExportRecord[] {
   return [...sessions]
     .sort((a, b) => a.started_at.localeCompare(b.started_at))
     .map((session) => toSessionExportRecord(session))
 }
 
-export function serializeSessionExportCsv(records: SessionExportRecord[]) {
-  const headers = [
-    'id',
-    'started_at',
-    'ended_at',
-    'work_seconds',
-    'break_seconds',
-    'work_minutes',
-    'break_minutes',
-    'task_id',
-    'task_name',
-    'task_color',
-    'category_id',
-    'category_name',
-    'category_color',
-    'notes',
-    'edited_at',
-  ]
+const CSV_FIELDS = [
+  ['id', 'id'],
+  ['started_at', 'startedAt'],
+  ['ended_at', 'endedAt'],
+  ['work_seconds', 'workSeconds'],
+  ['break_seconds', 'breakSeconds'],
+  ['work_minutes', 'workMinutes'],
+  ['break_minutes', 'breakMinutes'],
+  ['task_id', 'taskId'],
+  ['task_name', 'taskName'],
+  ['task_color', 'taskColor'],
+  ['category_id', 'categoryId'],
+  ['category_name', 'categoryName'],
+  ['category_color', 'categoryColor'],
+  ['notes', 'notes'],
+  ['edited_at', 'editedAt'],
+] as const satisfies ReadonlyArray<readonly [string, keyof SessionExportRecord]>
 
+function serializeSessionExportCsv(records: SessionExportRecord[]) {
   const rows = records.map((record) =>
-    [
-      record.id,
-      record.startedAt,
-      record.endedAt,
-      record.workSeconds,
-      record.breakSeconds,
-      record.workMinutes,
-      record.breakMinutes,
-      record.taskId,
-      record.taskName,
-      record.taskColor,
-      record.categoryId,
-      record.categoryName,
-      record.categoryColor,
-      record.notes,
-      record.editedAt,
-    ]
-      .map((value) => toCsvCell(value))
-      .join(',')
+    CSV_FIELDS.map(([, key]) => toCsvCell(record[key])).join(',')
   )
-
-  return [headers.join(','), ...rows].join('\n')
+  return [CSV_FIELDS.map(([header]) => header).join(','), ...rows].join('\n')
 }
 
-export function serializeSessionExportJson(
+function serializeSessionExportJson(
   records: SessionExportRecord[],
   metadata: SessionExportMetadata
 ) {

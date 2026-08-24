@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/queryKeys'
-import { toSessionSnapshotColumns } from '@/lib/sessionSnapshot'
+import { snapshotColumns } from '@/lib/sessionSnapshot'
 import type { Session } from '@/types'
 import { supabase } from '@/lib/supabaseClient'
 import type { SaveSessionInput } from '@/features/sessions/types'
@@ -19,7 +19,7 @@ export function useSessionSave() {
         started_at: payload.started_at,
         ended_at: payload.ended_at,
         notes: payload.notes ?? null,
-        ...toSessionSnapshotColumns(payload.snapshot),
+        ...snapshotColumns(payload.snapshot),
       }
       const { data, error } = await supabase
         .from('sessions')

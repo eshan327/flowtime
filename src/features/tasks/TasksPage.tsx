@@ -17,10 +17,7 @@ export function TasksPage() {
     isLoading: categoriesLoading,
     error: categoriesError,
     addCategory,
-    renameCategory,
-    recolorCategory,
-    archiveCategory,
-    unarchiveCategory,
+    updateCategory,
     deleteCategory,
     reorderCategory,
   } = useCategories()
@@ -31,9 +28,7 @@ export function TasksPage() {
     error: tasksError,
     addTask,
     updateTask,
-    completeTask,
     deleteTask,
-    moveTask,
     reorderTask,
   } = useTasks()
 
@@ -44,17 +39,12 @@ export function TasksPage() {
 
   const mutationError =
     addCategory.error ??
-    renameCategory.error ??
-    recolorCategory.error ??
-    archiveCategory.error ??
-    unarchiveCategory.error ??
+    updateCategory.error ??
     deleteCategory.error ??
     reorderCategory.error ??
     addTask.error ??
     updateTask.error ??
-    completeTask.error ??
     deleteTask.error ??
-    moveTask.error ??
     reorderTask.error
 
   const isLoading = categoriesLoading || tasksLoading
@@ -89,7 +79,7 @@ export function TasksPage() {
         categories={categories}
         onAddCategory={() => setIsAddCategoryOpen(true)}
         onArchiveCategory={async (id) => {
-          await archiveCategory.mutateAsync(id)
+          await updateCategory.mutateAsync({ id, archivedAt: new Date().toISOString() })
           if (resolvedActiveTab === id) setActiveTab('all')
         }}
         onChangeTab={setActiveTab}
@@ -97,8 +87,8 @@ export function TasksPage() {
           await deleteCategory.mutateAsync(id)
           if (resolvedActiveTab === id) setActiveTab('all')
         }}
-        onRecolorCategory={(id, color) => recolorCategory.mutateAsync({ id, color })}
-        onRenameCategory={(id, name) => renameCategory.mutateAsync({ id, name })}
+        onRecolorCategory={(id, color) => updateCategory.mutateAsync({ id, color })}
+        onRenameCategory={(id, name) => updateCategory.mutateAsync({ id, name })}
         onReorderCategory={(id, newPosition) => reorderCategory.mutateAsync({ id, newPosition })}
       />
 
@@ -107,14 +97,16 @@ export function TasksPage() {
         archivedCategories={archivedCategories}
         categories={categories}
         onAddTask={addTask.mutateAsync}
-        onCompleteTask={completeTask.mutateAsync}
+        onCompleteTask={(id) =>
+          updateTask.mutateAsync({ id, completedAt: new Date().toISOString() })
+        }
         onDeleteTask={deleteTask.mutateAsync}
-        onMoveTask={moveTask.mutateAsync}
+        onMoveTask={({ id, categoryId }) => updateTask.mutateAsync({ id, categoryId })}
         onMoveArchivedTasks={async (taskIds, categoryId) => {
-          for (const id of taskIds) await moveTask.mutateAsync({ id, categoryId })
+          for (const id of taskIds) await updateTask.mutateAsync({ id, categoryId })
         }}
         onRestoreCategory={async (id) => {
-          await unarchiveCategory.mutateAsync(id)
+          await updateCategory.mutateAsync({ id, archivedAt: null })
           setActiveTab(id)
         }}
         onReorderTask={reorderTask.mutateAsync}

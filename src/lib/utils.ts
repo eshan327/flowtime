@@ -1,13 +1,7 @@
 import { twMerge, type ClassNameValue } from 'tailwind-merge'
 import { toHourKey, toLocalDateKey, toStartOfDay, toWeekStart } from '@/lib/dateMath'
-import {
-  getSessionCategoryId,
-  getSessionCategoryName,
-  getSessionColor,
-  getSessionTaskColor,
-  getSessionTaskId,
-  getSessionTaskName,
-} from '@/lib/sessionSnapshot'
+import { snapshotSession } from '@/lib/sessionSnapshot'
+import { DEFAULT_NEUTRAL_COLOR } from '@/lib/colors'
 import type {
   CategorySeconds,
   CategorySummary,
@@ -21,7 +15,8 @@ function addSessionToCategoryBuckets(
   buckets: Map<string, CategorySeconds>,
   session: SessionWithTask
 ) {
-  const categoryId = getSessionCategoryId(session)
+  const snapshot = snapshotSession(session)
+  const categoryId = snapshot.categoryIdSnapshot
   const mapKey = categoryId ?? 'uncategorized'
   const existing = buckets.get(mapKey)
 
@@ -32,8 +27,8 @@ function addSessionToCategoryBuckets(
 
   buckets.set(mapKey, {
     categoryId,
-    categoryName: getSessionCategoryName(session),
-    color: getSessionColor(session),
+    categoryName: snapshot.categoryNameSnapshot ?? 'Uncategorized',
+    color: snapshot.categoryColorSnapshot ?? snapshot.taskColorSnapshot ?? DEFAULT_NEUTRAL_COLOR,
     seconds: session.work_seconds,
   })
 }
@@ -167,7 +162,8 @@ export function aggregateByCategory(sessions: SessionWithTask[]): CategorySummar
   >()
 
   for (const session of sessions) {
-    const categoryId = getSessionCategoryId(session)
+    const snapshot = snapshotSession(session)
+    const categoryId = snapshot.categoryIdSnapshot
     const mapKey = categoryId ?? 'uncategorized'
     const existing = map.get(mapKey)
 
@@ -179,8 +175,8 @@ export function aggregateByCategory(sessions: SessionWithTask[]): CategorySummar
 
     map.set(mapKey, {
       categoryId,
-      categoryName: getSessionCategoryName(session),
-      color: getSessionColor(session),
+      categoryName: snapshot.categoryNameSnapshot ?? 'Uncategorized',
+      color: snapshot.categoryColorSnapshot ?? snapshot.taskColorSnapshot ?? DEFAULT_NEUTRAL_COLOR,
       totalSeconds: session.work_seconds,
       sessionCount: 1,
     })
@@ -203,10 +199,11 @@ export function aggregateByTask(sessions: SessionWithTask[]): TaskSummary[] {
   >()
 
   for (const session of sessions) {
-    const taskName = getSessionTaskName(session)
+    const snapshot = snapshotSession(session)
+    const taskName = snapshot.taskNameSnapshot
     if (!taskName) continue
 
-    const taskId = getSessionTaskId(session)
+    const taskId = snapshot.taskIdSnapshot
     const mapKey = taskId ?? `snapshot:${taskName}`
 
     const existing = map.get(mapKey)
@@ -220,7 +217,7 @@ export function aggregateByTask(sessions: SessionWithTask[]): TaskSummary[] {
       taskId,
       taskName,
       categoryName: session.category_name_snapshot ?? session.tasks?.categories?.name ?? null,
-      color: getSessionTaskColor(session),
+      color: snapshot.taskColorSnapshot ?? snapshot.categoryColorSnapshot ?? DEFAULT_NEUTRAL_COLOR,
       totalSeconds: session.work_seconds,
       sessionCount: 1,
     })

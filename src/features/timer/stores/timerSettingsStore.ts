@@ -7,6 +7,15 @@ export const MIN_GLOBAL_BREAK_DIVISOR = 1
 export const DEFAULT_FOCUS_MODE_LOCK = true
 export const DEFAULT_SHORTCUTS_ENABLED = true
 
+const DEFAULT_SETTINGS = {
+  breakDivisor: DEFAULT_BREAK_DIVISOR,
+  notificationsEnabled: true,
+  chimeEnabled: true,
+  chimeId: DEFAULT_DONE_CHIME_ID,
+  focusModeLock: DEFAULT_FOCUS_MODE_LOCK,
+  shortcutsEnabled: DEFAULT_SHORTCUTS_ENABLED,
+}
+
 export function sanitizeBreakDivisor(value: number) {
   if (!Number.isFinite(value)) return DEFAULT_BREAK_DIVISOR
 
@@ -49,12 +58,7 @@ interface TimerSettingsState {
 export const useTimerSettingsStore = create<TimerSettingsState>()(
   persist(
     (set) => ({
-      breakDivisor: DEFAULT_BREAK_DIVISOR,
-      notificationsEnabled: true,
-      chimeEnabled: true,
-      chimeId: DEFAULT_DONE_CHIME_ID,
-      focusModeLock: DEFAULT_FOCUS_MODE_LOCK,
-      shortcutsEnabled: DEFAULT_SHORTCUTS_ENABLED,
+      ...DEFAULT_SETTINGS,
 
       setBreakDivisor: (value) =>
         set({
@@ -67,15 +71,7 @@ export const useTimerSettingsStore = create<TimerSettingsState>()(
       setFocusModeLock: (enabled) => set({ focusModeLock: enabled }),
       setShortcutsEnabled: (enabled) => set({ shortcutsEnabled: enabled }),
 
-      resetSettings: () =>
-        set({
-          breakDivisor: DEFAULT_BREAK_DIVISOR,
-          notificationsEnabled: true,
-          chimeEnabled: true,
-          chimeId: DEFAULT_DONE_CHIME_ID,
-          focusModeLock: DEFAULT_FOCUS_MODE_LOCK,
-          shortcutsEnabled: DEFAULT_SHORTCUTS_ENABLED,
-        }),
+      resetSettings: () => set(DEFAULT_SETTINGS),
     }),
     {
       name: 'flowtime-timer-settings',
@@ -85,19 +81,24 @@ export const useTimerSettingsStore = create<TimerSettingsState>()(
 
         return {
           ...state,
-          breakDivisor: sanitizeBreakDivisor(state.breakDivisor ?? DEFAULT_BREAK_DIVISOR),
+          breakDivisor: sanitizeBreakDivisor(state.breakDivisor ?? DEFAULT_SETTINGS.breakDivisor),
           notificationsEnabled:
-            typeof state.notificationsEnabled === 'boolean' ? state.notificationsEnabled : true,
-          chimeEnabled: typeof state.chimeEnabled === 'boolean' ? state.chimeEnabled : true,
+            typeof state.notificationsEnabled === 'boolean'
+              ? state.notificationsEnabled
+              : DEFAULT_SETTINGS.notificationsEnabled,
+          chimeEnabled:
+            typeof state.chimeEnabled === 'boolean'
+              ? state.chimeEnabled
+              : DEFAULT_SETTINGS.chimeEnabled,
           chimeId: sanitizeChimeId(state.chimeId),
           focusModeLock:
             typeof state.focusModeLock === 'boolean'
               ? state.focusModeLock
-              : DEFAULT_FOCUS_MODE_LOCK,
+              : DEFAULT_SETTINGS.focusModeLock,
           shortcutsEnabled:
             typeof state.shortcutsEnabled === 'boolean'
               ? state.shortcutsEnabled
-              : DEFAULT_SHORTCUTS_ENABLED,
+              : DEFAULT_SETTINGS.shortcutsEnabled,
         }
       },
     }

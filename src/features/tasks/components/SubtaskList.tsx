@@ -23,15 +23,8 @@ interface SubtaskListProps {
 }
 
 export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
-  const {
-    subtasks,
-    isLoading,
-    addSubtask,
-    renameSubtask,
-    completeSubtask,
-    deleteSubtask,
-    reorderSubtask,
-  } = useSubtasks(taskId)
+  const { subtasks, isLoading, addSubtask, updateSubtask, deleteSubtask, reorderSubtask } =
+    useSubtasks(taskId)
 
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
@@ -79,7 +72,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
       return
     }
 
-    await renameSubtask.mutateAsync({ id: subtaskId, name: trimmed })
+    await updateSubtask.mutateAsync({ id: subtaskId, name: trimmed })
     setEditingSubtaskId(null)
     setDraftName('')
   }
@@ -236,7 +229,10 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
                   onClick={() => {
                     setCompletingSubtaskId(subtask.id)
                     window.setTimeout(() => {
-                      void completeSubtask.mutateAsync(subtask.id)
+                      void updateSubtask.mutateAsync({
+                        id: subtask.id,
+                        completedAt: new Date().toISOString(),
+                      })
                     }, 300)
                   }}
                   size="icon"

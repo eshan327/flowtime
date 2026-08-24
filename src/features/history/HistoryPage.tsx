@@ -20,11 +20,7 @@ import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { getRangeDatesForAnchor } from '@/lib/dateRange'
 import { toEndOfDay, toStartOfDay } from '@/lib/dateMath'
 import { getErrorMessage } from '@/lib/errorMessages'
-import {
-  createSessionSnapshotForTaskId,
-  getSessionCategoryName,
-  getSessionTaskName,
-} from '@/lib/sessionSnapshot'
+import { EMPTY_SESSION_SNAPSHOT, snapshotSession, snapshotTask } from '@/lib/sessionSnapshot'
 import type { SessionWithTask, TimeRange } from '@/types'
 
 type HistoryRange = TimeRange | 'all-time' | 'custom'
@@ -198,7 +194,7 @@ export function HistoryPage() {
     archivedCategories,
     isLoading: categoriesLoading,
     error: categoriesError,
-    unarchiveCategory,
+    updateCategory,
     deleteCategory,
   } = useCategories()
 
@@ -207,7 +203,7 @@ export function HistoryPage() {
     completedTasks,
     isLoading: tasksLoading,
     error: tasksError,
-    restoreTask,
+    updateTask,
     deleteTask,
   } = useTasks()
   const { updateSession, softDeleteSession, restoreSession } = useSessionMutations()
@@ -260,9 +256,10 @@ export function HistoryPage() {
     if (!search) return sessions
 
     return sessions.filter((session) => {
+      const snapshot = snapshotSession(session)
       const values = [
-        getSessionTaskName(session),
-        getSessionCategoryName(session),
+        snapshot.taskNameSnapshot,
+        snapshot.categoryNameSnapshot ?? 'Uncategorized',
         session.notes,
         new Date(session.started_at).toLocaleDateString(),
       ]
@@ -301,7 +298,11 @@ export function HistoryPage() {
     const selectedTask = values.taskId
       ? (sessionTasks.find((task) => task.id === values.taskId) ?? null)
       : null
-    const snapshot = createSessionSnapshotForTaskId(values.taskId, selectedTask, editingSession)
+    const snapshot = !values.taskId
+      ? EMPTY_SESSION_SNAPSHOT
+      : selectedTask
+        ? snapshotTask(selectedTask)
+        : { ...snapshotSession(editingSession), taskIdSnapshot: values.taskId }
 
     await updateSession.mutateAsync({
       id: values.id,
@@ -340,9 +341,9 @@ export function HistoryPage() {
     updateSession.error ??
     softDeleteSession.error ??
     restoreSession.error ??
-    unarchiveCategory.error ??
+    updateCategory.error ??
     deleteCategory.error ??
-    restoreTask.error ??
+    updateTask.error ??
     deleteTask.error
 
   if (isLoading) {
@@ -539,7 +540,7 @@ export function HistoryPage() {
         items={filteredArchivedCategories}
         isExpanded={showArchivedCategories}
         onDelete={(id) => deleteCategory.mutateAsync(id)}
-        onRestore={(id) => unarchiveCategory.mutateAsync(id)}
+        onRestore={(id) => updateCategory.mutateAsync({ id, archivedAt: null })}
         onToggle={() => setShowArchivedCategories((current) => !current)}
         renderItem={(category) => (
           <div className="flex min-w-0 items-center gap-2">
@@ -561,7 +562,7 @@ export function HistoryPage() {
         items={filteredCompletedTasks}
         isExpanded={showCompletedTasks}
         onDelete={(id) => deleteTask.mutateAsync(id)}
-        onRestore={(id) => restoreTask.mutateAsync(id)}
+        onRestore={(id) => updateTask.mutateAsync({ id, completedAt: null })}
         onToggle={() => setShowCompletedTasks((current) => !current)}
         renderItem={(task) => (
           <div className="min-w-0">

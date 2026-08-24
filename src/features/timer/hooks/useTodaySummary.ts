@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useUser } from '@/hooks/useUser'
+import { useUser } from '@/context/UserContext'
 import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabaseClient'
 
