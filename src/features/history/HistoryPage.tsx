@@ -18,7 +18,7 @@ import {
 import { useHistorySessions } from '@/features/history/hooks/useHistorySessions'
 import { useCategories } from '@/features/tasks/hooks/useCategories'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
-import { formatRangeWindow, getRangeDatesForAnchor } from '@/lib/dateRange'
+import { getRangeDatesForAnchor } from '@/lib/dateRange'
 import { toEndOfDay, toStartOfDay } from '@/lib/dateMath'
 import { getErrorMessage } from '@/lib/errorMessages'
 import {
@@ -33,7 +33,6 @@ type HistoryRange = TimeRange | 'all-time' | 'custom'
 interface HistoryWindow {
   from: Date | null
   to: Date | null
-  label: string
   isValid: boolean
   exportRange: TimeRange | 'all-time' | 'custom'
 }
@@ -69,7 +68,6 @@ function getHistoryWindow(
     return {
       from: null,
       to: null,
-      label: 'All time',
       isValid: true,
       exportRange: 'all-time',
     }
@@ -80,7 +78,6 @@ function getHistoryWindow(
       return {
         from: null,
         to: null,
-        label: 'Custom range',
         isValid: false,
         exportRange: 'custom',
       }
@@ -92,7 +89,6 @@ function getHistoryWindow(
       return {
         from: null,
         to: null,
-        label: 'Custom range',
         isValid: false,
         exportRange: 'custom',
       }
@@ -104,15 +100,6 @@ function getHistoryWindow(
     return {
       from,
       to,
-      label: `${from.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })} - ${to.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })}`,
       isValid: true,
       exportRange: 'custom',
     }
@@ -123,7 +110,6 @@ function getHistoryWindow(
   return {
     from,
     to,
-    label: formatRangeWindow(range, from, to),
     isValid: true,
     exportRange: range,
   }
@@ -350,10 +336,10 @@ export function HistoryPage() {
 
       <section>
         <p className="text-sm text-ink-secondary">Range</p>
-        <div className="mt-3 inline-flex max-w-full flex-wrap gap-0.5 rounded-lg bg-surface-sidebar/70 p-1">
+        <div className="mt-3 grid grid-cols-3 gap-0.5 rounded-lg bg-surface-sidebar/70 p-1 sm:inline-flex">
           {HISTORY_RANGE_OPTIONS.map((option) => (
             <Button
-              className={`min-w-[74px] ${
+              className={`min-w-0 sm:min-w-[74px] ${
                 range === option.value ? 'bg-surface-hover text-ink-primary' : ''
               }`}
               key={option.value}
@@ -385,14 +371,13 @@ export function HistoryPage() {
           </div>
         ) : null}
 
-        <p className="mt-3 text-xs text-ink-tertiary">{historyWindow.label}</p>
         {!historyWindow.isValid ? (
           <p className="mt-2 text-sm text-red-300">Pick a valid custom start/end date range.</p>
         ) : null}
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-3">
-        <article className="flex min-h-24 flex-col justify-between rounded-xl bg-surface-panel p-4">
+      <section className="grid grid-cols-3 divide-x divide-surface-border-subtle overflow-hidden rounded-xl bg-surface-panel">
+        <article className="min-w-0 px-3 py-4 sm:px-5">
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.archivedCategories}
           </p>
@@ -401,7 +386,7 @@ export function HistoryPage() {
           </p>
         </article>
 
-        <article className="flex min-h-24 flex-col justify-between rounded-xl bg-surface-panel p-4">
+        <article className="min-w-0 px-3 py-4 sm:px-5">
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.completedTasks}
           </p>
@@ -410,7 +395,7 @@ export function HistoryPage() {
           </p>
         </article>
 
-        <article className="flex min-h-24 flex-col justify-between rounded-xl bg-surface-panel p-4">
+        <article className="min-w-0 px-3 py-4 sm:px-5">
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.exportableSessions}
           </p>

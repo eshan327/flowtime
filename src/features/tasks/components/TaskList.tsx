@@ -146,12 +146,29 @@ export function TaskList({
   const hasAnyTasks = tasks.length > 0
   const [archivedMoveTargets, setArchivedMoveTargets] = useState<Record<string, string>>({})
 
+  if (!hasAnyTasks) {
+    const emptySection = sections[0]
+
+    return (
+      <div className="rounded-xl bg-surface-panel">
+        <EmptyState
+          action={
+            <AddTaskForm
+              label="Add task"
+              onAdd={async (name) => {
+                await onAddTask({ name, categoryId: emptySection?.categoryId ?? null })
+              }}
+            />
+          }
+          icon={<ListTodo className="h-5 w-5" />}
+          title="No active tasks"
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5">
-      {!hasAnyTasks ? (
-        <EmptyState icon={<ListTodo className="h-5 w-5" />} title="No active tasks" />
-      ) : null}
-
       {sections.map((section) => (
         <section className="space-y-3" key={section.key}>
           <header>
