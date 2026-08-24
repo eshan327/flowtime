@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { Archive, BarChart3, CheckSquare, Home, LogIn, LogOut } from 'lucide-react'
+import { Archive, BarChart3, CheckSquare, ChevronRight, Home, LogIn, LogOut } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { useUser } from '@/hooks/useUser'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -55,10 +57,40 @@ function getInitials(label: string) {
   return 'U'
 }
 
+function UserAvatar({
+  initials,
+  url,
+  className,
+}: {
+  initials: string
+  url?: string
+  className: string
+}) {
+  return (
+    <span
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-hover font-medium text-ink-primary ${className}`}
+    >
+      {initials}
+      {url ? (
+        <img
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(event) => event.currentTarget.remove()}
+          src={url}
+        />
+      ) : null}
+    </span>
+  )
+}
+
 export function Layout({ children }: { children: ReactNode }) {
   const { user } = useUser()
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
+  const [isAccountOpen, setIsAccountOpen] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState('')
+  const [profileMessage, setProfileMessage] = useState<string | null>(null)
+  const [accountAgeMonths, setAccountAgeMonths] = useState<number | null>(null)
   const isGuest = !user || user.is_anonymous
 
   const displayName = getUserDisplayName(
@@ -66,6 +98,18 @@ export function Layout({ children }: { children: ReactNode }) {
     user?.user_metadata?.full_name ?? user?.user_metadata?.name
   )
   const initials = getInitials(displayName)
+  const avatarUrl = user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture
+
+  const openAccount = () => {
+    setPhotoUrl(typeof avatarUrl === 'string' ? avatarUrl : '')
+    setAccountAgeMonths(
+      user?.created_at
+        ? Math.max(0, Math.floor((Date.now() - Date.parse(user.created_at)) / 2_629_746_000))
+        : null
+    )
+    setProfileMessage(null)
+    setIsAccountOpen(true)
+  }
 
   const handleSignIn = async () => {
     setIsAuthPending(true)
@@ -93,6 +137,20 @@ export function Layout({ children }: { children: ReactNode }) {
     if (error) {
       setAuthError(error.message)
     }
+    setIsAccountOpen(false)
+    setIsAuthPending(false)
+  }
+
+  const handlePhotoUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setIsAuthPending(true)
+    setProfileMessage(null)
+
+    const { error } = await supabase.auth.updateUser({
+      data: { avatar_url: photoUrl.trim() || null },
+    })
+
+    setProfileMessage(error ? error.message : 'Profile photo updated.')
     setIsAuthPending(false)
   }
 
@@ -123,28 +181,18 @@ export function Layout({ children }: { children: ReactNode }) {
                 {isAuthPending ? 'Please wait...' : 'Sign in'}
               </Button>
             ) : (
-              <div className="flex items-center gap-3 px-1 py-1">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-hover text-sm font-medium text-ink-primary">
-                  {initials}
-                </span>
+              <button
+                className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-surface-hover/30 focus-visible:ring-2 focus-visible:ring-accent-primary/70"
+                onClick={openAccount}
+                type="button"
+              >
+                <UserAvatar className="h-10 w-10 text-sm" initials={initials} url={avatarUrl} />
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-medium text-ink-primary">{displayName}</p>
-                  <p className="truncate text-xs text-ink-tertiary">{user?.email ?? 'Signed in'}</p>
                 </div>
-
-                <Button
-                  aria-label={isAuthPending ? 'Signing out' : 'Sign out'}
-                  className="shrink-0 text-ink-tertiary"
-                  disabled={isAuthPending}
-                  onClick={handleSignOut}
-                  size="icon"
-                  title="Sign out"
-                  variant="ghost"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-ink-tertiary" />
+              </button>
             )}
 
             {authError ? <p className="mt-2 text-sm text-red-300">{authError}</p> : null}
@@ -163,22 +211,21 @@ export function Layout({ children }: { children: ReactNode }) {
             </div>
 
             <div className="flex items-center gap-2">
-              {!isGuest ? (
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-hover text-xs font-medium text-ink-primary">
-                  {initials}
-                </span>
-              ) : null}
-              <Button
-                aria-label={isGuest ? 'Sign in' : 'Sign out'}
-                disabled={isAuthPending}
-                onClick={isGuest ? handleSignIn : handleSignOut}
-                size={isGuest ? 'sm' : 'icon'}
-                title={isGuest ? undefined : 'Sign out'}
-                variant="ghost"
-              >
-                {isGuest ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
-                {isGuest ? (isAuthPending ? 'Please wait...' : 'Sign in') : null}
-              </Button>
+              {isGuest ? (
+                <Button disabled={isAuthPending} onClick={handleSignIn} size="sm" variant="ghost">
+                  <LogIn className="h-4 w-4" />
+                  {isAuthPending ? 'Please wait...' : 'Sign in'}
+                </Button>
+              ) : (
+                <button
+                  aria-label="Open account"
+                  className="rounded-full focus-visible:ring-2 focus-visible:ring-accent-primary/70"
+                  onClick={openAccount}
+                  type="button"
+                >
+                  <UserAvatar className="h-8 w-8 text-xs" initials={initials} url={avatarUrl} />
+                </button>
+              )}
             </div>
           </header>
 
@@ -209,6 +256,62 @@ export function Layout({ children }: { children: ReactNode }) {
           ))}
         </div>
       </nav>
+
+      <Modal isOpen={isAccountOpen} onClose={() => setIsAccountOpen(false)} title="Account">
+        <div className="flex items-center gap-4">
+          <UserAvatar className="h-16 w-16 text-lg" initials={initials} url={avatarUrl} />
+          <div className="min-w-0">
+            <p className="truncate text-lg font-medium text-ink-primary">{displayName}</p>
+            <p className="truncate text-sm text-ink-tertiary">{user?.email}</p>
+          </div>
+        </div>
+
+        <form className="mt-6" onSubmit={handlePhotoUpdate}>
+          <Input
+            label="Profile photo URL"
+            onChange={(event) => setPhotoUrl(event.target.value)}
+            placeholder="https://example.com/photo.jpg"
+            type="url"
+            value={photoUrl}
+          />
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <p
+              className={`text-sm ${profileMessage?.endsWith('updated.') ? 'text-ink-secondary' : 'text-red-300'}`}
+              role="status"
+            >
+              {profileMessage}
+            </p>
+            <Button loading={isAuthPending} size="sm" type="submit">
+              Save photo
+            </Button>
+          </div>
+        </form>
+
+        <dl className="mt-6 divide-y divide-surface-border-subtle border-y border-surface-border-subtle text-sm">
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-ink-tertiary">Email</dt>
+            <dd className="min-w-0 truncate text-ink-primary">{user?.email}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-ink-tertiary">Account age</dt>
+            <dd className="text-ink-primary">
+              {accountAgeMonths === null
+                ? 'Unknown'
+                : `${accountAgeMonths} ${accountAgeMonths === 1 ? 'month' : 'months'}`}
+            </dd>
+          </div>
+        </dl>
+
+        <Button
+          className="mt-5 w-full"
+          disabled={isAuthPending}
+          onClick={handleSignOut}
+          variant="ghost"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </Button>
+      </Modal>
     </div>
   )
 }

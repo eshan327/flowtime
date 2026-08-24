@@ -390,7 +390,7 @@ export function TimerPage() {
           </p>
         ) : null}
 
-        <div className="flex flex-col items-center">
+        <div className="mt-6 flex flex-col items-center sm:mt-8">
           <TimerClock
             accentColor={selectedTaskColor}
             breakEndAt={breakEndAt}
