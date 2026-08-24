@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
@@ -8,8 +9,6 @@ import {
 } from '@/features/sessions/components/SessionEditModal'
 import { SessionLog } from '@/features/sessions/components/SessionLog'
 import { useSessionMutations } from '@/features/sessions/hooks/useSessionMutations'
-import { ArchivedCategoriesSection } from '@/features/tasks/components/ArchivedCategoriesSection'
-import { CompletedTasksSection } from '@/features/tasks/components/CompletedTasksSection'
 import {
   createSessionExportPayload,
   downloadSessionExportFile,
@@ -33,8 +32,6 @@ type HistoryRange = TimeRange | 'all-time' | 'custom'
 interface HistoryWindow {
   from: Date | null
   to: Date | null
-  isValid: boolean
-  exportRange: TimeRange | 'all-time' | 'custom'
 }
 
 const HISTORY_RANGE_OPTIONS: Array<{ label: string; value: HistoryRange }> = [
@@ -63,56 +60,27 @@ function getHistoryWindow(
   range: HistoryRange,
   customFrom: string,
   customTo: string
-): HistoryWindow {
+): HistoryWindow | null {
   if (range === 'all-time') {
-    return {
-      from: null,
-      to: null,
-      isValid: true,
-      exportRange: 'all-time',
-    }
+    return { from: null, to: null }
   }
 
   if (range === 'custom') {
-    if (!customFrom || !customTo) {
-      return {
-        from: null,
-        to: null,
-        isValid: false,
-        exportRange: 'custom',
-      }
-    }
+    if (!customFrom || !customTo) return null
 
     const parsedFrom = toParsedDate(customFrom)
     const parsedTo = toParsedDate(customTo)
     if (!parsedFrom || !parsedTo || parsedFrom.getTime() > parsedTo.getTime()) {
-      return {
-        from: null,
-        to: null,
-        isValid: false,
-        exportRange: 'custom',
-      }
+      return null
     }
-
-    const from = toStartOfDay(parsedFrom)
-    const to = toEndOfDay(parsedTo)
 
     return {
-      from,
-      to,
-      isValid: true,
-      exportRange: 'custom',
+      from: toStartOfDay(parsedFrom),
+      to: toEndOfDay(parsedTo),
     }
   }
 
-  const { from, to } = getRangeDatesForAnchor(range, new Date())
-
-  return {
-    from,
-    to,
-    isValid: true,
-    exportRange: range,
-  }
+  return getRangeDatesForAnchor(range, new Date())
 }
 
 function isWithinWindow(value: string | null | undefined, from: Date | null, to: Date | null) {
@@ -136,6 +104,79 @@ function isWithinWindow(value: string | null | undefined, from: Date | null, to:
   }
 
   return true
+}
+
+interface ArchivedItemsSectionProps<T extends { id: string }> {
+  title: string
+  emptyMessage: string
+  items: T[]
+  isExpanded: boolean
+  onToggle: () => void
+  onRestore: (id: string) => Promise<void> | void
+  onDelete: (id: string) => Promise<void> | void
+  renderItem: (item: T) => ReactNode
+  deleteConfirmation: (item: T) => string
+}
+
+function ArchivedItemsSection<T extends { id: string }>({
+  title,
+  emptyMessage,
+  items,
+  isExpanded,
+  onToggle,
+  onRestore,
+  onDelete,
+  renderItem,
+  deleteConfirmation,
+}: ArchivedItemsSectionProps<T>) {
+  return (
+    <section className="rounded-xl bg-surface-panel p-4">
+      <Button
+        aria-expanded={isExpanded}
+        className="h-auto w-full justify-between px-1 text-sm"
+        onClick={onToggle}
+        size="sm"
+        variant="ghost"
+      >
+        <span>
+          {title} ({items.length})
+        </span>
+        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </Button>
+
+      {isExpanded ? (
+        items.length === 0 ? (
+          <p className="mt-2 text-sm text-ink-tertiary">{emptyMessage}</p>
+        ) : (
+          <div className="mt-2 space-y-2">
+            {items.map((item) => (
+              <div
+                className="flex items-center justify-between gap-2 border-b border-surface-border-subtle px-1 py-3"
+                key={item.id}
+              >
+                {renderItem(item)}
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => void onRestore(item.id)} size="sm" variant="ghost">
+                    Restore
+                  </Button>
+                  <Button
+                    className="text-red-300 hover:text-red-200"
+                    onClick={() => {
+                      if (window.confirm(deleteConfirmation(item))) void onDelete(item.id)
+                    }}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : null}
+    </section>
+  )
 }
 
 export function HistoryPage() {
@@ -179,6 +220,7 @@ export function HistoryPage() {
     () => getHistoryWindow(range, customFrom, customTo),
     [range, customFrom, customTo]
   )
+  const isHistoryWindowValid = historyWindow !== null
   const isAllTimeRange = range === 'all-time'
 
   const {
@@ -186,15 +228,13 @@ export function HistoryPage() {
     isLoading: sessionsLoading,
     error: sessionsError,
   } = useHistorySessions({
-    from: historyWindow.from,
-    to: historyWindow.to,
-    enabled: historyWindow.isValid,
+    from: historyWindow?.from ?? null,
+    to: historyWindow?.to ?? null,
+    enabled: isHistoryWindowValid,
   })
 
   const filteredArchivedCategories = useMemo(() => {
-    if (!historyWindow.isValid) {
-      return []
-    }
+    if (!historyWindow) return []
 
     return archivedCategories.filter((category) =>
       isWithinWindow(category.archived_at, historyWindow.from, historyWindow.to)
@@ -202,23 +242,18 @@ export function HistoryPage() {
   }, [archivedCategories, historyWindow])
 
   const filteredCompletedTasks = useMemo(() => {
-    if (!historyWindow.isValid) {
-      return []
-    }
+    if (!historyWindow) return []
 
     return completedTasks.filter((task) =>
       isWithinWindow(task.completed_at, historyWindow.from, historyWindow.to)
     )
   }, [completedTasks, historyWindow])
 
-  const archiveSummary = useMemo(
-    () => ({
-      archivedCategories: filteredArchivedCategories.length,
-      completedTasks: filteredCompletedTasks.length,
-      exportableSessions: historyWindow.isValid ? sessions.length : 0,
-    }),
-    [filteredArchivedCategories, filteredCompletedTasks, historyWindow.isValid, sessions]
-  )
+  const archiveSummary = {
+    archivedCategories: filteredArchivedCategories.length,
+    completedTasks: filteredCompletedTasks.length,
+    exportableSessions: isHistoryWindowValid ? sessions.length : 0,
+  }
 
   const filteredSessions = useMemo(() => {
     const search = sessionSearch.trim().toLocaleLowerCase()
@@ -247,9 +282,9 @@ export function HistoryPage() {
         sessions,
         scope: exportScope,
         format,
-        range: historyWindow.exportRange,
-        from: exportScope === 'range' ? (historyWindow.from ?? undefined) : undefined,
-        to: exportScope === 'range' ? (historyWindow.to ?? undefined) : undefined,
+        range,
+        from: exportScope === 'range' ? (historyWindow?.from ?? undefined) : undefined,
+        to: exportScope === 'range' ? (historyWindow?.to ?? undefined) : undefined,
       })
 
       downloadSessionExportFile(payload)
@@ -373,7 +408,7 @@ export function HistoryPage() {
           </div>
         ) : null}
 
-        {!historyWindow.isValid ? (
+        {!isHistoryWindowValid ? (
           <p className="mt-2 text-sm text-red-300">Pick a valid custom start/end date range.</p>
         ) : null}
       </section>
@@ -473,7 +508,7 @@ export function HistoryPage() {
           <div className="flex flex-wrap gap-2">
             {(['csv', 'json'] as const).map((format) => (
               <Button
-                disabled={!historyWindow.isValid || sessionsLoading}
+                disabled={!isHistoryWindowValid || sessionsLoading}
                 key={format}
                 loading={activeExportFormat === format}
                 onClick={() => {
@@ -496,28 +531,45 @@ export function HistoryPage() {
         {exportError ? <p className="mt-3 text-sm text-red-300">{exportError}</p> : null}
       </section>
 
-      <ArchivedCategoriesSection
-        categories={filteredArchivedCategories}
+      <ArchivedItemsSection
+        deleteConfirmation={(category) =>
+          `Delete ${category.name} permanently? Its tasks will become uncategorized.`
+        }
+        emptyMessage="No archived categories."
+        items={filteredArchivedCategories}
         isExpanded={showArchivedCategories}
-        onDeleteCategory={async (id) => {
-          await deleteCategory.mutateAsync(id)
-        }}
-        onRestoreCategory={async (id) => {
-          await unarchiveCategory.mutateAsync(id)
-        }}
+        onDelete={(id) => deleteCategory.mutateAsync(id)}
+        onRestore={(id) => unarchiveCategory.mutateAsync(id)}
         onToggle={() => setShowArchivedCategories((current) => !current)}
+        renderItem={(category) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: category.color }}
+            />
+            <span className="truncate text-sm text-ink-primary">{category.name}</span>
+          </div>
+        )}
+        title="Archived categories"
       />
 
-      <CompletedTasksSection
+      <ArchivedItemsSection
+        deleteConfirmation={(task) =>
+          `Delete ${task.name} permanently? Its session history will be preserved.`
+        }
+        emptyMessage="No completed tasks."
+        items={filteredCompletedTasks}
         isExpanded={showCompletedTasks}
-        onDeleteTask={async (id) => {
-          await deleteTask.mutateAsync(id)
-        }}
-        onRestoreTask={async (id) => {
-          await restoreTask.mutateAsync(id)
-        }}
+        onDelete={(id) => deleteTask.mutateAsync(id)}
+        onRestore={(id) => restoreTask.mutateAsync(id)}
         onToggle={() => setShowCompletedTasks((current) => !current)}
-        tasks={filteredCompletedTasks}
+        renderItem={(task) => (
+          <div className="min-w-0">
+            <p className="truncate text-sm text-ink-primary">{task.name}</p>
+            <p className="text-xs text-ink-tertiary">{task.categories?.name ?? 'Uncategorized'}</p>
+          </div>
+        )}
+        title="Completed tasks"
       />
 
       {mutationError ? (

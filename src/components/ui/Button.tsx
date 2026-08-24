@@ -1,4 +1,3 @@
-import { forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 
 type ButtonVariant = 'filled' | 'outlined' | 'ghost'
@@ -20,25 +19,22 @@ const sizeClasses: Record<ButtonSize, string> = {
   icon: 'h-9 w-9 p-0',
 }
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
   size?: ButtonSize
   loading?: boolean
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  {
-    variant = 'outlined',
-    size = 'md',
-    loading = false,
-    type = 'button',
-    disabled,
-    className,
-    children,
-    ...props
-  },
-  ref
-) {
+export function Button({
+  variant = 'outlined',
+  size = 'md',
+  loading = false,
+  type = 'button',
+  disabled,
+  className,
+  children,
+  ...props
+}: ButtonProps) {
   return (
     <button
       className={cn(
@@ -48,7 +44,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         className
       )}
       disabled={disabled || loading}
-      ref={ref}
       type={type}
       {...props}
     >
@@ -61,4 +56,4 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {children}
     </button>
   )
-})
+}

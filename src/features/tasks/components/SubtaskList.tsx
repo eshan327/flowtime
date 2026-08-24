@@ -302,12 +302,7 @@ export function SubtaskList({ taskId, accentColor }: SubtaskListProps) {
         )
       })}
 
-      <AddTaskForm
-        label="Add subtask"
-        onAdd={async (name) => {
-          await addSubtask.mutateAsync(name)
-        }}
-      />
+      <AddTaskForm label="Add subtask" onAdd={addSubtask.mutateAsync} />
 
       {reorderError ? <p className="text-xs text-red-300">{reorderError}</p> : null}
     </div>

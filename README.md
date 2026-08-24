@@ -55,7 +55,7 @@ Live app: https://flowtimeboard.vercel.app
 - Zustand
 - Supabase
 - Recharts + Lucide
-- ESLint + Prettier + simple-git-hooks + lint-staged
+- ESLint + Prettier + native Git hooks
 
 ## Architecture Conventions
 
@@ -77,7 +77,7 @@ pnpm install
 2. If your environment requires build-script approvals (pnpm v11+):
 
 ```bash
-pnpm approve-builds simple-git-hooks supabase
+pnpm approve-builds supabase
 ```
 
 3. Start the app:
@@ -103,6 +103,8 @@ Optional fallback:
 
 - `pnpm dev` - run local dev server
 - `pnpm lint` - lint source files
+- `pnpm format` - format source files
+- `pnpm format:check` - verify source formatting
 - `pnpm build` - type-check and build for production
 - `pnpm preview` - preview production bundle locally
 - `pnpm update-types` - regenerate Supabase types in [src/types/supabase.ts](src/types/supabase.ts)

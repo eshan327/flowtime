@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input'
 
 interface AddTaskFormProps {
   label: string
-  onAdd: (name: string) => Promise<void> | void
+  onAdd: (name: string) => Promise<unknown> | void
 }
 
 export function AddTaskForm({ label, onAdd }: AddTaskFormProps) {

@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/Button'
 import { useUser } from '@/hooks/useUser'
 import { supabase } from '@/lib/supabaseClient'
 
+const NAV_ITEMS = [
+  { to: '/', label: 'Timer', icon: Home },
+  { to: '/tasks', label: 'Tasks', icon: CheckSquare },
+  { to: '/stats', label: 'Stats', icon: BarChart3 },
+  { to: '/history', label: 'History', icon: Archive },
+]
+
 function desktopNavClassName(isActive: boolean) {
   return [
     'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70',
@@ -96,22 +103,12 @@ export function Layout({ children }: { children: ReactNode }) {
           <p className="px-3 text-lg font-semibold tracking-wide text-ink-primary">Flowtime</p>
 
           <nav className="mt-7 grid gap-1">
-            <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/">
-              <Home className="h-5 w-5" />
-              Timer
-            </NavLink>
-            <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/tasks">
-              <CheckSquare className="h-5 w-5" />
-              Tasks
-            </NavLink>
-            <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/stats">
-              <BarChart3 className="h-5 w-5" />
-              Stats
-            </NavLink>
-            <NavLink className={({ isActive }) => desktopNavClassName(isActive)} to="/history">
-              <Archive className="h-5 w-5" />
-              History
-            </NavLink>
+            {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+              <NavLink className={({ isActive }) => desktopNavClassName(isActive)} key={to} to={to}>
+                <Icon className="h-5 w-5" />
+                {label}
+              </NavLink>
+            ))}
           </nav>
 
           <div className="mt-auto border-t border-surface-border-subtle pt-5">
@@ -199,41 +196,17 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-border-subtle bg-surface-sidebar md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-4">
-          <NavLink
-            aria-label="Timer"
-            className={({ isActive }) => mobileNavClassName(isActive)}
-            to="/"
-          >
-            <Home className="h-5 w-5" />
-            <span>Timer</span>
-          </NavLink>
-
-          <NavLink
-            aria-label="Tasks"
-            className={({ isActive }) => mobileNavClassName(isActive)}
-            to="/tasks"
-          >
-            <CheckSquare className="h-5 w-5" />
-            <span>Tasks</span>
-          </NavLink>
-
-          <NavLink
-            aria-label="Stats"
-            className={({ isActive }) => mobileNavClassName(isActive)}
-            to="/stats"
-          >
-            <BarChart3 className="h-5 w-5" />
-            <span>Stats</span>
-          </NavLink>
-
-          <NavLink
-            aria-label="History"
-            className={({ isActive }) => mobileNavClassName(isActive)}
-            to="/history"
-          >
-            <Archive className="h-5 w-5" />
-            <span>History</span>
-          </NavLink>
+          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              aria-label={label}
+              className={({ isActive }) => mobileNavClassName(isActive)}
+              key={to}
+              to={to}
+            >
+              <Icon className="h-5 w-5" />
+              <span>{label}</span>
+            </NavLink>
+          ))}
         </div>
       </nav>
     </div>

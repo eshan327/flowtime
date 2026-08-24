@@ -97,33 +97,19 @@ export function TasksPage() {
           await deleteCategory.mutateAsync(id)
           if (resolvedActiveTab === id) setActiveTab('all')
         }}
-        onRecolorCategory={async (id, color) => {
-          await recolorCategory.mutateAsync({ id, color })
-        }}
-        onRenameCategory={async (id, name) => {
-          await renameCategory.mutateAsync({ id, name })
-        }}
-        onReorderCategory={async (id, newPosition) => {
-          await reorderCategory.mutateAsync({ id, newPosition })
-        }}
+        onRecolorCategory={(id, color) => recolorCategory.mutateAsync({ id, color })}
+        onRenameCategory={(id, name) => renameCategory.mutateAsync({ id, name })}
+        onReorderCategory={(id, newPosition) => reorderCategory.mutateAsync({ id, newPosition })}
       />
 
       <TaskList
         activeTab={resolvedActiveTab}
         archivedCategories={archivedCategories}
         categories={categories}
-        onAddTask={async (payload) => {
-          await addTask.mutateAsync(payload)
-        }}
-        onCompleteTask={async (id) => {
-          await completeTask.mutateAsync(id)
-        }}
-        onDeleteTask={async (id) => {
-          await deleteTask.mutateAsync(id)
-        }}
-        onMoveTask={async (payload) => {
-          await moveTask.mutateAsync(payload)
-        }}
+        onAddTask={addTask.mutateAsync}
+        onCompleteTask={completeTask.mutateAsync}
+        onDeleteTask={deleteTask.mutateAsync}
+        onMoveTask={moveTask.mutateAsync}
         onMoveArchivedTasks={async (taskIds, categoryId) => {
           for (const id of taskIds) await moveTask.mutateAsync({ id, categoryId })
         }}
@@ -131,12 +117,8 @@ export function TasksPage() {
           await unarchiveCategory.mutateAsync(id)
           setActiveTab(id)
         }}
-        onReorderTask={async (payload) => {
-          await reorderTask.mutateAsync(payload)
-        }}
-        onUpdateTask={async (payload) => {
-          await updateTask.mutateAsync(payload)
-        }}
+        onReorderTask={reorderTask.mutateAsync}
+        onUpdateTask={updateTask.mutateAsync}
         tasks={activeTasks}
       />
 

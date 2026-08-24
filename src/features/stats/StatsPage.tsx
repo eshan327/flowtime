@@ -8,7 +8,6 @@ import { DailyBarChart } from '@/features/stats/components/DailyBarChart'
 import { HeatmapGrid } from '@/features/stats/components/HeatmapGrid'
 import { SessionLog } from '@/features/sessions/components/SessionLog'
 import { SummaryCards } from '@/features/stats/components/SummaryCards'
-import { TimeRangeSelector } from '@/features/stats/components/TimeRangeSelector'
 import { useStats } from '@/features/stats/hooks/useStats'
 import { formatDuration } from '@/lib/formatting'
 import { formatRangeWindow, getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
@@ -109,7 +108,19 @@ export function StatsPage() {
       <section>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm text-ink-secondary">
-            Focus time by <TimeRangeSelector onChange={setRange} value={range} />
+            Focus time by{' '}
+            <select
+              aria-label="Focus time range"
+              className="rounded-lg border border-surface-border-subtle bg-surface-sidebar px-2 py-1 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
+              onChange={(event) => setRange(event.target.value as TimeRange)}
+              value={range}
+            >
+              {(['day', 'week', 'month', 'year'] as const).map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </h2>
 
           <div className="flex items-center gap-2">

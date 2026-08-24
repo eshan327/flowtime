@@ -13,7 +13,7 @@ interface TaskListProps {
   categories: Category[]
   archivedCategories: Category[]
   activeTab: string
-  onAddTask: (payload: { name: string; categoryId: string | null }) => Promise<void> | void
+  onAddTask: (payload: { name: string; categoryId: string | null }) => Promise<unknown> | void
   onUpdateTask: (payload: { id: string; name?: string; color?: string }) => Promise<void> | void
   onCompleteTask: (taskId: string) => Promise<void> | void
   onDeleteTask: (taskId: string) => Promise<void> | void
@@ -154,9 +154,7 @@ export function TaskList({
           <div className="mx-auto w-full max-w-xl">
             <AddTaskForm
               label="Add task"
-              onAdd={async (name) => {
-                await onAddTask({ name, categoryId: emptySection?.categoryId ?? null })
-              }}
+              onAdd={(name) => onAddTask({ name, categoryId: emptySection?.categoryId ?? null })}
             />
           </div>
         }
@@ -257,12 +255,12 @@ export function TaskList({
           ) : (
             <AddTaskForm
               label="Add task"
-              onAdd={async (name) => {
-                await onAddTask({
+              onAdd={(name) =>
+                onAddTask({
                   name,
                   categoryId: section.categoryId,
                 })
-              }}
+              }
             />
           )}
         </section>

@@ -1,4 +1,4 @@
-import { useMemo, type ComponentProps } from 'react'
+import { useMemo } from 'react'
 import { BarChart3 } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -23,40 +23,6 @@ interface DailyTooltipProps {
   active?: boolean
   label?: string
   payload?: DailyTooltipPayloadItem[]
-}
-
-type VerticalCoordinatesGenerator = NonNullable<
-  ComponentProps<typeof CartesianGrid>['verticalCoordinatesGenerator']
->
-
-const verticalCoordinatesGenerator: VerticalCoordinatesGenerator = ({ xAxis, offset }) => {
-  const minX = offset.left
-  const maxX = offset.left + offset.width
-  const coordinates = (xAxis?.ticks as Array<{ coordinate?: number }> | undefined)
-    ?.map((tick) => tick.coordinate)
-    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
-
-  if (!coordinates?.length) {
-    return []
-  }
-
-  const sorted = [...coordinates].sort((a, b) => a - b)
-  const first = sorted[0]
-  const last = sorted[sorted.length - 1]
-  const ticksAreAlreadyBoundaries =
-    Math.abs(first - minX) <= 1 || Math.abs(last - maxX) <= 1 || sorted.length <= 2
-
-  if (ticksAreAlreadyBoundaries) {
-    return sorted.filter((value) => value >= minX && value <= maxX)
-  }
-
-  const boundaries = [minX]
-  for (let index = 0; index < sorted.length - 1; index += 1) {
-    boundaries.push((sorted[index] + sorted[index + 1]) / 2)
-  }
-  boundaries.push(maxX)
-
-  return boundaries
 }
 
 function formatLabel(date: string, range: TimeRange) {
@@ -167,7 +133,7 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
               stroke={CHART_GRID_COLOR}
               strokeOpacity={0.6}
               strokeDasharray="3 3"
-              verticalCoordinatesGenerator={verticalCoordinatesGenerator}
+              vertical={false}
             />
             <XAxis
               dataKey="label"

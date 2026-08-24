@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { DEFAULT_NEUTRAL_COLOR } from '@/lib/colors'
 import { formatClock, formatDuration } from '@/lib/formatting'
@@ -38,9 +37,13 @@ export function SessionSummary({
       {taskName ? (
         <div className="mt-2">
           <p className="text-sm text-ink-secondary">Task</p>
-          <div className="mt-1">
-            <Badge color={taskColor ?? DEFAULT_NEUTRAL_COLOR} label={taskName} />
-          </div>
+          <span className="mt-1 inline-flex items-center gap-2 text-xs font-medium text-ink-secondary">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: taskColor ?? DEFAULT_NEUTRAL_COLOR }}
+            />
+            {taskName}
+          </span>
         </div>
       ) : null}
 
