@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { ListTodo } from 'lucide-react'
-import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { AddTaskForm } from '@/features/tasks/components/AddTaskForm'
@@ -150,32 +149,41 @@ export function TaskList({
     const emptySection = sections[0]
 
     return (
-      <div className="rounded-xl bg-surface-panel">
-        <EmptyState
-          action={
+      <EmptyState
+        action={
+          <div className="mx-auto w-full max-w-xl">
             <AddTaskForm
               label="Add task"
               onAdd={async (name) => {
                 await onAddTask({ name, categoryId: emptySection?.categoryId ?? null })
               }}
             />
-          }
-          icon={<ListTodo className="h-5 w-5" />}
-          title="No active tasks"
-        />
-      </div>
+          </div>
+        }
+        className="py-10 sm:py-14"
+        icon={<ListTodo className="h-6 w-6" />}
+        title="No active tasks"
+      />
     )
   }
 
   return (
-    <div className="space-y-5">
+    <div
+      className={
+        activeTab === 'all' && sections.length > 1
+          ? 'grid items-start gap-x-10 gap-y-10 lg:grid-cols-2'
+          : 'space-y-10'
+      }
+    >
       {sections.map((section) => (
-        <section className="space-y-3" key={section.key}>
-          <header>
-            <Badge color={section.color} label={section.title} />
+        <section className="min-w-0 space-y-3" key={section.key}>
+          <header className="flex items-center gap-3">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: section.color }} />
+            <h2 className="text-lg font-medium text-ink-primary">{section.title}</h2>
+            <span className="text-sm tabular-nums text-ink-tertiary">{section.tasks.length}</span>
           </header>
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             {section.tasks.map((task) => (
               <TaskItem
                 categories={categories}

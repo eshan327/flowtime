@@ -355,9 +355,9 @@ export function TimerPage() {
   })
 
   return (
-    <section className="flex min-h-[calc(100vh-8rem)] w-full flex-col items-center justify-center py-4 md:py-6">
-      <div className="w-full max-w-2xl rounded-3xl bg-surface-sidebar/40 px-4 py-6 ring-1 ring-surface-border-subtle/60 sm:p-8 md:p-10">
-        <div className="mx-auto flex max-w-lg items-center gap-2">
+    <section className="flex w-full flex-col items-center justify-start md:min-h-[calc(100vh-7rem)] md:justify-center md:py-6">
+      <div className="w-full max-w-4xl px-1 py-4 sm:px-4 sm:py-6">
+        <div className="mx-auto flex max-w-2xl items-center gap-2">
           <TaskSelector
             disabled={focusModeLock && phase === 'working'}
             isLoading={tasksLoading}
@@ -385,7 +385,7 @@ export function TimerPage() {
         </div>
 
         {tasksError ? (
-          <p className="mx-auto mt-3 max-w-lg rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
+          <p className="mx-auto mt-3 max-w-2xl rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
             {getErrorMessage(tasksError, 'Unable to load tasks right now.')}
           </p>
         ) : null}
@@ -503,19 +503,21 @@ export function TimerPage() {
           ) : null}
         </div>
 
-        <div className="mx-auto mt-8 flex min-h-5 items-center justify-center gap-3 border-t border-surface-border-subtle pt-4 text-xs text-ink-tertiary">
+        <div className="mx-auto mt-8 grid min-h-5 w-full max-w-2xl grid-cols-3 items-center divide-x divide-surface-border-subtle rounded-xl bg-surface-panel/45 px-4 py-4 text-center text-sm text-ink-secondary sm:px-6 [&>span]:px-2 sm:[&>span]:px-4">
           {todaySummary.isError ? (
-            <p className="text-red-300">Unable to load today's summary.</p>
+            <p className="col-span-3 text-red-300">Unable to load today's summary.</p>
           ) : todaySummary.isLoading ? (
-            <>
+            <div className="col-span-3 flex items-center justify-center gap-2">
               <Spinner />
               <span>Loading today...</span>
-            </>
+            </div>
           ) : (
             <>
-              <span className="font-medium uppercase tracking-[0.1em]">Today</span>
+              <span className="text-left font-medium text-ink-primary">Today</span>
               <span>{todaySummary.data?.count ?? 0} sessions</span>
-              <span>{formatDuration(todaySummary.data?.totalWorkSeconds ?? 0)} focus</span>
+              <span className="text-right">
+                {formatDuration(todaySummary.data?.totalWorkSeconds ?? 0)} focus
+              </span>
             </>
           )}
         </div>

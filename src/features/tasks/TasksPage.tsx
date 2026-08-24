@@ -81,7 +81,7 @@ export function TasksPage() {
   return (
     <section className="space-y-6">
       <header>
-        <h1 className="text-3xl font-medium tracking-tight">Tasks</h1>
+        <h1 className="text-4xl font-medium tracking-tight">Tasks</h1>
       </header>
 
       <CategoryTabs

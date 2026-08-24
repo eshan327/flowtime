@@ -12,7 +12,7 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
       <p className="truncate text-[28px] font-medium leading-none tabular-nums tracking-tight text-ink-primary sm:text-[32px]">
         {value}
       </p>
-      <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.08em] text-ink-tertiary sm:text-[11px]">
+      <p className="mt-3 text-xs font-medium uppercase tracking-[0.06em] text-ink-tertiary">
         {label}
       </p>
     </div>

@@ -37,23 +37,25 @@ export function TimerClock({
 
   return (
     <div
-      className="mx-auto flex w-full flex-col items-center justify-center py-10 md:py-12"
+      className="timer-dial relative mx-auto flex h-[min(21rem,82vw)] w-[min(21rem,82vw)] shrink-0 items-center justify-center rounded-full sm:h-96 sm:w-96 lg:h-[min(30rem,55vh)] lg:w-[min(30rem,55vh)]"
       style={{ '--timer-accent': accent } as CSSProperties}
     >
-      <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-accent-primary">
-        {phase === 'working' ? 'Focus' : phase === 'breaking' ? 'Recover' : 'Ready'}
-      </p>
-      <p className="mt-4 text-[88px] font-extralight leading-none tabular-nums tracking-[-0.07em] text-ink-primary sm:text-[104px] md:text-[120px]">
-        {formatClock(seconds)}
-      </p>
-      {phase === 'breaking' ? (
-        <progress
-          aria-label="Break progress"
-          className="timer-progress mt-6 h-1 w-40"
-          max={breakTotal}
-          value={progress}
-        />
-      ) : null}
+      <div className="relative z-[1] flex flex-col items-center">
+        <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-accent-primary">
+          {phase === 'working' ? 'Focus' : phase === 'breaking' ? 'Recover' : 'Ready'}
+        </p>
+        <p className="mt-5 text-[84px] font-extralight leading-none tabular-nums tracking-[-0.07em] text-ink-primary sm:text-[112px] lg:text-[128px]">
+          {formatClock(seconds)}
+        </p>
+        {phase === 'breaking' ? (
+          <progress
+            aria-label="Break progress"
+            className="timer-progress mt-6 h-1 w-40"
+            max={breakTotal}
+            value={progress}
+          />
+        ) : null}
+      </div>
     </div>
   )
 }

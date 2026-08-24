@@ -175,7 +175,7 @@ export function TaskItem({
       ) : null}
 
       <div
-        className={`border-b border-surface-border-subtle/70 transition-all duration-300 transform-gpu hover:bg-surface-hover/25 ${
+        className={`rounded-xl bg-surface-panel/45 transition-all duration-300 transform-gpu hover:bg-surface-hover/55 ${
           isCompleting || isDeleting
             ? 'max-h-0 -translate-x-2 overflow-hidden opacity-0'
             : 'max-h-[1000px] translate-x-0 opacity-100'
@@ -222,10 +222,7 @@ export function TaskItem({
           void handleDrop(draggedId, dropPlacement ?? fallbackPlacement)
         }}
       >
-        <div
-          className="flex items-center gap-2 border-l-2 px-2 py-2"
-          style={{ borderLeftColor: accentColor }}
-        >
+        <div className="flex items-center gap-2 px-1 py-3 sm:px-2">
           <Button
             aria-label={`Reorder ${task.name}`}
             className="cursor-grab p-0 text-ink-tertiary transition hover:text-ink-secondary"
@@ -256,6 +253,7 @@ export function TaskItem({
               }, 300)
             }}
             size="icon"
+            style={{ borderColor: accentColor }}
             variant="outlined"
           >
             <Check className="h-3 w-3" />
@@ -287,7 +285,7 @@ export function TaskItem({
               />
             ) : (
               <Button
-                className="h-auto w-full justify-start p-0 text-left text-sm text-ink-primary"
+                className="h-auto w-full justify-start p-0 text-left text-base text-ink-primary"
                 onDoubleClick={() => {
                   setIsEditing(true)
                   setDraftName(task.name)

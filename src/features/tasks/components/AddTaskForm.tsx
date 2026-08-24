@@ -41,7 +41,7 @@ export function AddTaskForm({ label, onAdd }: AddTaskFormProps) {
 
   if (!isOpen) {
     return (
-      <Button className="gap-1 px-0" onClick={() => setIsOpen(true)} size="sm" variant="ghost">
+      <Button className="gap-1 px-0 text-base" onClick={() => setIsOpen(true)} variant="ghost">
         <Plus className="h-4 w-4" />
         {label}
       </Button>

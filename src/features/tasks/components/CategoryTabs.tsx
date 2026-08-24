@@ -88,13 +88,14 @@ export function CategoryTabs({
 
   return (
     <>
-      <div className="flex flex-col gap-3 border-b border-surface-border-subtle pb-4 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto rounded-lg bg-surface-sidebar/60 p-1">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
           <button
-            className={`shrink-0 rounded-lg px-3 py-1.5 text-sm transition-colors duration-150 ${
+            aria-pressed={activeTab === 'all'}
+            className={`shrink-0 border-b-2 px-2 py-2 text-base outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70 ${
               activeTab === 'all'
-                ? 'bg-surface-hover text-ink-primary'
-                : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
+                ? 'border-accent-primary font-medium text-ink-primary'
+                : 'border-transparent text-ink-tertiary hover:text-ink-primary'
             }`}
             onClick={() => onChangeTab('all')}
             type="button"
@@ -106,10 +107,11 @@ export function CategoryTabs({
             const isActive = activeTab === category.id
             return (
               <button
-                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors duration-150 ${
+                aria-pressed={isActive}
+                className={`flex shrink-0 items-center gap-2 border-b-2 px-2 py-2 text-base outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70 ${
                   isActive
-                    ? 'bg-surface-hover text-ink-primary'
-                    : 'text-ink-secondary hover:bg-surface-hover/60 hover:text-ink-primary'
+                    ? 'border-accent-primary font-medium text-ink-primary'
+                    : 'border-transparent text-ink-tertiary hover:text-ink-primary'
                 }`}
                 key={category.id}
                 onClick={() => onChangeTab(category.id)}
@@ -125,14 +127,18 @@ export function CategoryTabs({
           })}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 sm:border-l sm:border-surface-border-subtle sm:pl-3">
-          <Button onClick={openManager} size="sm" variant="ghost">
+        <div className="flex shrink-0 items-center gap-2">
+          <Button onClick={openManager} variant="ghost">
             <Settings2 className="h-4 w-4" />
             Organize
           </Button>
-          <Button onClick={onAddCategory} size="sm" variant="outlined">
+          <Button
+            className="border-accent-primary/25 bg-accent-primary/10 text-accent-primary hover:border-accent-primary/40 hover:bg-accent-primary/15"
+            onClick={onAddCategory}
+            variant="outlined"
+          >
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">New category</span>
+            <span>New category</span>
           </Button>
         </div>
       </div>

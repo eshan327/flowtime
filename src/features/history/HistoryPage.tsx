@@ -331,16 +331,18 @@ export function HistoryPage() {
   return (
     <section className="space-y-7">
       <header>
-        <h1 className="text-3xl font-medium tracking-tight">History</h1>
+        <h1 className="text-4xl font-medium tracking-tight">History</h1>
       </header>
 
       <section>
         <p className="text-sm text-ink-secondary">Range</p>
-        <div className="mt-3 grid grid-cols-3 gap-0.5 rounded-lg bg-surface-sidebar/70 p-1 sm:inline-flex">
+        <div className="mt-2 grid grid-cols-3 gap-x-3 sm:inline-flex">
           {HISTORY_RANGE_OPTIONS.map((option) => (
             <Button
-              className={`min-w-0 sm:min-w-[74px] ${
-                range === option.value ? 'bg-surface-hover text-ink-primary' : ''
+              className={`min-w-0 rounded-none border-b-2 px-2 sm:min-w-[74px] ${
+                range === option.value
+                  ? 'border-b-accent-primary text-ink-primary'
+                  : 'border-b-transparent'
               }`}
               key={option.value}
               onClick={() => setRange(option.value)}
@@ -381,7 +383,7 @@ export function HistoryPage() {
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.archivedCategories}
           </p>
-          <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+          <p className="mt-3 text-xs font-medium uppercase tracking-[0.06em] text-ink-tertiary">
             Archived categories
           </p>
         </article>
@@ -390,7 +392,7 @@ export function HistoryPage() {
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.completedTasks}
           </p>
-          <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+          <p className="mt-3 text-xs font-medium uppercase tracking-[0.06em] text-ink-tertiary">
             Completed tasks
           </p>
         </article>
@@ -399,13 +401,13 @@ export function HistoryPage() {
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {archiveSummary.exportableSessions}
           </p>
-          <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+          <p className="mt-3 text-xs font-medium uppercase tracking-[0.06em] text-ink-tertiary">
             Exportable sessions
           </p>
         </article>
       </section>
 
-      <section className="border-t border-surface-border-subtle pt-5">
+      <section className="pt-2">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm text-ink-secondary">Session log</h2>
 
@@ -459,7 +461,7 @@ export function HistoryPage() {
         )}
       </section>
 
-      <section className="border-t border-surface-border-subtle pt-5">
+      <section className="pt-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm text-ink-secondary">Session export</h2>

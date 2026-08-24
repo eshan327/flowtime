@@ -97,7 +97,7 @@ export function StatsPage() {
   return (
     <section className="space-y-7">
       <header>
-        <h1 className="text-3xl font-medium tracking-tight">Insights</h1>
+        <h1 className="text-4xl font-medium tracking-tight">Insights</h1>
       </header>
 
       <SummaryCards
