@@ -1,26 +1,30 @@
 import { useEffect, useState } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
 import {
-  Archive,
-  BarChart3,
+  ChartNoAxesColumnIncreasing,
   Camera,
-  CheckSquare,
+  Clock3,
+  CloudCheck,
+  CloudOff,
   ChevronRight,
-  Home,
+  History,
+  ListChecks,
   LogIn,
   LogOut,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { FlowtimeMark } from '@/components/FlowtimeMark'
 import { Modal } from '@/components/ui/Modal'
 import { useUser } from '@/context/UserContext'
+import { getQueuedSessions } from '@/features/sessions/lib/sessionOutbox'
 import { supabase } from '@/lib/supabaseClient'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Timer', icon: Home },
-  { to: '/tasks', label: 'Tasks', icon: CheckSquare },
-  { to: '/stats', label: 'Stats', icon: BarChart3 },
-  { to: '/history', label: 'History', icon: Archive },
+  { to: '/', label: 'Timer', icon: Clock3 },
+  { to: '/tasks', label: 'Tasks', icon: ListChecks },
+  { to: '/stats', label: 'Insights', icon: ChartNoAxesColumnIncreasing },
+  { to: '/history', label: 'History', icon: History },
 ]
 
 const AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -28,9 +32,9 @@ const MAX_AVATAR_SIZE = 5 * 1024 * 1024
 
 function desktopNavClassName(isActive: boolean) {
   return [
-    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70',
+    'relative flex items-center gap-3 rounded-md px-4 py-3 text-[15px] outline-none transition-colors duration-150 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:rounded-full focus-visible:ring-2 focus-visible:ring-accent-primary/70',
     isActive
-      ? 'bg-surface-hover/55 font-medium text-ink-primary [&>svg]:text-accent-primary'
+      ? 'bg-surface-hover/70 font-medium text-ink-primary before:bg-accent-primary [&>svg]:text-accent-primary'
       : 'text-ink-secondary hover:bg-surface-hover/30 hover:text-ink-primary',
   ].join(' ')
 }
@@ -102,6 +106,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const [profileMessage, setProfileMessage] = useState<string | null>(null)
   const [accountAgeMonths, setAccountAgeMonths] = useState<number | null>(null)
   const [customAvatarUrl, setCustomAvatarUrl] = useState<string | null>(null)
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine)
+  const [pendingSyncCount, setPendingSyncCount] = useState(0)
   const isGuest = !user || user.is_anonymous
 
   const displayName = getUserDisplayName(
@@ -115,6 +121,25 @@ export function Layout({ children }: { children: ReactNode }) {
     (typeof avatarPath === 'string' ? customAvatarUrl : null) ??
     user?.user_metadata?.avatar_url ??
     user?.user_metadata?.picture
+
+  useEffect(() => {
+    const refresh = () => {
+      setIsOnline(navigator.onLine)
+      if (user?.id) {
+        void getQueuedSessions(user.id).then((sessions) => setPendingSyncCount(sessions.length))
+      }
+    }
+
+    refresh()
+    const interval = window.setInterval(refresh, 5000)
+    window.addEventListener('online', refresh)
+    window.addEventListener('offline', refresh)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('online', refresh)
+      window.removeEventListener('offline', refresh)
+    }
+  }, [user?.id])
 
   useEffect(() => {
     let active = true
@@ -220,10 +245,13 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen text-ink-primary">
       <div className="flex min-h-screen md:flex-row">
-        <aside className="hidden border-r border-surface-border-subtle bg-surface-sidebar px-4 py-6 md:sticky md:top-0 md:flex md:h-screen md:w-56 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
-          <p className="px-3 text-lg font-semibold tracking-wide text-ink-primary">Flowtime</p>
+        <aside className="hidden border-r border-surface-border-subtle bg-surface-sidebar px-4 py-7 md:sticky md:top-0 md:flex md:h-screen md:w-60 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
+          <div className="flex items-center gap-3 px-3 text-ink-primary">
+            <FlowtimeMark className="h-9 w-9 text-accent-primary" />
+            <p className="text-xl font-semibold tracking-tight">Flowtime</p>
+          </div>
 
-          <nav className="mt-7 grid gap-1">
+          <nav className="mt-10 grid gap-2">
             {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
               <NavLink className={({ isActive }) => desktopNavClassName(isActive)} key={to} to={to}>
                 <Icon className="h-5 w-5" />
@@ -232,45 +260,66 @@ export function Layout({ children }: { children: ReactNode }) {
             ))}
           </nav>
 
-          <div className="mt-auto border-t border-surface-border-subtle pt-5">
-            {isGuest ? (
-              <Button
-                className="w-full justify-start gap-3 px-2"
-                disabled={isAuthPending}
-                onClick={handleSignIn}
-                variant="ghost"
-              >
-                <LogIn className="h-4 w-4" />
-                {isAuthPending ? 'Please wait...' : 'Sign in'}
-              </Button>
-            ) : (
-              <button
-                className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-surface-hover/30 focus-visible:ring-2 focus-visible:ring-accent-primary/70"
-                onClick={openAccount}
-                type="button"
-              >
-                <UserAvatar className="h-10 w-10 text-sm" initials={initials} url={avatarUrl} />
+          <div className="mt-auto">
+            <div
+              className={`mb-5 flex items-center gap-2 px-3 text-xs ${!isOnline ? 'text-ink-tertiary' : pendingSyncCount > 0 ? 'text-accent-primary' : 'text-cyan-300'}`}
+              role="status"
+            >
+              {isOnline ? <CloudCheck className="h-4 w-4" /> : <CloudOff className="h-4 w-4" />}
+              <span>
+                {!isOnline
+                  ? 'Offline · changes stay local'
+                  : pendingSyncCount > 0
+                    ? `${pendingSyncCount} ${pendingSyncCount === 1 ? 'session' : 'sessions'} pending`
+                    : 'All changes synced'}
+              </span>
+            </div>
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-medium text-ink-primary">{displayName}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-ink-tertiary" />
-              </button>
-            )}
+            <div className="border-t border-surface-border-subtle pt-5">
+              {isGuest ? (
+                <Button
+                  className="w-full justify-start gap-3 px-2"
+                  disabled={isAuthPending}
+                  onClick={handleSignIn}
+                  variant="ghost"
+                >
+                  <LogIn className="h-4 w-4" />
+                  {isAuthPending ? 'Please wait...' : 'Sign in'}
+                </Button>
+              ) : (
+                <button
+                  className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-surface-hover/30 focus-visible:ring-2 focus-visible:ring-accent-primary/70"
+                  onClick={openAccount}
+                  type="button"
+                >
+                  <UserAvatar className="h-10 w-10 text-sm" initials={initials} url={avatarUrl} />
 
-            {authError ? <p className="mt-2 text-sm text-red-300">{authError}</p> : null}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-medium text-ink-primary">
+                      {displayName}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-ink-tertiary" />
+                </button>
+              )}
+
+              {authError ? <p className="mt-2 text-sm text-red-300">{authError}</p> : null}
+            </div>
           </div>
         </aside>
 
         <div className="flex min-h-screen min-w-0 flex-1 flex-col pb-20 md:pb-0">
           <header className="flex items-center justify-between border-b border-surface-border-subtle bg-surface-sidebar px-4 py-3 md:hidden">
-            <div>
-              <p className="text-lg font-semibold tracking-wide text-ink-primary">Flowtime</p>
-              {!isGuest ? (
-                <p className="mt-1 max-w-[200px] truncate text-xs text-ink-secondary">
-                  {displayName}
-                </p>
-              ) : null}
+            <div className="flex items-center gap-2">
+              <FlowtimeMark className="h-7 w-7 text-accent-primary" />
+              <div>
+                <p className="text-lg font-semibold tracking-wide text-ink-primary">Flowtime</p>
+                {!isGuest ? (
+                  <p className="mt-1 max-w-[200px] truncate text-xs text-ink-secondary">
+                    {displayName}
+                  </p>
+                ) : null}
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -298,8 +347,8 @@ export function Layout({ children }: { children: ReactNode }) {
             </p>
           ) : null}
 
-          <main className="flex-1 px-4 py-7 md:px-8 md:py-9">
-            <div className="mx-auto w-full max-w-6xl">{children}</div>
+          <main className="flex-1 px-4 py-6 md:px-8 md:py-8 xl:px-10">
+            <div className="mx-auto w-full max-w-[1280px]">{children}</div>
           </main>
         </div>
       </div>

@@ -4,6 +4,7 @@ interface SummaryCardsProps {
   totalSessions: number
   totalWorkSeconds: number
   currentStreak: number
+  dailyAverageSeconds: number
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
@@ -23,11 +24,13 @@ export function SummaryCards({
   totalSessions,
   totalWorkSeconds,
   currentStreak,
+  dailyAverageSeconds,
 }: SummaryCardsProps) {
   return (
-    <div className="grid grid-cols-3 divide-x divide-surface-border-subtle overflow-hidden rounded-xl bg-surface-panel">
-      <SummaryCard label="Sessions" value={String(totalSessions)} />
+    <div className="grid grid-cols-2 divide-x divide-y divide-surface-border overflow-hidden rounded-md border border-surface-border bg-surface-sidebar/35 sm:grid-cols-4 sm:divide-y-0">
       <SummaryCard label="Focus Time" value={formatDuration(totalWorkSeconds)} />
+      <SummaryCard label="Daily Average" value={formatDuration(dailyAverageSeconds)} />
+      <SummaryCard label="Sessions" value={String(totalSessions)} />
       <SummaryCard
         label="Current Streak"
         value={`${currentStreak} day${currentStreak === 1 ? '' : 's'}`}

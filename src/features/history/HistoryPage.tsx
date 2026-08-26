@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Download, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
@@ -126,10 +126,10 @@ function ArchivedItemsSection<T extends { id: string }>({
   deleteConfirmation,
 }: ArchivedItemsSectionProps<T>) {
   return (
-    <section className="rounded-xl bg-surface-panel p-4">
+    <section className="overflow-hidden rounded-md border border-surface-border bg-surface-sidebar/25">
       <Button
         aria-expanded={isExpanded}
-        className="h-auto w-full justify-between px-1 text-sm"
+        className="h-14 w-full justify-between rounded-none px-5 text-sm"
         onClick={onToggle}
         size="sm"
         variant="ghost"
@@ -142,14 +142,13 @@ function ArchivedItemsSection<T extends { id: string }>({
 
       {isExpanded ? (
         items.length === 0 ? (
-          <p className="mt-2 text-sm text-ink-tertiary">{emptyMessage}</p>
+          <p className="border-t border-surface-border-subtle px-5 py-4 text-sm text-ink-tertiary">
+            {emptyMessage}
+          </p>
         ) : (
-          <div className="mt-2 space-y-2">
+          <div className="divide-y divide-surface-border-subtle border-t border-surface-border-subtle px-5">
             {items.map((item) => (
-              <div
-                className="flex items-center justify-between gap-2 border-b border-surface-border-subtle px-1 py-3"
-                key={item.id}
-              >
+              <div className="flex items-center justify-between gap-2 py-3" key={item.id}>
                 {renderItem(item)}
                 <div className="flex items-center gap-2">
                   <Button onClick={() => void onRestore(item.id)} size="sm" variant="ghost">
@@ -245,12 +244,6 @@ export function HistoryPage() {
     )
   }, [completedTasks, historyWindow])
 
-  const archiveSummary = {
-    archivedCategories: filteredArchivedCategories.length,
-    completedTasks: filteredCompletedTasks.length,
-    exportableSessions: isHistoryWindowValid ? sessions.length : 0,
-  }
-
   const filteredSessions = useMemo(() => {
     const search = sessionSearch.trim().toLocaleLowerCase()
     if (!search) return sessions
@@ -267,6 +260,7 @@ export function HistoryPage() {
       return values.some((value) => value?.toLocaleLowerCase().includes(search))
     })
   }, [sessionSearch, sessions])
+  const historyFocusSeconds = sessions.reduce((sum, session) => sum + session.work_seconds, 0)
 
   const handleExport = async (format: SessionExportFormat) => {
     setActiveExportFormat(format)
@@ -366,32 +360,60 @@ export function HistoryPage() {
 
   return (
     <section className="space-y-7">
-      <header>
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="text-4xl font-medium tracking-tight">History</h1>
-      </header>
-
-      <section>
-        <p className="text-sm text-ink-secondary">Range</p>
-        <div className="mt-2 grid grid-cols-3 gap-x-3 sm:inline-flex">
-          {HISTORY_RANGE_OPTIONS.map((option) => (
+        <div className="flex gap-2">
+          {(['csv', 'json'] as const).map((format) => (
             <Button
-              className={`min-w-0 rounded-none border-b-2 px-2 sm:min-w-[74px] ${
-                range === option.value
-                  ? 'border-b-accent-primary text-ink-primary'
-                  : 'border-b-transparent'
-              }`}
-              key={option.value}
-              onClick={() => setRange(option.value)}
+              disabled={!isHistoryWindowValid || sessionsLoading}
+              key={format}
+              loading={activeExportFormat === format}
+              onClick={() => void handleExport(format)}
               size="sm"
-              variant="ghost"
+              variant={format === 'csv' ? 'filled' : 'outlined'}
             >
-              {option.label}
+              <Download className="h-4 w-4" />
+              {format.toUpperCase()}
             </Button>
           ))}
         </div>
+      </header>
+
+      <section className="rounded-md border border-surface-border bg-surface-sidebar/25 p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid grid-cols-3 gap-x-2 sm:inline-flex">
+            {HISTORY_RANGE_OPTIONS.map((option) => (
+              <Button
+                className={`min-w-0 rounded-none border-b-2 px-2 sm:min-w-[72px] ${
+                  range === option.value
+                    ? 'border-b-accent-primary text-ink-primary'
+                    : 'border-b-transparent'
+                }`}
+                key={option.value}
+                onClick={() => setRange(option.value)}
+                size="sm"
+                variant="ghost"
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+
+          <label className="relative block w-full max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-tertiary" />
+            <Input
+              aria-label="Search sessions"
+              className="pl-9"
+              onChange={(event) => setSessionSearch(event.target.value)}
+              placeholder="Search sessions"
+              type="search"
+              value={sessionSearch}
+            />
+          </label>
+        </div>
 
         {range === 'custom' ? (
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-4 grid gap-3 border-t border-surface-border-subtle pt-4 sm:grid-cols-2">
             <Input
               label="From"
               max={customTo || undefined}
@@ -414,58 +436,51 @@ export function HistoryPage() {
         ) : null}
       </section>
 
-      <section className="grid grid-cols-3 divide-x divide-surface-border-subtle overflow-hidden rounded-xl bg-surface-panel">
+      <section className="grid grid-cols-3 divide-x divide-surface-border overflow-hidden rounded-md border border-surface-border bg-surface-sidebar/35">
         <article className="min-w-0 px-3 py-4 sm:px-5">
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
-            {archiveSummary.archivedCategories}
+            {sessions.length}
           </p>
           <p className="mt-3 text-xs font-medium uppercase tracking-[0.06em] text-ink-tertiary">
-            Archived categories
+            Sessions
           </p>
         </article>
 
         <article className="min-w-0 px-3 py-4 sm:px-5">
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
-            {archiveSummary.completedTasks}
+            {Math.round(historyFocusSeconds / 360) / 10}h
           </p>
           <p className="mt-3 text-xs font-medium uppercase tracking-[0.06em] text-ink-tertiary">
-            Completed tasks
+            Focus time
           </p>
         </article>
 
         <article className="min-w-0 px-3 py-4 sm:px-5">
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
-            {archiveSummary.exportableSessions}
+            {filteredCompletedTasks.length}
           </p>
           <p className="mt-3 text-xs font-medium uppercase tracking-[0.06em] text-ink-tertiary">
-            Exportable sessions
+            Tasks completed
           </p>
         </article>
       </section>
 
-      <section className="pt-2">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm text-ink-secondary">Session log</h2>
-
-          <div className="w-full max-w-sm">
-            <Input
-              aria-label="Search sessions"
-              onChange={(event) => setSessionSearch(event.target.value)}
-              placeholder="Search task, category, note, or date"
-              type="search"
-              value={sessionSearch}
-            />
-            {sessionSearch.trim() ? (
-              <p className="mt-2 text-xs text-ink-tertiary" role="status">
-                {filteredSessions.length} matching{' '}
-                {filteredSessions.length === 1 ? 'session' : 'sessions'}
-              </p>
-            ) : null}
-          </div>
+      <section className="overflow-hidden rounded-md border border-surface-border bg-surface-sidebar/25">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-surface-border px-5 py-4">
+          <h2 className="text-lg font-medium text-ink-primary">Session log</h2>
+          {sessionSearch.trim() ? (
+            <p className="text-xs text-ink-tertiary" role="status">
+              {filteredSessions.length} matching{' '}
+              {filteredSessions.length === 1 ? 'session' : 'sessions'}
+            </p>
+          ) : null}
         </div>
 
         {lastDeletedSession ? (
-          <div className="mb-4 flex items-center justify-end gap-2" role="status">
+          <div
+            className="flex items-center justify-end gap-2 border-b border-surface-border-subtle px-5 py-3"
+            role="status"
+          >
             <p className="text-xs text-ink-secondary">Session deleted.</p>
             <Button
               loading={restoreSession.isPending}
@@ -479,58 +494,27 @@ export function HistoryPage() {
         ) : null}
 
         {sessionsLoading ? (
-          <div className="flex items-center gap-2 text-sm text-ink-secondary">
+          <div className="flex items-center gap-2 p-5 text-sm text-ink-secondary">
             <Spinner />
             Loading sessions...
           </div>
         ) : sessionsError ? (
-          <p className="text-sm text-red-300" role="alert">
+          <p className="p-5 text-sm text-red-300" role="alert">
             {getErrorMessage(sessionsError, 'Unable to load sessions right now.')}
           </p>
         ) : (
-          <SessionLog
-            deletingSessionId={softDeleteSession.isPending ? softDeleteSession.variables : null}
-            onDelete={handleDeleteSession}
-            onEdit={setEditingSession}
-            sessions={filteredSessions}
-          />
+          <div className="p-5">
+            <SessionLog
+              deletingSessionId={softDeleteSession.isPending ? softDeleteSession.variables : null}
+              onDelete={handleDeleteSession}
+              onEdit={setEditingSession}
+              sessions={filteredSessions}
+            />
+          </div>
         )}
       </section>
 
-      <section className="pt-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm text-ink-secondary">Session export</h2>
-            {sessionsLoading ? (
-              <p className="mt-1 text-xs text-ink-tertiary">Loading sessions for export...</p>
-            ) : null}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {(['csv', 'json'] as const).map((format) => (
-              <Button
-                disabled={!isHistoryWindowValid || sessionsLoading}
-                key={format}
-                loading={activeExportFormat === format}
-                onClick={() => {
-                  void handleExport(format)
-                }}
-                size="sm"
-                variant={format === 'csv' ? 'outlined' : 'ghost'}
-              >
-                Export {format.toUpperCase()}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {sessionsError ? (
-          <p className="mt-3 text-sm text-red-300">
-            {getErrorMessage(sessionsError, 'Unable to load sessions for export right now.')}
-          </p>
-        ) : null}
-        {exportError ? <p className="mt-3 text-sm text-red-300">{exportError}</p> : null}
-      </section>
+      {exportError ? <p className="text-sm text-red-300">{exportError}</p> : null}
 
       <ArchivedItemsSection
         deleteConfirmation={(category) =>

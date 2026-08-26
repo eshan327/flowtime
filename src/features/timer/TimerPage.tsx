@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Settings2, X } from 'lucide-react'
+import { CloudUpload, Settings2, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
@@ -198,11 +198,11 @@ export function TimerPage() {
     })
   }, [phase, selectedTask, selectedTaskColor, setSelectedTaskSnapshot])
 
-  const secondaryText =
+  const earnedBreak =
     phase === 'working'
-      ? `Break earned: ${formatClock(getBreakSeconds(workSeconds, breakDivisor))}`
+      ? formatClock(getBreakSeconds(workSeconds, breakDivisor))
       : phase === 'breaking'
-        ? `${formatClock(breakTotal)} break earned`
+        ? formatClock(breakTotal)
         : null
 
   const replayTask = useMemo(() => {
@@ -358,12 +358,13 @@ export function TimerPage() {
   })
 
   return (
-    <section className="flex w-full flex-col items-center justify-start md:min-h-[calc(100vh-7rem)] md:justify-center md:py-6">
-      <div className="w-full max-w-4xl px-1 py-4 sm:px-4 sm:py-6">
-        <div className="mx-auto flex max-w-2xl items-center gap-2">
+    <section className="flex w-full flex-col items-center justify-start md:min-h-[calc(100vh-4rem)]">
+      <div className="w-full px-0 py-2 sm:px-2">
+        <div className="mx-auto flex max-w-6xl items-center gap-3">
           <TaskSelector
             disabled={focusModeLock && phase === 'working'}
             isLoading={tasksLoading}
+            label="Active task"
             onQuickAddTask={async (name) => {
               const createdTask = await addTask.mutateAsync({ name, categoryId: null })
               return createdTask.id
@@ -377,13 +378,13 @@ export function TimerPage() {
 
           <Button
             aria-label="Timer settings"
-            className="shrink-0"
+            className="h-16 w-16 shrink-0"
             onClick={() => setIsSettingsOpen(true)}
             size="icon"
             title="Timer settings"
             variant="ghost"
           >
-            <Settings2 className="h-4 w-4" />
+            <Settings2 className="h-5 w-5" />
           </Button>
         </div>
 
@@ -393,19 +394,19 @@ export function TimerPage() {
           </p>
         ) : null}
 
-        <div className="mt-6 flex flex-col items-center sm:mt-8">
+        <div className="mt-8 flex flex-col items-center">
           <TimerClock
             accentColor={selectedTaskColor}
             breakEndAt={breakEndAt}
             breakTotal={breakTotal}
             phase={phase}
+            supportingLabel={earnedBreak ? 'Break earned' : null}
+            supportingValue={earnedBreak}
+            taskName={selectedTask?.name ?? selectedTaskName}
             workSeconds={workSeconds}
           />
-          {secondaryText ? (
-            <p className="text-center text-sm text-ink-secondary">{secondaryText}</p>
-          ) : null}
 
-          <div className="mt-6">
+          <div className="mt-8 flex w-full justify-center">
             <TimerControls
               canStartWork={canStartWork}
               onSkipBreak={skipBreak}
@@ -418,24 +419,23 @@ export function TimerPage() {
           {queuedSessionCount > 0 ? (
             <div
               aria-live="polite"
-              className="mt-4 w-full rounded-lg border border-amber-300/40 bg-amber-950/20 px-3 py-2 text-sm text-amber-100"
+              className="mt-5 flex w-full items-center justify-center gap-2 text-sm text-ink-secondary"
               role="status"
             >
-              <div className="flex items-start justify-between gap-3">
-                <p>
-                  {lastSaveQueued ? 'Saved offline.' : 'Syncing saved sessions.'}{' '}
-                  {queuedSessionCount} {queuedSessionCount === 1 ? 'session is' : 'sessions are'}{' '}
-                  waiting to sync.
-                </p>
-                <Button
-                  loading={saveSession.isPending}
-                  onClick={retryLastSessionSave}
-                  size="sm"
-                  variant="outlined"
-                >
-                  Retry
-                </Button>
-              </div>
+              <CloudUpload className="h-4 w-4 text-accent-primary" />
+              <span>
+                {lastSaveQueued ? 'Saved offline' : 'Syncing'} · {queuedSessionCount}{' '}
+                {queuedSessionCount === 1 ? 'session' : 'sessions'} pending
+              </span>
+              <Button
+                className="h-auto px-1 py-0 text-xs"
+                loading={saveSession.isPending}
+                onClick={retryLastSessionSave}
+                size="sm"
+                variant="ghost"
+              >
+                Retry
+              </Button>
             </div>
           ) : null}
 
@@ -474,7 +474,7 @@ export function TimerPage() {
           ) : null}
 
           {phase === 'done' ? (
-            <div className="mt-4 w-full">
+            <div className="mx-auto mt-8 w-full max-w-2xl">
               <SessionSummary
                 breakTotal={breakTotal}
                 isDeletingSession={softDeleteSession.isPending}
@@ -506,7 +506,7 @@ export function TimerPage() {
           ) : null}
         </div>
 
-        <div className="mx-auto mt-8 grid min-h-5 w-full max-w-2xl grid-cols-3 items-center divide-x divide-surface-border-subtle rounded-xl bg-surface-panel/45 px-4 py-4 text-center text-sm text-ink-secondary sm:px-6 [&>span]:px-2 sm:[&>span]:px-4">
+        <div className="mx-auto mt-8 grid min-h-5 w-full max-w-6xl grid-cols-3 items-center divide-x divide-surface-border rounded-md border border-surface-border bg-surface-sidebar/45 px-4 py-5 text-center text-sm text-ink-secondary sm:px-7 [&>span]:px-2 sm:[&>span]:px-4">
           {todaySummary.isError ? (
             <p className="col-span-3 text-red-300">Unable to load today's summary.</p>
           ) : todaySummary.isLoading ? (

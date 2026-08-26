@@ -15,6 +15,7 @@ interface TaskSelectorProps {
   isLoading?: boolean
   shortcutsEnabled?: boolean
   shortcutsBlocked?: boolean
+  label?: string
 }
 
 interface GroupedTasks {
@@ -46,6 +47,7 @@ export function TaskSelector({
   isLoading = false,
   shortcutsEnabled = true,
   shortcutsBlocked = false,
+  label,
 }: TaskSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [quickAddValue, setQuickAddValue] = useState('')
@@ -148,7 +150,7 @@ export function TaskSelector({
         aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="h-11 w-full justify-between px-3 text-base"
+        className={`${label ? 'h-16' : 'h-11'} w-full justify-between px-4 text-base`}
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
         onKeyDown={(event) => {
@@ -166,7 +168,16 @@ export function TaskSelector({
             Loading tasks...
           </span>
         ) : (
-          <span className="truncate">{selectedTask?.name ?? 'Select a task'}</span>
+          <span className="min-w-0 text-left">
+            {label ? (
+              <span className="block text-[11px] font-medium uppercase tracking-[0.08em] text-ink-tertiary">
+                {label}
+              </span>
+            ) : null}
+            <span className={`block truncate ${label ? 'mt-1 font-medium text-ink-primary' : ''}`}>
+              {selectedTask?.name ?? 'Select a task'}
+            </span>
+          </span>
         )}
         <ChevronDown className="h-4 w-4 text-ink-tertiary" />
       </Button>

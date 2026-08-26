@@ -116,22 +116,13 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
     const tooltipWidth = 280
     const tooltipHeight = Math.min(220, 92 + tooltip.byCategory.length * 20)
 
-    let left = tooltip.x + 14
-    let top = tooltip.y + 14
-
     const maxLeft = window.innerWidth - tooltipWidth - 8
     const maxTop = window.innerHeight - tooltipHeight - 8
-
-    if (left > maxLeft) {
-      left = tooltip.x - tooltipWidth - 14
-    }
-
-    if (top > maxTop) {
-      top = tooltip.y - tooltipHeight - 14
-    }
-
-    left = Math.max(8, left)
-    top = Math.max(8, top)
+    const left = Math.min(maxLeft, Math.max(8, tooltip.x - tooltipWidth / 2))
+    const top = Math.max(
+      8,
+      tooltip.y + 10 > maxTop ? tooltip.y - tooltipHeight - 18 : tooltip.y + 10
+    )
 
     return { left, top }
   }, [tooltip])
@@ -143,17 +134,9 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
   ) => {
     if (day.isFuture) return
 
-    let x = 0
-    let y = 0
-
-    if ('clientX' in event) {
-      x = event.clientX
-      y = event.clientY
-    } else {
-      const rect = event.currentTarget.getBoundingClientRect()
-      x = rect.left + rect.width / 2
-      y = rect.top + rect.height / 2
-    }
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = rect.left + rect.width / 2
+    const y = rect.bottom
 
     setTooltip({
       date: day.date,
@@ -253,7 +236,7 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
 
       {tooltip && tooltipPosition ? (
         <div
-          className="pointer-events-none fixed z-50 max-w-[280px] rounded-lg border border-surface-border-subtle bg-surface-panel p-3 text-xs text-ink-secondary shadow-xl"
+          className="pointer-events-none fixed z-50 w-[280px] max-w-[calc(100vw-16px)] rounded-lg border border-surface-border-subtle bg-surface-panel p-3 text-xs text-ink-secondary shadow-xl"
           style={{ left: tooltipPosition.left, top: tooltipPosition.top }}
         >
           <p className="text-ink-primary">{tooltip.date}</p>

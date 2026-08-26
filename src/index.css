@@ -4,17 +4,17 @@
 
 @layer base {
   :root {
-    --surface-page: 36 39 58;
-    --surface-sidebar: 30 32 48;
-    --surface-panel: 43 47 69;
-    --surface-hover: 54 58 79;
-    --surface-border: 73 77 100;
-    --surface-border-subtle: 54 58 79;
-    --ink-primary: 202 211 245;
-    --ink-secondary: 184 192 224;
-    --ink-tertiary: 128 135 162;
-    --accent-primary: 198 160 246;
-    --accent-primary-hover: 183 189 248;
+    --surface-page: 8 13 24;
+    --surface-sidebar: 12 19 33;
+    --surface-panel: 17 26 42;
+    --surface-hover: 26 37 59;
+    --surface-border: 50 65 92;
+    --surface-border-subtle: 37 48 71;
+    --ink-primary: 244 246 255;
+    --ink-secondary: 184 193 216;
+    --ink-tertiary: 127 140 168;
+    --accent-primary: 157 124 255;
+    --accent-primary-hover: 178 151 255;
   }
 
   html {
@@ -31,7 +31,13 @@
   }
 
   * {
-    font-family: system-ui, sans-serif;
+    font-family:
+      Inter,
+      ui-sans-serif,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      sans-serif;
   }
 
   ::selection {
@@ -84,56 +90,57 @@
     animation: modal-in 150ms ease-out;
   }
 
-  .timer-progress {
-    appearance: none;
-    overflow: hidden;
-    border-radius: 9999px;
-    background: rgb(var(--surface-hover));
-  }
-
-  .timer-progress::-webkit-progress-bar {
-    background: rgb(var(--surface-hover));
-  }
-
-  .timer-progress::-webkit-progress-value {
-    background: var(--timer-accent);
-  }
-
-  .timer-progress::-moz-progress-bar {
-    background: var(--timer-accent);
-  }
-
   .timer-dial::before {
     position: absolute;
     inset: 0;
     border-radius: 9999px;
-    background: repeating-conic-gradient(
-      from -0.6deg,
-      rgb(var(--ink-tertiary) / 0.48) 0deg 1.2deg,
-      transparent 1.2deg 6deg
+    background: conic-gradient(
+      from -90deg,
+      var(--timer-accent) 0deg var(--timer-progress),
+      rgb(var(--surface-border) / 0.72) var(--timer-progress) 360deg
     );
     content: '';
-    mask: radial-gradient(
-      circle closest-side,
-      transparent calc(100% - 13px),
-      #000 calc(100% - 12px)
-    );
+    mask: radial-gradient(circle closest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
     -webkit-mask: radial-gradient(
       circle closest-side,
-      transparent calc(100% - 13px),
-      #000 calc(100% - 12px)
+      transparent calc(100% - 7px),
+      #000 calc(100% - 6px)
     );
+    transition: background 500ms linear;
   }
 
-  .timer-dial::after {
+  .timer-orbit {
     position: absolute;
-    top: 1px;
+    inset: -3px;
+    transform: rotate(var(--timer-progress));
+    transition: transform 500ms linear;
+  }
+
+  .timer-orbit::after {
+    position: absolute;
+    top: 0;
     left: 50%;
-    height: 15px;
-    width: 2px;
-    transform: translateX(-50%);
+    height: 14px;
+    width: 14px;
+    transform: translate(-50%, -50%);
     border-radius: 9999px;
-    background: rgb(var(--accent-primary) / 0.72);
+    background: var(--timer-accent);
+    box-shadow:
+      0 0 0 5px rgb(var(--surface-page)),
+      0 0 24px var(--timer-accent);
     content: '';
+  }
+
+  .timer-dial.is-running {
+    box-shadow:
+      inset 0 0 96px rgb(var(--accent-primary) / 0.055),
+      0 0 54px rgb(var(--accent-primary) / 0.06);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .timer-dial::before,
+    .timer-orbit {
+      transition: none;
+    }
   }
 }

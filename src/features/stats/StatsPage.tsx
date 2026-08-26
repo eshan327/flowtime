@@ -45,6 +45,11 @@ export function StatsPage() {
   const canGoNext = selectedWindow.from.getTime() < currentWindow.from.getTime()
   const selectedWindowLabel = formatRangeWindow(range, selectedWindow.from, selectedWindow.to)
   const hasRangeData = stats.totalSessions > 0
+  const selectedDayCount = Math.max(
+    1,
+    Math.round((selectedWindow.to.getTime() - selectedWindow.from.getTime()) / 86_400_000)
+  )
+  const dailyAverageSeconds = Math.round(stats.totalWorkSeconds / selectedDayCount)
 
   const selectedHeatmapDay = useMemo(() => {
     if (!selectedHeatmapDate) {
@@ -95,74 +100,65 @@ export function StatsPage() {
 
   return (
     <section className="space-y-7">
-      <header>
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="text-4xl font-medium tracking-tight">Insights</h1>
+        <div className="flex items-center gap-2">
+          <select
+            aria-label="Focus time range"
+            className="h-10 rounded-md border border-surface-border bg-surface-sidebar px-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
+            onChange={(event) => setRange(event.target.value as TimeRange)}
+            value={range}
+          >
+            {(['day', 'week', 'month', 'year'] as const).map((option) => (
+              <option key={option} value={option}>
+                {option[0].toUpperCase() + option.slice(1)}
+              </option>
+            ))}
+          </select>
+          <Button
+            aria-label="Previous period"
+            disabled={!canGoPrevious}
+            onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, -1))}
+            size="icon"
+            variant="outlined"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            aria-label="Next period"
+            disabled={!canGoNext}
+            onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, 1))}
+            size="icon"
+            variant="outlined"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </header>
+
+      <div className="flex items-center justify-between gap-3 border-b border-surface-border-subtle pb-3">
+        <p className="text-sm text-ink-secondary">{selectedWindowLabel}</p>
+        {!isCurrentWindow ? (
+          <Button onClick={() => setAnchorDate(new Date())} size="sm" variant="ghost">
+            Today
+          </Button>
+        ) : null}
+      </div>
 
       <SummaryCards
         currentStreak={stats.currentStreak}
+        dailyAverageSeconds={dailyAverageSeconds}
         totalSessions={stats.totalSessions}
         totalWorkSeconds={stats.totalWorkSeconds}
       />
 
       <section>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm text-ink-secondary">
-            Focus time by{' '}
-            <select
-              aria-label="Focus time range"
-              className="rounded-lg border border-surface-border-subtle bg-surface-sidebar px-2 py-1 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
-              onChange={(event) => setRange(event.target.value as TimeRange)}
-              value={range}
-            >
-              {(['day', 'week', 'month', 'year'] as const).map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </h2>
-
-          <div className="flex items-center gap-2">
-            <Button
-              disabled={isCurrentWindow}
-              onClick={() => setAnchorDate(new Date())}
-              size="sm"
-              variant="ghost"
-            >
-              Today
-            </Button>
-
-            <Button
-              aria-label="Previous period"
-              disabled={!canGoPrevious}
-              onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, -1))}
-              size="icon"
-              variant="outlined"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <span className="min-w-32 text-center text-xs text-ink-secondary">
-              {selectedWindowLabel}
-            </span>
-
-            <Button
-              aria-label="Next period"
-              disabled={!canGoNext}
-              onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, 1))}
-              size="icon"
-              variant="outlined"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <h2 className="mb-3 text-lg font-medium text-ink-primary">Focus time</h2>
 
         {hasRangeData ? (
           <DailyBarChart data={stats.byDay} range={range} />
         ) : (
-          <div className="rounded-xl bg-surface-panel">
+          <div className="rounded-md border border-surface-border bg-surface-sidebar/30">
             <EmptyState
               className="py-5"
               icon={<BarChart3 className="h-5 w-5" />}
@@ -173,8 +169,8 @@ export function StatsPage() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm text-ink-secondary">Activity heatmap</h2>
-        <div className="rounded-xl bg-surface-panel p-4">
+        <h2 className="mb-3 text-lg font-medium text-ink-primary">Activity</h2>
+        <div className="rounded-md border border-surface-border bg-surface-sidebar/30 p-4">
           <HeatmapGrid
             data={stats.allDays}
             onSelectDay={(day) => {
@@ -185,7 +181,7 @@ export function StatsPage() {
         </div>
 
         {selectedHeatmapDay ? (
-          <div className="mt-3 rounded-xl bg-surface-panel p-4">
+          <div className="mt-3 rounded-md border border-surface-border bg-surface-sidebar/30 p-4">
             <div className="mb-3">
               <div>
                 <p className="text-sm text-ink-primary">
@@ -211,8 +207,8 @@ export function StatsPage() {
 
       {hasRangeData ? (
         <div className="grid items-start gap-5 lg:grid-cols-2">
-          <section className="rounded-xl bg-surface-panel p-4">
-            <h2 className="mb-2 text-sm text-ink-secondary">Time by category</h2>
+          <section className="rounded-md border border-surface-border bg-surface-sidebar/30 p-5">
+            <h2 className="mb-4 text-lg font-medium text-ink-primary">Time by category</h2>
             <BreakdownChart
               data={stats.byCategory.map((item) => ({
                 color: item.color,
@@ -224,8 +220,8 @@ export function StatsPage() {
             />
           </section>
 
-          <section className="rounded-xl bg-surface-panel p-4">
-            <h2 className="mb-2 text-sm text-ink-secondary">Time by task</h2>
+          <section className="rounded-md border border-surface-border bg-surface-sidebar/30 p-5">
+            <h2 className="mb-4 text-lg font-medium text-ink-primary">Time by task</h2>
             <BreakdownChart
               data={stats.byTask.map((item) => ({
                 color: item.color,

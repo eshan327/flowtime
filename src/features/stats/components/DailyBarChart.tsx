@@ -69,7 +69,10 @@ function CustomTooltip({ active, payload, label }: DailyTooltipProps) {
 
 export function DailyBarChart({ range, data }: DailyBarChartProps) {
   const { chartData, categories } = useMemo(() => {
-    const categoryMap = new Map<string, { key: string; name: string; color: string }>()
+    const categoryMap = new Map<
+      string,
+      { key: string; name: string; color: string; totalSeconds: number }
+    >()
 
     const rows = data.map((day) => {
       const row: Record<string, number | string> = {
@@ -80,11 +83,18 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
       for (const bucket of day.byCategory) {
         const key = bucket.categoryId ?? 'uncategorized'
         row[key] = bucket.seconds
-        categoryMap.set(key, {
+        const existing = categoryMap.get(key)
+        categoryMap.set(
           key,
-          name: bucket.categoryName,
-          color: bucket.color,
-        })
+          existing
+            ? { ...existing, totalSeconds: existing.totalSeconds + bucket.seconds }
+            : {
+                key,
+                name: bucket.categoryName,
+                color: bucket.color,
+                totalSeconds: bucket.seconds,
+              }
+        )
       }
 
       return row
@@ -99,74 +109,90 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
   if (!data.some((day) => day.totalSeconds > 0)) {
     return <EmptyState icon={<BarChart3 className="h-5 w-5" />} title="No sessions in this range" />
   }
+  const totalSeconds = categories.reduce((sum, category) => sum + category.totalSeconds, 0)
 
   return (
-    <div className="rounded-xl bg-surface-panel p-4">
-      <ul aria-label="Category colors" className="mb-3 flex flex-wrap gap-x-4 gap-y-2">
-        {categories.map((category) => (
-          <li className="flex items-center gap-1.5 text-xs text-ink-secondary" key={category.key}>
-            <span
-              aria-hidden="true"
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: category.color }}
-            />
-            {category.name}
-          </li>
-        ))}
-      </ul>
-
-      <div aria-label={`Focus time by ${range}`} className="h-[220px] w-full" role="group">
-        <p className="sr-only">
-          {data
-            .filter((day) => day.totalSeconds > 0)
-            .map((day) => `${formatLabel(day.date, range)}: ${formatDuration(day.totalSeconds)}`)
-            .join(', ')}
-        </p>
-        <ResponsiveContainer>
-          <BarChart
-            barCategoryGap="0%"
-            barGap={0}
-            data={chartData}
-            margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-          >
-            <CartesianGrid
-              stroke={CHART_GRID_COLOR}
-              strokeOpacity={0.6}
-              strokeDasharray="3 3"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="label"
-              interval={range === 'day' ? 2 : 'preserveStartEnd'}
-              minTickGap={8}
-              padding={{ left: 0, right: 0 }}
-              axisLine={false}
-              tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
-              tickMargin={8}
-              tickLine={false}
-            />
-            <YAxis
-              axisLine={false}
-              tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
-              tickFormatter={(value) => formatDuration(Math.round(Number(value)))}
-              tickLine={false}
-              type="number"
-              allowDecimals={false}
-              width={56}
-            />
-            <Tooltip content={<CustomTooltip />} />
-
-            {categories.map((category) => (
-              <Bar
-                dataKey={category.key}
-                fill={category.color}
-                key={category.key}
-                name={category.name}
-                stackId="total"
+    <div className="rounded-md border border-surface-border bg-surface-sidebar/30 p-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <div
+          aria-label={`Focus time by ${range}`}
+          className="h-[250px] min-w-0 flex-1"
+          role="group"
+        >
+          <p className="sr-only">
+            {data
+              .filter((day) => day.totalSeconds > 0)
+              .map((day) => `${formatLabel(day.date, range)}: ${formatDuration(day.totalSeconds)}`)
+              .join(', ')}
+          </p>
+          <ResponsiveContainer>
+            <BarChart
+              barCategoryGap="0%"
+              barGap={0}
+              data={chartData}
+              margin={{ top: 8, right: 8, left: 4, bottom: 0 }}
+            >
+              <CartesianGrid
+                stroke={CHART_GRID_COLOR}
+                strokeOpacity={0.6}
+                strokeDasharray="3 3"
+                vertical={false}
               />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
+              <XAxis
+                dataKey="label"
+                interval={range === 'day' ? 2 : 'preserveStartEnd'}
+                minTickGap={8}
+                padding={{ left: 0, right: 0 }}
+                axisLine={false}
+                tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
+                tickMargin={8}
+                tickLine={false}
+              />
+              <YAxis
+                axisLine={false}
+                tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
+                tickFormatter={(value) => formatDuration(Math.round(Number(value)))}
+                tickLine={false}
+                type="number"
+                allowDecimals={false}
+                width={64}
+              />
+              <Tooltip content={<CustomTooltip />} />
+
+              {categories.map((category) => (
+                <Bar
+                  dataKey={category.key}
+                  fill={category.color}
+                  key={category.key}
+                  name={category.name}
+                  stackId="total"
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <ul
+          aria-label="Category colors"
+          className="flex shrink-0 flex-wrap content-start gap-x-4 gap-y-3 border-t border-surface-border-subtle pt-3 sm:w-52 sm:flex-col sm:border-l sm:border-t-0 sm:pl-5 sm:pt-2"
+        >
+          {categories.map((category) => (
+            <li
+              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-xs text-ink-secondary"
+              key={category.key}
+            >
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: category.color }}
+              />
+              <span className="truncate">{category.name}</span>
+              <span className="tabular-nums text-ink-tertiary">
+                {formatDuration(category.totalSeconds)} ·{' '}
+                {Math.round((category.totalSeconds / totalSeconds) * 100)}%
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   )

@@ -175,7 +175,7 @@ export function TaskItem({
       ) : null}
 
       <div
-        className={`rounded-xl bg-surface-panel/45 transition-all duration-300 transform-gpu hover:bg-surface-hover/55 ${
+        className={`bg-transparent transition-all duration-300 transform-gpu hover:bg-surface-hover/35 ${
           isCompleting || isDeleting
             ? 'max-h-0 -translate-x-2 overflow-hidden opacity-0'
             : 'max-h-[1000px] translate-x-0 opacity-100'

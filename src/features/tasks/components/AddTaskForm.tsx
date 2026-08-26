@@ -6,9 +6,17 @@ import { Input } from '@/components/ui/Input'
 interface AddTaskFormProps {
   label: string
   onAdd: (name: string) => Promise<unknown> | void
+  prominent?: boolean
 }
 
-export function AddTaskForm({ label, onAdd }: AddTaskFormProps) {
+function isTypingTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+  )
+}
+
+export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [value, setValue] = useState('')
@@ -19,6 +27,20 @@ export function AddTaskForm({ label, onAdd }: AddTaskFormProps) {
       inputRef.current?.focus()
     }
   }, [isOpen])
+
+  useEffect(() => {
+    if (!prominent) return
+
+    const openFromShortcut = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== 'n' || event.metaKey || event.ctrlKey || event.altKey) return
+      if (isTypingTarget(event.target)) return
+      event.preventDefault()
+      setIsOpen(true)
+    }
+
+    window.addEventListener('keydown', openFromShortcut)
+    return () => window.removeEventListener('keydown', openFromShortcut)
+  }, [prominent])
 
   const reset = () => {
     setIsOpen(false)
@@ -41,15 +63,30 @@ export function AddTaskForm({ label, onAdd }: AddTaskFormProps) {
 
   if (!isOpen) {
     return (
-      <Button className="gap-1 px-0 text-base" onClick={() => setIsOpen(true)} variant="ghost">
-        <Plus className="h-4 w-4" />
-        {label}
+      <Button
+        className={
+          prominent
+            ? 'h-14 w-full justify-start border-surface-border px-5 text-base text-ink-tertiary hover:text-ink-primary'
+            : 'gap-1 px-0 text-base'
+        }
+        onClick={() => setIsOpen(true)}
+        variant={prominent ? 'outlined' : 'ghost'}
+      >
+        <Plus className={prominent ? 'h-5 w-5' : 'h-4 w-4'} />
+        <span>{label}</span>
+        {prominent ? (
+          <kbd className="ml-auto rounded border border-surface-border px-2 py-0.5 font-sans text-xs text-ink-tertiary">
+            N
+          </kbd>
+        ) : null}
       </Button>
     )
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div
+      className={`flex items-center gap-2 ${prominent ? 'rounded-md border border-surface-border bg-surface-sidebar/40 p-2' : ''}`}
+    >
       <Input
         autoCapitalize="off"
         autoComplete="new-password"

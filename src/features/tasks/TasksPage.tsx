@@ -24,6 +24,7 @@ export function TasksPage() {
 
   const {
     activeTasks,
+    completedTasks,
     isLoading: tasksLoading,
     error: tasksError,
     addTask,
@@ -70,32 +71,31 @@ export function TasksPage() {
 
   return (
     <section className="space-y-6">
-      <header>
-        <h1 className="text-4xl font-medium tracking-tight">Tasks</h1>
-      </header>
-
-      <CategoryTabs
-        activeTab={resolvedActiveTab}
-        categories={categories}
-        onAddCategory={() => setIsAddCategoryOpen(true)}
-        onArchiveCategory={async (id) => {
-          await updateCategory.mutateAsync({ id, archivedAt: new Date().toISOString() })
-          if (resolvedActiveTab === id) setActiveTab('all')
-        }}
-        onChangeTab={setActiveTab}
-        onDeleteCategory={async (id) => {
-          await deleteCategory.mutateAsync(id)
-          if (resolvedActiveTab === id) setActiveTab('all')
-        }}
-        onRecolorCategory={(id, color) => updateCategory.mutateAsync({ id, color })}
-        onRenameCategory={(id, name) => updateCategory.mutateAsync({ id, name })}
-        onReorderCategory={(id, newPosition) => reorderCategory.mutateAsync({ id, newPosition })}
-      />
+      <div>
+        <CategoryTabs
+          activeTab={resolvedActiveTab}
+          categories={categories}
+          onAddCategory={() => setIsAddCategoryOpen(true)}
+          onArchiveCategory={async (id) => {
+            await updateCategory.mutateAsync({ id, archivedAt: new Date().toISOString() })
+            if (resolvedActiveTab === id) setActiveTab('all')
+          }}
+          onChangeTab={setActiveTab}
+          onDeleteCategory={async (id) => {
+            await deleteCategory.mutateAsync(id)
+            if (resolvedActiveTab === id) setActiveTab('all')
+          }}
+          onRecolorCategory={(id, color) => updateCategory.mutateAsync({ id, color })}
+          onRenameCategory={(id, name) => updateCategory.mutateAsync({ id, name })}
+          onReorderCategory={(id, newPosition) => reorderCategory.mutateAsync({ id, newPosition })}
+        />
+      </div>
 
       <TaskList
         activeTab={resolvedActiveTab}
         archivedCategories={archivedCategories}
         categories={categories}
+        completedTasks={completedTasks}
         onAddTask={addTask.mutateAsync}
         onCompleteTask={(id) =>
           updateTask.mutateAsync({ id, completedAt: new Date().toISOString() })
@@ -109,6 +109,7 @@ export function TasksPage() {
           await updateCategory.mutateAsync({ id, archivedAt: null })
           setActiveTab(id)
         }}
+        onRestoreTask={(id) => updateTask.mutateAsync({ id, completedAt: null })}
         onReorderTask={reorderTask.mutateAsync}
         onUpdateTask={updateTask.mutateAsync}
         tasks={activeTasks}

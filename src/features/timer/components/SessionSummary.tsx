@@ -24,56 +24,52 @@ export function SessionSummary({
   isDeletingSession = false,
 }: SessionSummaryProps) {
   return (
-    <section className="w-full max-w-md rounded-xl bg-surface-panel p-4">
-      <p className="text-sm text-ink-secondary">Session complete</p>
-
-      <p className="mt-2 text-sm text-ink-primary">
-        Focused for <span className="font-medium">{formatDuration(workSeconds)}</span>
-      </p>
-      <p className="mt-1 text-sm text-ink-primary">
-        Break earned <span className="font-medium">{formatClock(breakTotal)}</span>
-      </p>
-
-      {taskName ? (
-        <div className="mt-2">
-          <p className="text-sm text-ink-secondary">Task</p>
-          <span className="mt-1 inline-flex items-center gap-2 text-xs font-medium text-ink-secondary">
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: taskColor ?? DEFAULT_NEUTRAL_COLOR }}
-            />
-            {taskName}
-          </span>
-        </div>
-      ) : null}
-
-      {onReplaySession || onEditSession || onDeleteSession ? (
-        <div className="mt-4 flex items-center gap-2">
-          {onReplaySession ? (
-            <Button onClick={onReplaySession} size="sm" variant="outlined">
-              Replay session
-            </Button>
-          ) : null}
-
-          {onEditSession ? (
-            <Button onClick={onEditSession} size="sm" variant="ghost">
-              Edit last session
-            </Button>
-          ) : null}
-
-          {onDeleteSession ? (
-            <Button
-              className="text-red-300 hover:text-red-200"
-              loading={isDeletingSession}
-              onClick={onDeleteSession}
-              size="sm"
-              variant="ghost"
-            >
-              Delete last session
-            </Button>
+    <section className="w-full border-y border-surface-border-subtle py-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-medium text-ink-primary">Session complete</p>
+          <p className="mt-1 text-sm text-ink-secondary">
+            {formatDuration(workSeconds)} focus <span aria-hidden="true">·</span>{' '}
+            {formatClock(breakTotal)} break earned
+          </p>
+          {taskName ? (
+            <span className="mt-2 inline-flex items-center gap-2 text-xs font-medium text-ink-tertiary">
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ backgroundColor: taskColor ?? DEFAULT_NEUTRAL_COLOR }}
+              />
+              {taskName}
+            </span>
           ) : null}
         </div>
-      ) : null}
+        {onReplaySession || onEditSession || onDeleteSession ? (
+          <div className="flex flex-wrap items-center gap-1 sm:justify-end">
+            {onReplaySession ? (
+              <Button onClick={onReplaySession} size="sm" variant="outlined">
+                Replay session
+              </Button>
+            ) : null}
+
+            {onEditSession ? (
+              <Button onClick={onEditSession} size="sm" variant="ghost">
+                Edit last session
+              </Button>
+            ) : null}
+
+            {onDeleteSession ? (
+              <Button
+                className="text-red-300 hover:text-red-200"
+                loading={isDeletingSession}
+                onClick={onDeleteSession}
+                size="sm"
+                variant="ghost"
+              >
+                Delete last session
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </section>
   )
 }

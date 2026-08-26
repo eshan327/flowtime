@@ -88,11 +88,26 @@ export function CategoryTabs({
 
   return (
     <>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+      <div className="space-y-5 border-b border-surface-border-subtle">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-4xl font-semibold tracking-tight">Tasks</h1>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <Button onClick={openManager} variant="ghost">
+              <Settings2 className="h-4 w-4" />
+              Organize
+            </Button>
+            <Button onClick={onAddCategory} variant="filled">
+              <Plus className="h-4 w-4" />
+              <span>New category</span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex min-w-0 items-center gap-5 overflow-x-auto">
           <button
             aria-pressed={activeTab === 'all'}
-            className={`shrink-0 border-b-2 px-2 py-2 text-base outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70 ${
+            className={`shrink-0 border-b-2 px-2 pb-4 pt-1 text-base outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70 ${
               activeTab === 'all'
                 ? 'border-accent-primary font-medium text-ink-primary'
                 : 'border-transparent text-ink-tertiary hover:text-ink-primary'
@@ -108,7 +123,7 @@ export function CategoryTabs({
             return (
               <button
                 aria-pressed={isActive}
-                className={`flex shrink-0 items-center gap-2 border-b-2 px-2 py-2 text-base outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70 ${
+                className={`flex shrink-0 items-center gap-2 border-b-2 px-2 pb-4 pt-1 text-base outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70 ${
                   isActive
                     ? 'border-accent-primary font-medium text-ink-primary'
                     : 'border-transparent text-ink-tertiary hover:text-ink-primary'
@@ -125,21 +140,6 @@ export function CategoryTabs({
               </button>
             )
           })}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2">
-          <Button onClick={openManager} variant="ghost">
-            <Settings2 className="h-4 w-4" />
-            Organize
-          </Button>
-          <Button
-            className="border-accent-primary/25 bg-accent-primary/10 text-accent-primary hover:border-accent-primary/40 hover:bg-accent-primary/15"
-            onClick={onAddCategory}
-            variant="outlined"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New category</span>
-          </Button>
         </div>
       </div>
 
