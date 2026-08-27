@@ -79,12 +79,12 @@ export function SessionLog({
         return (
           <div key={session.id}>
             {showDateHeader ? (
-              <p className="border-b border-surface-border-subtle px-3 py-3 text-xs font-medium text-ink-secondary">
+              <p className="border-b border-surface-border px-3 py-3 text-xs font-medium text-ink-secondary">
                 {dateLabel}
               </p>
             ) : null}
 
-            <div className="grid gap-3 border-b border-surface-border-subtle px-3 py-4 md:grid-cols-[94px_minmax(0,1.3fr)_minmax(0,1fr)_110px_110px_minmax(0,1.2fr)_36px] md:items-center md:gap-4">
+            <div className="grid gap-3 border-b border-surface-border-subtle px-3 py-4 transition-colors hover:bg-surface-hover/20 md:grid-cols-[94px_minmax(0,1.3fr)_minmax(0,1fr)_110px_110px_minmax(0,1.2fr)_36px] md:items-center md:gap-4">
               <p className="text-xs tabular-nums text-ink-tertiary">
                 {toTimeLabel(session.started_at)}
               </p>

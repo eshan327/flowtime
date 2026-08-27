@@ -4,17 +4,17 @@
 
 @layer base {
   :root {
-    --surface-page: 8 13 24;
-    --surface-sidebar: 12 19 33;
-    --surface-panel: 17 26 42;
-    --surface-hover: 26 37 59;
-    --surface-border: 50 65 92;
-    --surface-border-subtle: 37 48 71;
-    --ink-primary: 244 246 255;
-    --ink-secondary: 184 193 216;
-    --ink-tertiary: 127 140 168;
-    --accent-primary: 157 124 255;
-    --accent-primary-hover: 178 151 255;
+    --surface-page: 6 12 20;
+    --surface-sidebar: 8 15 24;
+    --surface-panel: 13 21 32;
+    --surface-hover: 25 34 46;
+    --surface-border: 61 70 82;
+    --surface-border-subtle: 38 47 59;
+    --ink-primary: 244 242 239;
+    --ink-secondary: 190 188 186;
+    --ink-tertiary: 125 128 135;
+    --accent-primary: 174 125 255;
+    --accent-primary-hover: 194 158 255;
   }
 
   html {
@@ -25,13 +25,16 @@
 
   body {
     min-height: 100vh;
-    background: rgb(var(--surface-page));
+    background:
+      radial-gradient(circle at 68% 34%, rgb(var(--accent-primary) / 0.025), transparent 34rem),
+      rgb(var(--surface-page));
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
   * {
     font-family:
+      'Avenir Next',
       Inter,
       ui-sans-serif,
       -apple-system,
@@ -97,21 +100,39 @@
     background: conic-gradient(
       from -90deg,
       var(--timer-accent) 0deg var(--timer-progress),
-      rgb(var(--surface-border) / 0.72) var(--timer-progress) 360deg
+      rgb(var(--surface-border) / 0.58) var(--timer-progress) 360deg
     );
     content: '';
-    mask: radial-gradient(circle closest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+    mask: radial-gradient(circle closest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
     -webkit-mask: radial-gradient(
       circle closest-side,
-      transparent calc(100% - 7px),
-      #000 calc(100% - 6px)
+      transparent calc(100% - 4px),
+      #000 calc(100% - 3px)
     );
     transition: background 500ms linear;
   }
 
+  .timer-dial::after {
+    position: absolute;
+    inset: 7%;
+    border-radius: 9999px;
+    background: repeating-conic-gradient(
+      from -90deg,
+      rgb(var(--ink-tertiary) / 0.72) 0deg 0.5deg,
+      transparent 0.5deg 6deg
+    );
+    content: '';
+    mask: radial-gradient(circle closest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+    -webkit-mask: radial-gradient(
+      circle closest-side,
+      transparent calc(100% - 9px),
+      #000 calc(100% - 8px)
+    );
+  }
+
   .timer-orbit {
     position: absolute;
-    inset: -3px;
+    inset: -1px;
     transform: rotate(var(--timer-progress));
     transition: transform 500ms linear;
   }
@@ -120,21 +141,19 @@
     position: absolute;
     top: 0;
     left: 50%;
-    height: 14px;
-    width: 14px;
+    height: 8px;
+    width: 8px;
     transform: translate(-50%, -50%);
     border-radius: 9999px;
     background: var(--timer-accent);
-    box-shadow:
-      0 0 0 5px rgb(var(--surface-page)),
-      0 0 24px var(--timer-accent);
+    box-shadow: 0 0 0 4px rgb(var(--surface-page));
     content: '';
   }
 
   .timer-dial.is-running {
     box-shadow:
-      inset 0 0 96px rgb(var(--accent-primary) / 0.055),
-      0 0 54px rgb(var(--accent-primary) / 0.06);
+      inset 0 0 0 1px rgb(var(--surface-border-subtle) / 0.45),
+      inset 0 0 96px rgb(var(--accent-primary) / 0.035);
   }
 
   @media (prefers-reduced-motion: reduce) {

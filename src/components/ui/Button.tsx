@@ -7,9 +7,9 @@ const variantClasses: Record<ButtonVariant, string> = {
   filled:
     'border border-accent-primary bg-accent-primary text-surface-sidebar hover:border-accent-primary-hover hover:bg-accent-primary-hover focus-visible:ring-accent-primary',
   outlined:
-    'border border-surface-border-subtle bg-transparent text-ink-primary hover:border-surface-border hover:bg-surface-hover focus-visible:ring-accent-primary',
+    'border border-surface-border bg-transparent text-ink-primary hover:border-accent-primary/70 hover:bg-accent-primary/5 focus-visible:ring-accent-primary',
   ghost:
-    'border border-transparent text-ink-secondary hover:bg-surface-hover hover:text-ink-primary focus-visible:ring-accent-primary',
+    'border border-transparent text-ink-secondary hover:bg-surface-hover/55 hover:text-ink-primary focus-visible:ring-accent-primary',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -38,7 +38,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-hover/30 disabled:text-ink-tertiary/50 disabled:opacity-100',
+        'inline-flex items-center justify-center gap-2 rounded-[4px] font-medium tracking-[-0.01em] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-hover/30 disabled:text-ink-tertiary/50 disabled:opacity-100',
         variantClasses[variant],
         sizeClasses[size],
         className

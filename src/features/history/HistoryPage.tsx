@@ -126,7 +126,7 @@ function ArchivedItemsSection<T extends { id: string }>({
   deleteConfirmation,
 }: ArchivedItemsSectionProps<T>) {
   return (
-    <section className="overflow-hidden rounded-md border border-surface-border bg-surface-sidebar/25">
+    <section className="overflow-hidden border-y border-surface-border">
       <Button
         aria-expanded={isExpanded}
         className="h-14 w-full justify-between rounded-none px-5 text-sm"
@@ -360,8 +360,8 @@ export function HistoryPage() {
 
   return (
     <section className="space-y-7">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-4xl font-medium tracking-tight">History</h1>
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-surface-border pb-5">
+        <h1 className="text-4xl font-semibold tracking-[-0.045em]">History</h1>
         <div className="flex gap-2">
           {(['csv', 'json'] as const).map((format) => (
             <Button
@@ -379,7 +379,7 @@ export function HistoryPage() {
         </div>
       </header>
 
-      <section className="rounded-md border border-surface-border bg-surface-sidebar/25 p-4">
+      <section className="border-b border-surface-border pb-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="grid grid-cols-3 gap-x-2 sm:inline-flex">
             {HISTORY_RANGE_OPTIONS.map((option) => (
@@ -436,7 +436,7 @@ export function HistoryPage() {
         ) : null}
       </section>
 
-      <section className="grid grid-cols-3 divide-x divide-surface-border overflow-hidden rounded-md border border-surface-border bg-surface-sidebar/35">
+      <section className="grid grid-cols-3 divide-x divide-surface-border border-y border-surface-border">
         <article className="min-w-0 px-3 py-4 sm:px-5">
           <p className="text-[30px] font-medium leading-none tabular-nums tracking-tight">
             {sessions.length}
@@ -465,7 +465,7 @@ export function HistoryPage() {
         </article>
       </section>
 
-      <section className="overflow-hidden rounded-md border border-surface-border bg-surface-sidebar/25">
+      <section className="overflow-hidden border-y border-surface-border">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-surface-border px-5 py-4">
           <h2 className="text-lg font-medium text-ink-primary">Session log</h2>
           {sessionSearch.trim() ? (
@@ -503,7 +503,7 @@ export function HistoryPage() {
             {getErrorMessage(sessionsError, 'Unable to load sessions right now.')}
           </p>
         ) : (
-          <div className="p-5">
+          <div className="px-2 pb-2 pt-4 sm:px-4">
             <SessionLog
               deletingSessionId={softDeleteSession.isPending ? softDeleteSession.variables : null}
               onDelete={handleDeleteSession}

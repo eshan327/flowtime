@@ -1,5 +1,4 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { FileText } from 'lucide-react'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import type { TimerPhase } from '@/features/timer/stores/timerStore'
 import { formatClock } from '@/lib/formatting'
@@ -10,7 +9,6 @@ interface TimerClockProps {
   breakTotal: number
   breakEndAt: Date | null
   accentColor?: string | null
-  taskName?: string | null
   supportingLabel?: string | null
   supportingValue?: string | null
 }
@@ -21,7 +19,6 @@ export function TimerClock({
   breakTotal,
   breakEndAt,
   accentColor,
-  taskName,
   supportingLabel,
   supportingValue,
 }: TimerClockProps) {
@@ -50,7 +47,7 @@ export function TimerClock({
 
   return (
     <div
-      className={`timer-dial relative mx-auto flex h-[min(21rem,82vw)] w-[min(21rem,82vw)] shrink-0 items-center justify-center rounded-full sm:h-96 sm:w-96 lg:h-[min(31rem,58vh)] lg:w-[min(31rem,58vh)] ${phase === 'working' ? 'is-running' : ''}`}
+      className={`timer-dial relative mx-auto flex h-[min(21rem,82vw)] w-[min(21rem,82vw)] shrink-0 items-center justify-center rounded-full sm:h-96 sm:w-96 lg:h-[min(31rem,59vh)] lg:w-[min(31rem,59vh)] ${phase === 'working' ? 'is-running' : ''}`}
       style={
         {
           '--timer-accent': accent,
@@ -62,24 +59,16 @@ export function TimerClock({
         <span aria-hidden="true" className="timer-orbit" />
       ) : null}
       <div className="relative z-[1] flex w-[78%] flex-col items-center">
-        <p className="rounded-full border border-surface-border px-5 py-2 text-xs font-medium tracking-wide text-ink-primary">
-          <span
-            className="mr-2 inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: accent }}
-          />
-          {phase === 'working' ? 'Focus' : phase === 'breaking' ? 'Recover' : 'Ready'}
-        </p>
+        {phase === 'working' || phase === 'breaking' ? (
+          <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-accent-primary">
+            {phase === 'working' ? 'Focus' : 'Recover'}
+          </p>
+        ) : null}
         <p
-          className={`mt-7 whitespace-nowrap font-semibold leading-none tabular-nums text-ink-primary ${clock.length > 5 ? 'text-[48px] tracking-[-0.055em] sm:text-[70px] lg:text-[86px]' : 'text-[72px] tracking-[-0.07em] sm:text-[104px] lg:text-[118px]'}`}
+          className={`${phase === 'working' || phase === 'breaking' ? 'mt-7' : ''} whitespace-nowrap font-medium leading-none tabular-nums text-ink-primary ${clock.length > 5 ? 'text-[48px] tracking-[-0.055em] sm:text-[70px] lg:text-[86px]' : 'text-[72px] tracking-[-0.065em] sm:text-[104px] lg:text-[118px]'}`}
         >
           {clock}
         </p>
-        {taskName ? (
-          <p className="mt-7 flex w-full items-center justify-center gap-2 border-y border-surface-border-subtle py-4 text-sm font-medium text-ink-secondary sm:text-base">
-            <FileText className="h-4 w-4 text-ink-tertiary" />
-            <span className="truncate">{taskName}</span>
-          </p>
-        ) : null}
         {supportingLabel && supportingValue ? (
           <div className="mt-6 text-center">
             <p className="text-xs text-ink-tertiary sm:text-sm">{supportingLabel}</p>

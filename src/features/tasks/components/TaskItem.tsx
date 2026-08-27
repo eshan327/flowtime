@@ -175,7 +175,7 @@ export function TaskItem({
       ) : null}
 
       <div
-        className={`bg-transparent transition-all duration-300 transform-gpu hover:bg-surface-hover/35 ${
+        className={`bg-transparent transition-all duration-300 transform-gpu hover:bg-surface-hover/25 ${
           isCompleting || isDeleting
             ? 'max-h-0 -translate-x-2 overflow-hidden opacity-0'
             : 'max-h-[1000px] translate-x-0 opacity-100'
@@ -222,7 +222,7 @@ export function TaskItem({
           void handleDrop(draggedId, dropPlacement ?? fallbackPlacement)
         }}
       >
-        <div className="flex items-center gap-2 px-1 py-3 sm:px-2">
+        <div className="flex items-center gap-2 px-3 py-3.5 sm:px-4">
           <Button
             aria-label={`Reorder ${task.name}`}
             className="cursor-grab p-0 text-ink-tertiary transition hover:text-ink-secondary"
@@ -340,7 +340,7 @@ export function TaskItem({
             {isMenuOpen ? (
               <div
                 aria-label={`${task.name} options`}
-                className="absolute right-0 z-20 mt-1 w-52 rounded-xl border border-surface-border-subtle bg-surface-panel p-1 shadow-xl"
+                className="absolute right-0 z-20 mt-1 w-52 rounded-[4px] border border-surface-border bg-surface-panel p-1 shadow-xl"
                 role="menu"
               >
                 <Button

@@ -13,7 +13,6 @@ export function TasksPage() {
 
   const {
     categories,
-    archivedCategories,
     isLoading: categoriesLoading,
     error: categoriesError,
     addCategory,
@@ -24,7 +23,6 @@ export function TasksPage() {
 
   const {
     activeTasks,
-    completedTasks,
     isLoading: tasksLoading,
     error: tasksError,
     addTask,
@@ -93,23 +91,13 @@ export function TasksPage() {
 
       <TaskList
         activeTab={resolvedActiveTab}
-        archivedCategories={archivedCategories}
         categories={categories}
-        completedTasks={completedTasks}
         onAddTask={addTask.mutateAsync}
         onCompleteTask={(id) =>
           updateTask.mutateAsync({ id, completedAt: new Date().toISOString() })
         }
         onDeleteTask={deleteTask.mutateAsync}
         onMoveTask={({ id, categoryId }) => updateTask.mutateAsync({ id, categoryId })}
-        onMoveArchivedTasks={async (taskIds, categoryId) => {
-          for (const id of taskIds) await updateTask.mutateAsync({ id, categoryId })
-        }}
-        onRestoreCategory={async (id) => {
-          await updateCategory.mutateAsync({ id, archivedAt: null })
-          setActiveTab(id)
-        }}
-        onRestoreTask={(id) => updateTask.mutateAsync({ id, completedAt: null })}
         onReorderTask={reorderTask.mutateAsync}
         onUpdateTask={updateTask.mutateAsync}
         tasks={activeTasks}

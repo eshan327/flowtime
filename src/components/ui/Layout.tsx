@@ -32,10 +32,10 @@ const MAX_AVATAR_SIZE = 5 * 1024 * 1024
 
 function desktopNavClassName(isActive: boolean) {
   return [
-    'relative flex items-center gap-3 rounded-md px-4 py-3 text-[15px] outline-none transition-colors duration-150 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:rounded-full focus-visible:ring-2 focus-visible:ring-accent-primary/70',
+    'relative flex items-center gap-4 rounded-[4px] px-4 py-4 text-[15px] outline-none transition-colors duration-150 before:absolute before:inset-y-0 before:left-0 before:w-[3px] focus-visible:ring-2 focus-visible:ring-accent-primary/70',
     isActive
-      ? 'bg-surface-hover/70 font-medium text-ink-primary before:bg-accent-primary [&>svg]:text-accent-primary'
-      : 'text-ink-secondary hover:bg-surface-hover/30 hover:text-ink-primary',
+      ? 'bg-surface-hover/60 font-medium text-ink-primary before:bg-accent-primary [&>svg]:text-ink-primary'
+      : 'text-ink-secondary hover:bg-surface-hover/25 hover:text-ink-primary',
   ].join(' ')
 }
 
@@ -245,13 +245,13 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen text-ink-primary">
       <div className="flex min-h-screen md:flex-row">
-        <aside className="hidden border-r border-surface-border-subtle bg-surface-sidebar px-4 py-7 md:sticky md:top-0 md:flex md:h-screen md:w-60 md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
+        <aside className="hidden border-r border-surface-border bg-surface-sidebar/55 px-4 py-9 md:sticky md:top-0 md:flex md:h-screen md:w-[248px] md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
           <div className="flex items-center gap-3 px-3 text-ink-primary">
             <FlowtimeMark className="h-9 w-9 text-accent-primary" />
-            <p className="text-xl font-semibold tracking-tight">Flowtime</p>
+            <p className="text-[22px] font-semibold tracking-[-0.035em]">Flowtime</p>
           </div>
 
-          <nav className="mt-10 grid gap-2">
+          <nav className="mt-12 grid gap-2">
             {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
               <NavLink className={({ isActive }) => desktopNavClassName(isActive)} key={to} to={to}>
                 <Icon className="h-5 w-5" />
@@ -347,8 +347,8 @@ export function Layout({ children }: { children: ReactNode }) {
             </p>
           ) : null}
 
-          <main className="flex-1 px-4 py-6 md:px-8 md:py-8 xl:px-10">
-            <div className="mx-auto w-full max-w-[1280px]">{children}</div>
+          <main className="flex-1 px-4 py-6 md:px-10 md:py-9 xl:px-12">
+            <div className="mx-auto w-full max-w-[1320px]">{children}</div>
           </main>
         </div>
       </div>

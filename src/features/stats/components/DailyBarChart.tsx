@@ -3,7 +3,7 @@ import { BarChart3 } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CHART_GRID_COLOR, CHART_TEXT_COLOR } from '@/lib/colors'
-import { formatDuration } from '@/lib/formatting'
+import { formatDuration, formatTimeAxisTick, getTimeAxis } from '@/lib/formatting'
 import type { DaySummary, TimeRange } from '@/types'
 
 interface DailyBarChartProps {
@@ -110,9 +110,10 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
     return <EmptyState icon={<BarChart3 className="h-5 w-5" />} title="No sessions in this range" />
   }
   const totalSeconds = categories.reduce((sum, category) => sum + category.totalSeconds, 0)
+  const timeAxis = getTimeAxis(Math.max(...data.map((day) => day.totalSeconds)))
 
   return (
-    <div className="rounded-md border border-surface-border bg-surface-sidebar/30 p-4">
+    <div className="border-y border-surface-border py-4">
       <div className="flex flex-col gap-4 sm:flex-row">
         <div
           aria-label={`Focus time by ${range}`}
@@ -150,9 +151,11 @@ export function DailyBarChart({ range, data }: DailyBarChartProps) {
               />
               <YAxis
                 axisLine={false}
+                domain={timeAxis.domain}
                 tick={{ fill: CHART_TEXT_COLOR, fontSize: 11 }}
-                tickFormatter={(value) => formatDuration(Math.round(Number(value)))}
+                tickFormatter={(value) => formatTimeAxisTick(Number(value))}
                 tickLine={false}
+                ticks={timeAxis.ticks}
                 type="number"
                 allowDecimals={false}
                 width={64}

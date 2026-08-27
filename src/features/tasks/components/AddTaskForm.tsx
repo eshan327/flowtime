@@ -66,7 +66,7 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
       <Button
         className={
           prominent
-            ? 'h-14 w-full justify-start border-surface-border px-5 text-base text-ink-tertiary hover:text-ink-primary'
+            ? 'h-16 w-full justify-start border-surface-border px-5 text-base text-ink-tertiary hover:border-accent-primary/50 hover:text-ink-primary'
             : 'gap-1 px-0 text-base'
         }
         onClick={() => setIsOpen(true)}
@@ -85,7 +85,7 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
 
   return (
     <div
-      className={`flex items-center gap-2 ${prominent ? 'rounded-md border border-surface-border bg-surface-sidebar/40 p-2' : ''}`}
+      className={`flex items-center gap-2 ${prominent ? 'rounded-[4px] border border-surface-border p-2' : ''}`}
     >
       <Input
         autoCapitalize="off"

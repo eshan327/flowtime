@@ -9,12 +9,10 @@ interface SummaryCardsProps {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 px-3 py-4 sm:px-5">
-      <p className="truncate text-[28px] font-medium leading-none tabular-nums tracking-tight text-ink-primary sm:text-[32px]">
+    <div className="min-w-0 px-3 py-5 sm:px-6">
+      <p className="text-xs text-ink-tertiary">{label}</p>
+      <p className="mt-2 truncate text-[28px] font-medium leading-none tabular-nums tracking-[-0.04em] text-ink-primary sm:text-[34px]">
         {value}
-      </p>
-      <p className="mt-3 text-xs font-medium uppercase tracking-[0.06em] text-ink-tertiary">
-        {label}
       </p>
     </div>
   )
@@ -27,7 +25,7 @@ export function SummaryCards({
   dailyAverageSeconds,
 }: SummaryCardsProps) {
   return (
-    <div className="grid grid-cols-2 divide-x divide-y divide-surface-border overflow-hidden rounded-md border border-surface-border bg-surface-sidebar/35 sm:grid-cols-4 sm:divide-y-0">
+    <div className="grid grid-cols-2 divide-x divide-y divide-surface-border border-y border-surface-border sm:grid-cols-4 sm:divide-y-0">
       <SummaryCard label="Focus Time" value={formatDuration(totalWorkSeconds)} />
       <SummaryCard label="Daily Average" value={formatDuration(dailyAverageSeconds)} />
       <SummaryCard label="Sessions" value={String(totalSessions)} />

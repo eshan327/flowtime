@@ -150,7 +150,7 @@ export function TaskSelector({
         aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className={`${label ? 'h-16' : 'h-11'} w-full justify-between px-4 text-base`}
+        className={`${label ? 'h-[72px]' : 'h-11'} w-full justify-between border-x-0 border-t-0 px-0 text-base hover:bg-transparent`}
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
         onKeyDown={(event) => {
@@ -174,7 +174,9 @@ export function TaskSelector({
                 {label}
               </span>
             ) : null}
-            <span className={`block truncate ${label ? 'mt-1 font-medium text-ink-primary' : ''}`}>
+            <span
+              className={`block truncate ${label ? 'mt-1 text-xl font-medium tracking-[-0.025em] text-ink-primary sm:text-2xl' : ''}`}
+            >
               {selectedTask?.name ?? 'Select a task'}
             </span>
           </span>
@@ -183,7 +185,7 @@ export function TaskSelector({
       </Button>
 
       {isOpen && !disabled ? (
-        <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-surface-border-subtle bg-surface-panel p-1 shadow-xl">
+        <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-[4px] border border-surface-border bg-surface-panel p-1 shadow-xl">
           {onQuickAddTask ? (
             <div className="mb-2 flex items-center gap-2 border-b border-surface-border px-2 pb-2">
               <Input

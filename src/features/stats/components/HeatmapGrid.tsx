@@ -113,7 +113,7 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
   const tooltipPosition = useMemo(() => {
     if (!tooltip || typeof window === 'undefined') return null
 
-    const tooltipWidth = 280
+    const tooltipWidth = 240
     const tooltipHeight = Math.min(220, 92 + tooltip.byCategory.length * 20)
 
     const maxLeft = window.innerWidth - tooltipWidth - 8
@@ -236,7 +236,7 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
 
       {tooltip && tooltipPosition ? (
         <div
-          className="pointer-events-none fixed z-50 w-[280px] max-w-[calc(100vw-16px)] rounded-lg border border-surface-border-subtle bg-surface-panel p-3 text-xs text-ink-secondary shadow-xl"
+          className="pointer-events-none fixed z-50 w-[240px] max-w-[calc(100vw-16px)] rounded-[4px] border border-surface-border bg-surface-panel p-3 text-xs text-ink-secondary shadow-xl"
           style={{ left: tooltipPosition.left, top: tooltipPosition.top }}
         >
           <p className="text-ink-primary">{tooltip.date}</p>

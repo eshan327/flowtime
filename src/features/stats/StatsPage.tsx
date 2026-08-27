@@ -100,12 +100,12 @@ export function StatsPage() {
 
   return (
     <section className="space-y-7">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-4xl font-medium tracking-tight">Insights</h1>
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-surface-border pb-5">
+        <h1 className="text-4xl font-semibold tracking-[-0.045em]">Insights</h1>
         <div className="flex items-center gap-2">
           <select
             aria-label="Focus time range"
-            className="h-10 rounded-md border border-surface-border bg-surface-sidebar px-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
+            className="h-10 rounded-[4px] border border-surface-border bg-transparent px-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
             onChange={(event) => setRange(event.target.value as TimeRange)}
             value={range}
           >
@@ -136,7 +136,7 @@ export function StatsPage() {
         </div>
       </header>
 
-      <div className="flex items-center justify-between gap-3 border-b border-surface-border-subtle pb-3">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-ink-secondary">{selectedWindowLabel}</p>
         {!isCurrentWindow ? (
           <Button onClick={() => setAnchorDate(new Date())} size="sm" variant="ghost">
@@ -158,7 +158,7 @@ export function StatsPage() {
         {hasRangeData ? (
           <DailyBarChart data={stats.byDay} range={range} />
         ) : (
-          <div className="rounded-md border border-surface-border bg-surface-sidebar/30">
+          <div className="border-y border-surface-border">
             <EmptyState
               className="py-5"
               icon={<BarChart3 className="h-5 w-5" />}
@@ -170,7 +170,7 @@ export function StatsPage() {
 
       <section>
         <h2 className="mb-3 text-lg font-medium text-ink-primary">Activity</h2>
-        <div className="rounded-md border border-surface-border bg-surface-sidebar/30 p-4">
+        <div className="border-y border-surface-border py-4">
           <HeatmapGrid
             data={stats.allDays}
             onSelectDay={(day) => {
@@ -181,7 +181,7 @@ export function StatsPage() {
         </div>
 
         {selectedHeatmapDay ? (
-          <div className="mt-3 rounded-md border border-surface-border bg-surface-sidebar/30 p-4">
+          <div className="mt-3 border-y border-surface-border py-4">
             <div className="mb-3">
               <div>
                 <p className="text-sm text-ink-primary">
@@ -207,7 +207,7 @@ export function StatsPage() {
 
       {hasRangeData ? (
         <div className="grid items-start gap-5 lg:grid-cols-2">
-          <section className="rounded-md border border-surface-border bg-surface-sidebar/30 p-5">
+          <section className="border-t border-surface-border pt-5">
             <h2 className="mb-4 text-lg font-medium text-ink-primary">Time by category</h2>
             <BreakdownChart
               data={stats.byCategory.map((item) => ({
@@ -220,7 +220,7 @@ export function StatsPage() {
             />
           </section>
 
-          <section className="rounded-md border border-surface-border bg-surface-sidebar/30 p-5">
+          <section className="border-t border-surface-border pt-5">
             <h2 className="mb-4 text-lg font-medium text-ink-primary">Time by task</h2>
             <BreakdownChart
               data={stats.byTask.map((item) => ({

@@ -88,9 +88,9 @@ export function CategoryTabs({
 
   return (
     <>
-      <div className="space-y-5 border-b border-surface-border-subtle">
+      <div className="space-y-6 border-b border-surface-border">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-4xl font-semibold tracking-tight">Tasks</h1>
+          <h1 className="text-4xl font-semibold tracking-[-0.045em]">Tasks</h1>
 
           <div className="flex shrink-0 items-center gap-2">
             <Button onClick={openManager} variant="ghost">
@@ -104,10 +104,10 @@ export function CategoryTabs({
           </div>
         </div>
 
-        <div className="flex min-w-0 items-center gap-5 overflow-x-auto">
+        <div className="flex min-w-0 items-center gap-7 overflow-x-auto">
           <button
             aria-pressed={activeTab === 'all'}
-            className={`shrink-0 border-b-2 px-2 pb-4 pt-1 text-base outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70 ${
+            className={`shrink-0 border-b-2 px-1 pb-4 pt-1 text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70 ${
               activeTab === 'all'
                 ? 'border-accent-primary font-medium text-ink-primary'
                 : 'border-transparent text-ink-tertiary hover:text-ink-primary'
@@ -123,7 +123,7 @@ export function CategoryTabs({
             return (
               <button
                 aria-pressed={isActive}
-                className={`flex shrink-0 items-center gap-2 border-b-2 px-2 pb-4 pt-1 text-base outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70 ${
+                className={`flex shrink-0 items-center gap-2 border-b-2 px-1 pb-4 pt-1 text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70 ${
                   isActive
                     ? 'border-accent-primary font-medium text-ink-primary'
                     : 'border-transparent text-ink-tertiary hover:text-ink-primary'

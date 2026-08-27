@@ -30,7 +30,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
     <dialog
       aria-labelledby={titleId}
       className={cn(
-        'animate-modal-in m-auto max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border border-surface-border-subtle bg-surface-panel p-5 text-ink-primary shadow-2xl backdrop:bg-black/55',
+        'animate-modal-in m-auto max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[6px] border border-surface-border bg-surface-panel p-5 text-ink-primary shadow-2xl backdrop:bg-black/65',
         className
       )}
       onCancel={onClose}

@@ -358,9 +358,9 @@ export function TimerPage() {
   })
 
   return (
-    <section className="flex w-full flex-col items-center justify-start md:min-h-[calc(100vh-4rem)]">
+    <section className="flex w-full flex-col items-center justify-start md:min-h-[calc(100vh-4.5rem)]">
       <div className="w-full px-0 py-2 sm:px-2">
-        <div className="mx-auto flex max-w-6xl items-center gap-3">
+        <div className="mx-auto flex max-w-6xl items-center gap-5 border-b border-surface-border pb-1">
           <TaskSelector
             disabled={focusModeLock && phase === 'working'}
             isLoading={tasksLoading}
@@ -394,7 +394,7 @@ export function TimerPage() {
           </p>
         ) : null}
 
-        <div className="mt-8 flex flex-col items-center">
+        <div className="mt-7 flex flex-col items-center">
           <TimerClock
             accentColor={selectedTaskColor}
             breakEndAt={breakEndAt}
@@ -402,7 +402,6 @@ export function TimerPage() {
             phase={phase}
             supportingLabel={earnedBreak ? 'Break earned' : null}
             supportingValue={earnedBreak}
-            taskName={selectedTask?.name ?? selectedTaskName}
             workSeconds={workSeconds}
           />
 
@@ -506,7 +505,7 @@ export function TimerPage() {
           ) : null}
         </div>
 
-        <div className="mx-auto mt-8 grid min-h-5 w-full max-w-6xl grid-cols-3 items-center divide-x divide-surface-border rounded-md border border-surface-border bg-surface-sidebar/45 px-4 py-5 text-center text-sm text-ink-secondary sm:px-7 [&>span]:px-2 sm:[&>span]:px-4">
+        <div className="mx-auto mt-8 grid min-h-5 w-full max-w-6xl grid-cols-3 items-center divide-x divide-surface-border border-y border-surface-border px-4 py-5 text-center text-sm text-ink-secondary sm:px-1 [&>span]:px-2 sm:[&>span]:px-7">
           {todaySummary.isError ? (
             <p className="col-span-3 text-red-300">Unable to load today's summary.</p>
           ) : todaySummary.isLoading ? (
