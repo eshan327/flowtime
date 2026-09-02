@@ -55,20 +55,20 @@ export function TimerClock({
         } as CSSProperties
       }
     >
-      {phase === 'working' || phase === 'breaking' ? (
-        <span aria-hidden="true" className="timer-orbit" />
-      ) : null}
       <div className="relative z-[1] flex w-[78%] flex-col items-center">
-        {phase === 'working' || phase === 'breaking' ? (
-          <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-accent-primary">
-            {phase === 'working' ? 'Focus' : 'Recover'}
-          </p>
-        ) : null}
         <p
-          className={`${phase === 'working' || phase === 'breaking' ? 'mt-7' : ''} whitespace-nowrap font-medium leading-none tabular-nums text-ink-primary ${clock.length > 5 ? 'text-[48px] tracking-[-0.055em] sm:text-[70px] lg:text-[86px]' : 'text-[72px] tracking-[-0.065em] sm:text-[104px] lg:text-[118px]'}`}
+          className={`whitespace-nowrap font-medium leading-none tabular-nums text-ink-primary ${clock.length > 5 ? 'text-[48px] tracking-[-0.055em] sm:text-[70px] lg:text-[86px]' : 'text-[72px] tracking-[-0.065em] sm:text-[104px] lg:text-[118px]'}`}
         >
           {clock}
         </p>
+        {phase === 'working' || phase === 'breaking' ? (
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <span aria-hidden="true" className="h-4 w-px bg-accent-primary" />
+            <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-accent-primary">
+              {phase === 'working' ? 'Focus' : 'Recover'}
+            </p>
+          </div>
+        ) : null}
         {supportingLabel && supportingValue ? (
           <div className="mt-6 text-center">
             <p className="text-xs text-ink-tertiary sm:text-sm">{supportingLabel}</p>
