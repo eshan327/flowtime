@@ -1,31 +1,30 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
+import { getBreakSeconds } from '@/features/timer/stores/timerSettingsStore'
+import { useTimerStore } from '@/features/timer/stores/timerStore'
 import type { TimerPhase } from '@/features/timer/stores/timerStore'
 import { formatClock } from '@/lib/formatting'
 
 interface TimerClockProps {
   phase: TimerPhase
-  workSeconds: number
+  breakDivisor: number
   breakTotal: number
   breakEndAt: Date | null
   accentColor?: string | null
-  supportingLabel?: string | null
-  supportingValue?: string | null
 }
 
 export function TimerClock({
   phase,
-  workSeconds,
+  breakDivisor,
   breakTotal,
   breakEndAt,
   accentColor,
-  supportingLabel,
-  supportingValue,
 }: TimerClockProps) {
   const [now, setNow] = useState(Date.now)
+  const workSeconds = useTimerStore((state) => state.workSeconds)
 
   useEffect(() => {
-    if (phase !== 'working' && phase !== 'breaking') return
+    if (phase !== 'breaking') return
     const interval = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(interval)
   }, [phase])
@@ -44,6 +43,12 @@ export function TimerClock({
         : 0
   const accent = accentColor ?? DEFAULT_TASK_COLOR
   const clock = formatClock(seconds)
+  const supportingValue =
+    phase === 'working'
+      ? formatClock(getBreakSeconds(workSeconds, breakDivisor))
+      : phase === 'breaking'
+        ? formatClock(breakTotal)
+        : null
 
   return (
     <div
@@ -69,9 +74,9 @@ export function TimerClock({
             </p>
           </div>
         ) : null}
-        {supportingLabel && supportingValue ? (
+        {supportingValue ? (
           <div className="mt-6 text-center">
-            <p className="text-xs text-ink-tertiary sm:text-sm">{supportingLabel}</p>
+            <p className="text-xs text-ink-tertiary sm:text-sm">Break earned</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums text-accent-primary sm:text-3xl">
               {supportingValue}
             </p>

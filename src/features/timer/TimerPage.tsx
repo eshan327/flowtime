@@ -24,7 +24,7 @@ import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { useUser } from '@/context/UserContext'
 import { getErrorMessage } from '@/lib/errorMessages'
-import { formatClock, formatDuration } from '@/lib/formatting'
+import { formatDuration } from '@/lib/formatting'
 import { requestNotificationPermission } from '@/lib/notifications'
 import {
   EMPTY_SESSION_SNAPSHOT,
@@ -64,7 +64,7 @@ export function TimerPage() {
 
   const {
     phase,
-    workSeconds,
+    completedWorkSeconds,
     breakEndAt,
     breakTotal,
     startedAt,
@@ -88,7 +88,7 @@ export function TimerPage() {
   } = useTimerStore(
     useShallow((state) => ({
       phase: state.phase,
-      workSeconds: state.workSeconds,
+      completedWorkSeconds: state.phase === 'done' ? state.workSeconds : 0,
       breakEndAt: state.breakEndAt,
       breakTotal: state.breakTotal,
       startedAt: state.startedAt,
@@ -198,13 +198,6 @@ export function TimerPage() {
     })
   }, [phase, selectedTask, selectedTaskColor, setSelectedTaskSnapshot])
 
-  const earnedBreak =
-    phase === 'working'
-      ? formatClock(getBreakSeconds(workSeconds, breakDivisor))
-      : phase === 'breaking'
-        ? formatClock(breakTotal)
-        : null
-
   const replayTask = useMemo(() => {
     const replayTaskId = lastSavedSession?.task_id_snapshot ?? lastSavedSession?.task_id
     if (!replayTaskId) return null
@@ -237,6 +230,7 @@ export function TimerPage() {
     if (notificationsEnabled) void requestNotificationPermission()
     if (isSavingSession) return
 
+    const workSeconds = useTimerStore.getState().workSeconds
     const snapshot = buildSessionSnapshot()
     const sessionTask = {
       name: snapshot.taskNameSnapshot,
@@ -272,7 +266,6 @@ export function TimerPage() {
     startedAt,
     stopWork,
     userId,
-    workSeconds,
   ])
 
   const handleStartWork = useCallback(() => {
@@ -398,11 +391,9 @@ export function TimerPage() {
           <TimerClock
             accentColor={selectedTaskColor}
             breakEndAt={breakEndAt}
+            breakDivisor={breakDivisor}
             breakTotal={breakTotal}
             phase={phase}
-            supportingLabel={earnedBreak ? 'Break earned' : null}
-            supportingValue={earnedBreak}
-            workSeconds={workSeconds}
           />
 
           <div className="mt-8 flex w-full justify-center">
@@ -484,7 +475,7 @@ export function TimerPage() {
                 onReplaySession={canReplaySession ? handleReplayLastSession : undefined}
                 taskColor={lastSessionTaskColor}
                 taskName={lastSessionTaskName}
-                workSeconds={workSeconds}
+                workSeconds={completedWorkSeconds}
               />
 
               {runawayDetected ? (

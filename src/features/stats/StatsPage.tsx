@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { BarChart3, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
 import { BreakdownChart } from '@/features/stats/components/BreakdownChart'
-import { DailyBarChart } from '@/features/stats/components/DailyBarChart'
 import { HeatmapGrid } from '@/features/stats/components/HeatmapGrid'
 import { SessionLog } from '@/features/sessions/components/SessionLog'
 import { SummaryCards } from '@/features/stats/components/SummaryCards'
@@ -14,6 +13,12 @@ import { formatRangeWindow, getRangeDatesForAnchor, shiftRangeAnchor } from '@/l
 import { toLocalDateKey } from '@/lib/dateMath'
 import { getErrorMessage } from '@/lib/errorMessages'
 import type { SessionWithTask, TimeRange } from '@/types'
+
+const DailyBarChart = lazy(() =>
+  import('@/features/stats/components/DailyBarChart').then((mod) => ({
+    default: mod.DailyBarChart,
+  }))
+)
 
 function getNavigationFloor() {
   const floor = new Date()
@@ -80,61 +85,71 @@ export function StatsPage() {
     return heatmapSessionsByDate.get(selectedHeatmapDate) ?? []
   }, [heatmapSessionsByDate, selectedHeatmapDate])
 
+  const header = (
+    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-surface-border pb-5">
+      <h1 className="text-4xl font-semibold tracking-[-0.045em]">Insights</h1>
+      <div className="flex items-center gap-2">
+        <select
+          aria-label="Focus time range"
+          className="h-10 rounded-[4px] border border-surface-border bg-transparent px-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
+          onChange={(event) => setRange(event.target.value as TimeRange)}
+          value={range}
+        >
+          {(['day', 'week', 'month', 'year'] as const).map((option) => (
+            <option key={option} value={option}>
+              {option[0].toUpperCase() + option.slice(1)}
+            </option>
+          ))}
+        </select>
+        <Button
+          aria-label="Previous period"
+          disabled={!canGoPrevious}
+          onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, -1))}
+          size="icon"
+          variant="outlined"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          aria-label="Next period"
+          disabled={!canGoNext}
+          onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, 1))}
+          size="icon"
+          variant="outlined"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </header>
+  )
+
   if (stats.isLoading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Spinner />
-      </div>
+      <section className="space-y-7">
+        {header}
+        <div className="flex h-[52vh] items-center justify-center">
+          <Spinner />
+        </div>
+      </section>
     )
   }
 
   if (stats.error) {
     return (
-      <section className="rounded-xl bg-surface-panel p-6">
-        <p className="text-sm text-red-300">
-          {getErrorMessage(stats.error, 'Unable to load stats right now.')}
-        </p>
+      <section className="space-y-7">
+        {header}
+        <div className="rounded-xl bg-surface-panel p-6">
+          <p className="text-sm text-red-300">
+            {getErrorMessage(stats.error, 'Unable to load stats right now.')}
+          </p>
+        </div>
       </section>
     )
   }
 
   return (
     <section className="space-y-7">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-surface-border pb-5">
-        <h1 className="text-4xl font-semibold tracking-[-0.045em]">Insights</h1>
-        <div className="flex items-center gap-2">
-          <select
-            aria-label="Focus time range"
-            className="h-10 rounded-[4px] border border-surface-border bg-transparent px-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
-            onChange={(event) => setRange(event.target.value as TimeRange)}
-            value={range}
-          >
-            {(['day', 'week', 'month', 'year'] as const).map((option) => (
-              <option key={option} value={option}>
-                {option[0].toUpperCase() + option.slice(1)}
-              </option>
-            ))}
-          </select>
-          <Button
-            aria-label="Previous period"
-            disabled={!canGoPrevious}
-            onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, -1))}
-            size="icon"
-            variant="outlined"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            aria-label="Next period"
-            disabled={!canGoNext}
-            onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, 1))}
-            size="icon"
-            variant="outlined"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
+      {header}
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-ink-secondary">{selectedWindowLabel}</p>
@@ -156,7 +171,15 @@ export function StatsPage() {
         <h2 className="mb-3 text-lg font-medium text-ink-primary">Focus time</h2>
 
         {hasRangeData ? (
-          <DailyBarChart data={stats.byDay} range={range} />
+          <Suspense
+            fallback={
+              <div className="flex h-[282px] items-center justify-center border-y border-surface-border">
+                <Spinner />
+              </div>
+            }
+          >
+            <DailyBarChart data={stats.byDay} range={range} />
+          </Suspense>
         ) : (
           <div className="border-y border-surface-border">
             <EmptyState

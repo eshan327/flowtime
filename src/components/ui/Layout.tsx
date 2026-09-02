@@ -21,10 +21,25 @@ import { getQueuedSessions } from '@/features/sessions/lib/sessionOutbox'
 import { supabase } from '@/lib/supabaseClient'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Timer', icon: Clock3 },
-  { to: '/tasks', label: 'Tasks', icon: ListChecks },
-  { to: '/stats', label: 'Insights', icon: ChartNoAxesColumnIncreasing },
-  { to: '/history', label: 'History', icon: History },
+  { to: '/', label: 'Timer', icon: Clock3, preload: () => import('@/features/timer/TimerPage') },
+  {
+    to: '/tasks',
+    label: 'Tasks',
+    icon: ListChecks,
+    preload: () => import('@/features/tasks/TasksPage'),
+  },
+  {
+    to: '/stats',
+    label: 'Insights',
+    icon: ChartNoAxesColumnIncreasing,
+    preload: () => import('@/features/stats/StatsPage'),
+  },
+  {
+    to: '/history',
+    label: 'History',
+    icon: History,
+    preload: () => import('@/features/history/HistoryPage'),
+  },
 ]
 
 const AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -44,6 +59,10 @@ function mobileNavClassName(isActive: boolean) {
     'flex flex-col items-center justify-center gap-1 py-2 text-[11px] transition-colors',
     isActive ? 'text-accent-primary' : 'text-ink-tertiary hover:text-ink-secondary',
   ].join(' ')
+}
+
+function preloadRoute(preload: () => Promise<unknown>) {
+  void preload().catch(() => undefined)
 }
 
 function getUserDisplayName(userEmail: string | null | undefined, metadataName: unknown) {
@@ -252,8 +271,14 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="mt-12 grid gap-2">
-            {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-              <NavLink className={({ isActive }) => desktopNavClassName(isActive)} key={to} to={to}>
+            {NAV_ITEMS.map(({ to, label, icon: Icon, preload }) => (
+              <NavLink
+                className={({ isActive }) => desktopNavClassName(isActive)}
+                key={to}
+                onFocus={() => preloadRoute(preload)}
+                onMouseEnter={() => preloadRoute(preload)}
+                to={to}
+              >
                 <Icon className="h-5 w-5" />
                 {label}
               </NavLink>
@@ -355,11 +380,13 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-border-subtle bg-surface-sidebar md:hidden">
         <div className="mx-auto grid max-w-md grid-cols-4">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          {NAV_ITEMS.map(({ to, label, icon: Icon, preload }) => (
             <NavLink
               aria-label={label}
               className={({ isActive }) => mobileNavClassName(isActive)}
               key={to}
+              onFocus={() => preloadRoute(preload)}
+              onTouchStart={() => preloadRoute(preload)}
               to={to}
             >
               <Icon className="h-5 w-5" />
