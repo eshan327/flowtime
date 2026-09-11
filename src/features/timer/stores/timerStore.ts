@@ -19,21 +19,9 @@ interface TimerState {
   selectedCategoryId: string | null
   selectedCategoryName: string | null
   selectedCategoryColor: string | null
-  lastSessionId: string | null
-  lastSessionTaskName: string | null
-  lastSessionTaskColor: string | null
   runawayDetected: boolean
   startWork: (userId: string) => void
-  stopWork: (options?: {
-    sessionTask?: {
-      name: string | null
-      color: string | null
-      categoryId: string | null
-      categoryName: string | null
-      categoryColor: string | null
-    } | null
-    breakDivisor?: number
-  }) => void
+  stopWork: (options?: { breakDivisor?: number }) => void
   setWorkSeconds: (seconds: number) => void
   finishBreak: () => void
   skipBreak: () => void
@@ -48,7 +36,6 @@ interface TimerState {
       categoryColor: string | null
     } | null
   ) => void
-  setLastSessionId: (sessionId: string | null) => void
   triggerRunaway: (options?: { breakDivisor?: number }) => void
   dismissRunaway: () => void
 }
@@ -67,9 +54,6 @@ function createInitialTimerState() {
     selectedCategoryId: null,
     selectedCategoryName: null,
     selectedCategoryColor: null,
-    lastSessionId: null,
-    lastSessionTaskName: null,
-    lastSessionTaskColor: null,
     runawayDetected: false,
   }
 }
@@ -92,22 +76,12 @@ export const useTimerStore = create<TimerState>()(
           breakEndAt: null,
           breakTotal: 0,
           startedAt: new Date(),
-          lastSessionId: null,
-          lastSessionTaskName: null,
-          lastSessionTaskColor: null,
           runawayDetected: false,
         })
       },
 
       stopWork: (options) => {
-        const {
-          workSeconds,
-          selectedTaskName,
-          selectedTaskColor,
-          selectedCategoryId,
-          selectedCategoryName,
-          selectedCategoryColor,
-        } = get()
+        const { workSeconds } = get()
         const breakDuration = getBreakSeconds(
           workSeconds,
           options?.breakDivisor ?? DEFAULT_BREAK_DIVISOR
@@ -118,11 +92,6 @@ export const useTimerStore = create<TimerState>()(
           phase: 'breaking',
           breakEndAt,
           breakTotal: breakDuration,
-          lastSessionTaskName: options?.sessionTask?.name ?? selectedTaskName,
-          lastSessionTaskColor: options?.sessionTask?.color ?? selectedTaskColor,
-          selectedCategoryId: options?.sessionTask?.categoryId ?? selectedCategoryId,
-          selectedCategoryName: options?.sessionTask?.categoryName ?? selectedCategoryName,
-          selectedCategoryColor: options?.sessionTask?.categoryColor ?? selectedCategoryColor,
         })
       },
 
@@ -137,9 +106,6 @@ export const useTimerStore = create<TimerState>()(
           breakTotal: 0,
           workSeconds: 0,
           startedAt: null,
-          lastSessionId: null,
-          lastSessionTaskName: null,
-          lastSessionTaskColor: null,
         }),
 
       clearUserState: () => set(createInitialTimerState()),
@@ -165,10 +131,7 @@ export const useTimerStore = create<TimerState>()(
           selectedCategoryColor: task?.categoryColor ?? null,
         }),
 
-      setLastSessionId: (sessionId) => set({ lastSessionId: sessionId }),
-
       triggerRunaway: (options) => {
-        const { selectedTaskName, selectedTaskColor } = get()
         const breakDuration = getBreakSeconds(
           MAX_SESSION_SECONDS,
           options?.breakDivisor ?? DEFAULT_BREAK_DIVISOR
@@ -179,8 +142,6 @@ export const useTimerStore = create<TimerState>()(
           workSeconds: MAX_SESSION_SECONDS,
           breakEndAt: null,
           breakTotal: breakDuration,
-          lastSessionTaskName: selectedTaskName,
-          lastSessionTaskColor: selectedTaskColor,
           runawayDetected: true,
         })
       },

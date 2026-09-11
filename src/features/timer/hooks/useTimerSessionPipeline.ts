@@ -1,13 +1,11 @@
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSessionSave } from '@/features/sessions/hooks/useSessionSave'
 import {
   getQueuedSessions,
   queueSession,
   removeQueuedSession,
 } from '@/features/sessions/lib/sessionOutbox'
-import { hydrateSession } from '@/lib/sessionSnapshot'
 import type { SessionSnapshotInput } from '@/lib/sessionSnapshot'
-import type { Session, SessionWithTask } from '@/types'
 
 export interface TimerSessionSavePayload {
   user_id: string
@@ -20,15 +18,9 @@ export interface TimerSessionSavePayload {
 
 interface UseTimerSessionPipelineOptions {
   userId?: string
-  setLastSessionId: (sessionId: string | null) => void
-  setLastSavedSession: Dispatch<SetStateAction<SessionWithTask | null>>
 }
 
-export function useTimerSessionPipeline({
-  userId,
-  setLastSessionId,
-  setLastSavedSession,
-}: UseTimerSessionPipelineOptions) {
+export function useTimerSessionPipeline({ userId }: UseTimerSessionPipelineOptions) {
   const saveSession = useSessionSave()
   const mutateSession = saveSession.mutateAsync
   const [queuedSessionCount, setQueuedSessionCount] = useState(0)
@@ -45,14 +37,6 @@ export function useTimerSessionPipeline({
     setQueuedSessionCount(queuedSessions.length)
     return queuedSessions
   }, [userId])
-
-  const commitSavedSession = useCallback(
-    (savedSession: Session, snapshot: SessionSnapshotInput) => {
-      setLastSessionId(savedSession.id)
-      setLastSavedSession(hydrateSession(savedSession, snapshot))
-    },
-    [setLastSessionId, setLastSavedSession]
-  )
 
   const saveTimerSession = useCallback(
     async (payload: TimerSessionSavePayload, snapshot: SessionSnapshotInput) => {
@@ -73,19 +57,18 @@ export function useTimerSessionPipeline({
       }
 
       try {
-        const savedSession = await mutateSession(pendingSession)
+        await mutateSession(pendingSession)
         if (wasQueued) {
           await removeQueuedSession(pendingSession.id)
           await refreshQueuedSessionCount()
         }
         setLastSaveQueued(false)
-        commitSavedSession(savedSession, snapshot)
       } catch (error) {
         setLastSaveQueued(wasQueued)
         throw error
       }
     },
-    [commitSavedSession, mutateSession, refreshQueuedSessionCount]
+    [mutateSession, refreshQueuedSessionCount]
   )
 
   const retryLastSessionSave = useCallback(async () => {
@@ -94,16 +77,15 @@ export function useTimerSessionPipeline({
     if (!pendingSession) return
 
     try {
-      const savedSession = await mutateSession(pendingSession)
+      await mutateSession(pendingSession)
       await removeQueuedSession(pendingSession.id)
       await refreshQueuedSessionCount()
       setLastSaveQueued(false)
-      commitSavedSession(savedSession, pendingSession.snapshot)
     } catch {
       setLastSaveQueued(true)
       // The mutation retains the error so the retry control remains visible.
     }
-  }, [commitSavedSession, mutateSession, refreshQueuedSessionCount, saveSession.variables])
+  }, [mutateSession, refreshQueuedSessionCount, saveSession.variables])
 
   const flushQueuedSessions = useCallback(async () => {
     const queuedSessions = await refreshQueuedSessionCount()

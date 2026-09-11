@@ -5,12 +5,10 @@ interface UseTimerKeyboardShortcutsOptions {
   enabled: boolean
   phase: TimerPhase
   canStartWork: boolean
-  canReplaySession: boolean
   overlaysOpen: boolean
   onStartWork: () => void
   onStopWork: () => void
   onSkipBreak: () => void
-  onReplaySession: () => void
   onOpenSettings: () => void
 }
 
@@ -32,12 +30,10 @@ export function useTimerKeyboardShortcuts({
   enabled,
   phase,
   canStartWork,
-  canReplaySession,
   overlaysOpen,
   onStartWork,
   onStopWork,
   onSkipBreak,
-  onReplaySession,
   onOpenSettings,
 }: UseTimerKeyboardShortcutsOptions) {
   useEffect(() => {
@@ -79,11 +75,6 @@ export function useTimerKeyboardShortcuts({
         onSkipBreak()
         return
       }
-
-      if (key === 'r' && phase === 'done' && canReplaySession) {
-        event.preventDefault()
-        onReplaySession()
-      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -92,11 +83,9 @@ export function useTimerKeyboardShortcuts({
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [
-    canReplaySession,
     canStartWork,
     enabled,
     onOpenSettings,
-    onReplaySession,
     onSkipBreak,
     onStartWork,
     onStopWork,

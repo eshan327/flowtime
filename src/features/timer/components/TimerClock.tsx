@@ -67,8 +67,7 @@ export function TimerClock({
           {clock}
         </p>
         {phase === 'working' || phase === 'breaking' ? (
-          <div className="mt-6 flex flex-col items-center gap-3">
-            <span aria-hidden="true" className="h-4 w-px bg-accent-primary" />
+          <div className="mt-6">
             <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-accent-primary">
               {phase === 'working' ? 'Focus' : 'Recover'}
             </p>

@@ -47,10 +47,10 @@ const MAX_AVATAR_SIZE = 5 * 1024 * 1024
 
 function desktopNavClassName(isActive: boolean) {
   return [
-    'relative flex items-center gap-4 rounded-[4px] px-4 py-4 text-[15px] outline-none transition-colors duration-150 before:absolute before:inset-y-0 before:left-0 before:w-[3px] focus-visible:ring-2 focus-visible:ring-accent-primary/70',
+    'flex items-center gap-4 rounded-[4px] px-4 py-4 text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70',
     isActive
-      ? 'bg-surface-hover/60 font-medium text-ink-primary before:bg-accent-primary [&>svg]:text-ink-primary'
-      : 'text-ink-secondary hover:bg-surface-hover/25 hover:text-ink-primary',
+      ? 'font-medium text-ink-primary [&>svg]:text-accent-primary'
+      : 'text-ink-secondary hover:text-ink-primary hover:[&>svg]:text-accent-primary/80',
   ].join(' ')
 }
 

@@ -16,7 +16,6 @@ interface UseRunawayProtectionOptions {
     payload: TimerSessionSavePayload,
     snapshot: SessionSnapshotInput
   ) => Promise<void>
-  setLastSessionId: (sessionId: string | null) => void
 }
 
 export function useRunawayProtection({
@@ -28,7 +27,6 @@ export function useRunawayProtection({
   breakDivisor,
   buildSessionSnapshot,
   saveTimerSession,
-  setLastSessionId,
 }: UseRunawayProtectionOptions) {
   const runawaySaveKeyRef = useRef<string | null>(null)
 
@@ -60,9 +58,7 @@ export function useRunawayProtection({
         ended_at: new Date().toISOString(),
       },
       snapshot
-    ).catch(() => {
-      setLastSessionId(null)
-    })
+    ).catch(() => undefined)
   }, [
     breakDivisor,
     buildSessionSnapshot,
@@ -70,7 +66,6 @@ export function useRunawayProtection({
     runawayDetected,
     saveTimerSession,
     selectedTaskId,
-    setLastSessionId,
     startedAt,
     userId,
   ])

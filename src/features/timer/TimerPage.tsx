@@ -3,12 +3,6 @@ import { CloudUpload, Settings2, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
-import {
-  SessionEditModal,
-  type SessionEditValues,
-} from '@/features/sessions/components/SessionEditModal'
-import { useSessionMutations } from '@/features/sessions/hooks/useSessionMutations'
-import { SessionSummary } from '@/features/timer/components/SessionSummary'
 import { TimerSettingsModal } from '@/features/timer/components/TimerSettingsModal'
 import { TaskSelector } from '@/features/timer/components/TaskSelector'
 import { TimerClock } from '@/features/timer/components/TimerClock'
@@ -26,23 +20,14 @@ import { useUser } from '@/context/UserContext'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { formatDuration } from '@/lib/formatting'
 import { requestNotificationPermission } from '@/lib/notifications'
-import {
-  EMPTY_SESSION_SNAPSHOT,
-  hydrateSession,
-  snapshotSession,
-  snapshotTask,
-} from '@/lib/sessionSnapshot'
-import type { Session, SessionWithTask } from '@/types'
+import { snapshotTask } from '@/lib/sessionSnapshot'
 
 export function TimerPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [isSessionEditOpen, setIsSessionEditOpen] = useState(false)
-  const [lastSavedSession, setLastSavedSession] = useState<SessionWithTask | null>(null)
 
   const { user } = useUser()
   const userId = user?.id
   const { activeTasks: tasks, addTask, isLoading: tasksLoading, error: tasksError } = useTasks()
-  const { updateSession, softDeleteSession } = useSessionMutations()
 
   const {
     breakDivisor,
@@ -64,7 +49,6 @@ export function TimerPage() {
 
   const {
     phase,
-    completedWorkSeconds,
     breakEndAt,
     breakTotal,
     startedAt,
@@ -74,9 +58,6 @@ export function TimerPage() {
     selectedCategoryId,
     selectedCategoryName,
     selectedCategoryColor,
-    lastSessionId,
-    lastSessionTaskName,
-    lastSessionTaskColor,
     runawayDetected,
     dismissRunaway,
     startWork,
@@ -84,11 +65,9 @@ export function TimerPage() {
     skipBreak,
     setSelectedTask,
     setSelectedTaskSnapshot,
-    setLastSessionId,
   } = useTimerStore(
     useShallow((state) => ({
       phase: state.phase,
-      completedWorkSeconds: state.phase === 'done' ? state.workSeconds : 0,
       breakEndAt: state.breakEndAt,
       breakTotal: state.breakTotal,
       startedAt: state.startedAt,
@@ -98,9 +77,6 @@ export function TimerPage() {
       selectedCategoryId: state.selectedCategoryId,
       selectedCategoryName: state.selectedCategoryName,
       selectedCategoryColor: state.selectedCategoryColor,
-      lastSessionId: state.lastSessionId,
-      lastSessionTaskName: state.lastSessionTaskName,
-      lastSessionTaskColor: state.lastSessionTaskColor,
       runawayDetected: state.runawayDetected,
       dismissRunaway: state.dismissRunaway,
       startWork: state.startWork,
@@ -108,7 +84,6 @@ export function TimerPage() {
       skipBreak: state.skipBreak,
       setSelectedTask: state.setSelectedTask,
       setSelectedTaskSnapshot: state.setSelectedTaskSnapshot,
-      setLastSessionId: state.setLastSessionId,
     }))
   )
 
@@ -120,11 +95,7 @@ export function TimerPage() {
     lastSaveQueued,
     outboxError,
     isSavingSession,
-  } = useTimerSessionPipeline({
-    userId,
-    setLastSessionId,
-    setLastSavedSession,
-  })
+  } = useTimerSessionPipeline({ userId })
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId)
   const selectedTaskIsSelectable = selectedTask
@@ -198,48 +169,12 @@ export function TimerPage() {
     })
   }, [phase, selectedTask, selectedTaskColor, setSelectedTaskSnapshot])
 
-  const replayTask = useMemo(() => {
-    const replayTaskId = lastSavedSession?.task_id_snapshot ?? lastSavedSession?.task_id
-    if (!replayTaskId) return null
-    return selectableTasks.find((task) => task.id === replayTaskId) ?? null
-  }, [lastSavedSession, selectableTasks])
-
-  const canReplaySession = phase === 'done' && !!replayTask
-
-  const handleReplayLastSession = useCallback(() => {
-    if (!replayTask || !userId) {
-      return
-    }
-
-    const replayColor = replayTask.categories?.color ?? replayTask.color ?? DEFAULT_TASK_COLOR
-
-    setSelectedTask(replayTask.id, userId)
-    setSelectedTaskSnapshot({
-      name: replayTask.name,
-      color: replayColor,
-      categoryId: replayTask.category_id,
-      categoryName: replayTask.categories?.name ?? null,
-      categoryColor: replayTask.categories?.color ?? null,
-    })
-
-    setLastSavedSession(null)
-    startWork(userId)
-  }, [replayTask, setSelectedTask, setSelectedTaskSnapshot, startWork, userId])
-
   const handleStopWork = useCallback(() => {
     if (notificationsEnabled) void requestNotificationPermission()
     if (isSavingSession) return
 
     const workSeconds = useTimerStore.getState().workSeconds
     const snapshot = buildSessionSnapshot()
-    const sessionTask = {
-      name: snapshot.taskNameSnapshot,
-      color: snapshot.taskColorSnapshot,
-      categoryId: snapshot.categoryIdSnapshot,
-      categoryName: snapshot.categoryNameSnapshot,
-      categoryColor: snapshot.categoryColorSnapshot,
-    }
-
     if (startedAt && userId) {
       void saveTimerSession(
         {
@@ -251,10 +186,10 @@ export function TimerPage() {
           ended_at: new Date().toISOString(),
         },
         snapshot
-      ).catch(() => setLastSessionId(null))
+      ).catch(() => undefined)
     }
 
-    stopWork({ sessionTask, breakDivisor })
+    stopWork({ breakDivisor })
   }, [
     breakDivisor,
     buildSessionSnapshot,
@@ -262,7 +197,6 @@ export function TimerPage() {
     notificationsEnabled,
     saveTimerSession,
     selectedTaskId,
-    setLastSessionId,
     startedAt,
     stopWork,
     userId,
@@ -270,60 +204,8 @@ export function TimerPage() {
 
   const handleStartWork = useCallback(() => {
     if (!canStartWork || !userId) return
-    setLastSavedSession(null)
     startWork(userId)
   }, [canStartWork, startWork, userId])
-
-  const handleSaveSessionEdit = useCallback(
-    async (values: SessionEditValues) => {
-      if (!lastSavedSession) return
-
-      const selectedEditTask = values.taskId
-        ? (selectableTasks.find((task) => task.id === values.taskId) ?? null)
-        : null
-      const snapshot = !values.taskId
-        ? EMPTY_SESSION_SNAPSHOT
-        : selectedEditTask
-          ? snapshotTask(selectedEditTask)
-          : { ...snapshotSession(lastSavedSession), taskIdSnapshot: values.taskId }
-
-      await updateSession.mutateAsync({
-        id: values.id,
-        taskId: values.taskId,
-        workSeconds: values.workSeconds,
-        breakSeconds: values.breakSeconds,
-        startedAt: values.startedAt,
-        endedAt: values.endedAt,
-        notes: values.notes,
-        snapshot,
-      })
-
-      setLastSavedSession((current) => {
-        if (!current) return current
-        const updated: Session = {
-          ...current,
-          task_id: values.taskId,
-          work_seconds: values.workSeconds,
-          break_seconds: values.breakSeconds,
-          started_at: values.startedAt,
-          ended_at: values.endedAt,
-          notes: values.notes,
-        }
-        return hydrateSession(updated, snapshot)
-      })
-      setIsSessionEditOpen(false)
-    },
-    [lastSavedSession, selectableTasks, updateSession]
-  )
-
-  const handleDeleteLastSession = useCallback(async () => {
-    const sessionId = lastSavedSession?.id ?? lastSessionId
-    if (!sessionId) return
-
-    await softDeleteSession.mutateAsync(sessionId)
-    setLastSavedSession(null)
-    setLastSessionId(null)
-  }, [lastSavedSession?.id, lastSessionId, setLastSessionId, softDeleteSession])
 
   useRunawayProtection({
     runawayDetected,
@@ -334,19 +216,16 @@ export function TimerPage() {
     breakDivisor,
     buildSessionSnapshot,
     saveTimerSession,
-    setLastSessionId,
   })
 
   useTimerKeyboardShortcuts({
     enabled: shortcutsEnabled,
     phase,
     canStartWork,
-    canReplaySession,
-    overlaysOpen: isSettingsOpen || isSessionEditOpen,
+    overlaysOpen: isSettingsOpen,
     onStartWork: handleStartWork,
     onStopWork: handleStopWork,
     onSkipBreak: skipBreak,
-    onReplaySession: handleReplayLastSession,
     onOpenSettings: () => setIsSettingsOpen(true),
   })
 
@@ -364,7 +243,7 @@ export function TimerPage() {
             }}
             onSelectTask={(taskId) => setSelectedTask(taskId, userId)}
             selectedTaskId={selectedTaskId}
-            shortcutsBlocked={isSettingsOpen || isSessionEditOpen}
+            shortcutsBlocked={isSettingsOpen}
             shortcutsEnabled={shortcutsEnabled}
             tasks={selectableTasks}
           />
@@ -393,6 +272,7 @@ export function TimerPage() {
             breakEndAt={breakEndAt}
             breakDivisor={breakDivisor}
             breakTotal={breakTotal}
+            key={phase}
             phase={phase}
           />
 
@@ -463,35 +343,18 @@ export function TimerPage() {
             </p>
           ) : null}
 
-          {phase === 'done' ? (
-            <div className="mx-auto mt-8 w-full max-w-2xl">
-              <SessionSummary
-                breakTotal={breakTotal}
-                isDeletingSession={softDeleteSession.isPending}
-                onDeleteSession={
-                  lastSavedSession ? () => void handleDeleteLastSession() : undefined
-                }
-                onEditSession={lastSavedSession ? () => setIsSessionEditOpen(true) : undefined}
-                onReplaySession={canReplaySession ? handleReplayLastSession : undefined}
-                taskColor={lastSessionTaskColor}
-                taskName={lastSessionTaskName}
-                workSeconds={completedWorkSeconds}
-              />
-
-              {runawayDetected ? (
-                <div className="mt-3 flex items-start justify-between gap-3 rounded-lg border border-amber-700/40 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
-                  <p>Looks like you left the timer running. We capped this session at 6 hours.</p>
-                  <Button
-                    aria-label="Dismiss runaway warning"
-                    className="p-0 transition hover:bg-amber-900/40"
-                    onClick={dismissRunaway}
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : null}
+          {runawayDetected ? (
+            <div className="mx-auto mt-8 flex w-full max-w-2xl items-start justify-between gap-3 rounded-lg border border-amber-700/40 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
+              <p>Looks like you left the timer running. We capped this session at 6 hours.</p>
+              <Button
+                aria-label="Dismiss runaway warning"
+                className="p-0 transition hover:bg-amber-900/40"
+                onClick={dismissRunaway}
+                size="icon"
+                variant="ghost"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           ) : null}
         </div>
@@ -517,20 +380,6 @@ export function TimerPage() {
       </div>
 
       <TimerSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-
-      <SessionEditModal
-        error={
-          updateSession.error
-            ? getErrorMessage(updateSession.error, 'Unable to update session right now.')
-            : null
-        }
-        isOpen={isSessionEditOpen && !!lastSavedSession}
-        isSaving={updateSession.isPending}
-        onClose={() => setIsSessionEditOpen(false)}
-        onSave={handleSaveSessionEdit}
-        session={lastSavedSession}
-        tasks={selectableTasks}
-      />
     </section>
   )
 }
