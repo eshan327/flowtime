@@ -147,38 +147,40 @@ export function TaskList({
           className="min-w-0 overflow-hidden border-t border-surface-border"
           key={section.key}
         >
-          <button
-            aria-expanded={!collapsedSections.has(section.key)}
-            className="relative flex w-full items-center gap-3 border-b border-surface-border-subtle px-5 py-3 text-left outline-none hover:bg-surface-hover/20 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-primary"
-            onClick={() =>
-              setCollapsedSections((current) => {
-                const next = new Set(current)
-                if (next.has(section.key)) next.delete(section.key)
-                else next.add(section.key)
-                return next
-              })
-            }
-            type="button"
-          >
-            <span
-              className="absolute inset-y-0 left-0 w-[3px]"
-              style={{ backgroundColor: section.color }}
-            />
-            {collapsedSections.has(section.key) ? (
-              <ChevronRight className="h-4 w-4 text-ink-tertiary" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-ink-tertiary" />
-            )}
-            <h2
-              className="text-sm font-medium uppercase tracking-[0.08em]"
-              style={{ color: section.color }}
+          {activeTab === 'all' ? (
+            <button
+              aria-expanded={!collapsedSections.has(section.key)}
+              className="relative flex w-full items-center gap-3 border-b border-surface-border-subtle px-5 py-3 text-left outline-none hover:bg-surface-hover/20 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-primary"
+              onClick={() =>
+                setCollapsedSections((current) => {
+                  const next = new Set(current)
+                  if (next.has(section.key)) next.delete(section.key)
+                  else next.add(section.key)
+                  return next
+                })
+              }
+              type="button"
             >
-              {section.title}
-            </h2>
-            <span className="text-sm tabular-nums text-ink-tertiary">{section.tasks.length}</span>
-          </button>
+              <span
+                className="absolute inset-y-0 left-0 w-[3px]"
+                style={{ backgroundColor: section.color }}
+              />
+              {collapsedSections.has(section.key) ? (
+                <ChevronRight className="h-4 w-4 text-ink-tertiary" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-ink-tertiary" />
+              )}
+              <h2
+                className="text-sm font-medium uppercase tracking-[0.08em]"
+                style={{ color: section.color }}
+              >
+                {section.title}
+              </h2>
+              <span className="text-sm tabular-nums text-ink-tertiary">{section.tasks.length}</span>
+            </button>
+          ) : null}
 
-          {!collapsedSections.has(section.key) ? (
+          {activeTab !== 'all' || !collapsedSections.has(section.key) ? (
             <div className="divide-y divide-surface-border-subtle">
               {section.tasks.map((task) => (
                 <TaskItem
