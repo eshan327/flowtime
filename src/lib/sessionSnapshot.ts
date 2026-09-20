@@ -33,7 +33,7 @@ export function snapshotTask(task: TaskWithCategory): SessionSnapshotInput {
 export function snapshotSession(session: SessionWithTask): SessionSnapshotInput {
   return {
     taskIdSnapshot: session.task_id_snapshot ?? session.task_id,
-    taskNameSnapshot: session.task_name_snapshot ?? session.tasks?.name ?? null,
+    taskNameSnapshot: session.tasks?.name ?? session.task_name_snapshot ?? null,
     taskColorSnapshot: session.task_color_snapshot ?? session.tasks?.color ?? null,
     categoryIdSnapshot: session.category_id_snapshot ?? session.tasks?.category_id ?? null,
     categoryNameSnapshot: session.category_name_snapshot ?? session.tasks?.categories?.name ?? null,

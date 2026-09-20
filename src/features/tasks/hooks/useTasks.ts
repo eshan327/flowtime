@@ -121,7 +121,10 @@ export function useTasks() {
     onSuccess: (_result, variables) => {
       if (variables.completedAt)
         queryClient.removeQueries({ queryKey: queryKeys.subtasks(variables.id) })
-      return queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user?.id) }),
+      ])
     },
   })
 

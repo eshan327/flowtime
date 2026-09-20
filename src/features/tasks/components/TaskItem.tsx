@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Check,
   ChevronDown,
@@ -25,6 +26,7 @@ import {
   type DropPlacement,
 } from '@/lib/ordering'
 import { getErrorMessage } from '@/lib/errorMessages'
+import { getMenuPosition } from '@/features/tasks/lib/menuPosition'
 import type { Category, TaskWithCategory } from '@/types'
 
 interface TaskItemProps {
@@ -60,12 +62,14 @@ export function TaskItem({
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showMoveMenu, setShowMoveMenu] = useState(false)
   const [showColorPicker, setShowColorPicker] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null)
 
   const [dropPlacement, setDropPlacement] = useState<DropPlacement | null>(null)
   const [reorderError, setReorderError] = useState<string | null>(null)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const menuAnchorRef = useRef<HTMLDivElement>(null)
   const dragIntentTaskIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -73,7 +77,7 @@ export function TaskItem({
 
     const handleOutsideClick = (event: MouseEvent) => {
       const target = event.target as Node
-      if (!menuRef.current?.contains(target)) {
+      if (!menuRef.current?.contains(target) && !menuAnchorRef.current?.contains(target)) {
         setIsMenuOpen(false)
         setShowMoveMenu(false)
         setShowColorPicker(false)
@@ -96,6 +100,24 @@ export function TaskItem({
     }
   }, [isMenuOpen])
 
+  useLayoutEffect(() => {
+    if (!isMenuOpen || !menuRef.current || !menuAnchorRef.current) return
+
+    setMenuPosition(
+      getMenuPosition(
+        menuAnchorRef.current.getBoundingClientRect(),
+        menuRef.current.getBoundingClientRect(),
+        {
+          top: 0,
+          right: window.innerWidth,
+          bottom: window.innerHeight,
+          width: window.innerWidth,
+          height: window.innerHeight,
+        }
+      )
+    )
+  }, [isMenuOpen, showMoveMenu])
+
   useEffect(() => {
     if (isEditing) {
       inputRef.current?.focus()
@@ -105,6 +127,7 @@ export function TaskItem({
 
   const closeMenu = () => {
     setIsMenuOpen(false)
+    setMenuPosition(null)
     setShowMoveMenu(false)
     setShowColorPicker(false)
   }
@@ -320,13 +343,14 @@ export function TaskItem({
             </Button>
           ) : null}
 
-          <div className="relative" ref={menuRef}>
+          <div className="relative" ref={menuAnchorRef}>
             <Button
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
               aria-label={`Task options for ${task.name}`}
               className="p-0 text-ink-tertiary transition hover:text-ink-secondary"
               onClick={() => {
+                setMenuPosition(null)
                 setIsMenuOpen((current) => !current)
                 setShowMoveMenu(false)
                 setShowColorPicker(false)
@@ -337,136 +361,141 @@ export function TaskItem({
               <MoreHorizontal className="h-4 w-4" />
             </Button>
 
-            {isMenuOpen ? (
-              <div
-                aria-label={`${task.name} options`}
-                className="absolute right-0 z-20 mt-1 w-52 rounded-[4px] border border-surface-border bg-surface-panel p-1 shadow-xl"
-                role="menu"
-              >
-                <Button
-                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
-                  onClick={() => {
-                    setIsEditing(true)
-                    setDraftName(task.name)
-                    closeMenu()
-                  }}
-                  size="sm"
-                  variant="ghost"
-                >
-                  Edit name
-                </Button>
-
-                <Button
-                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
-                  disabled={getStepMovePosition(tasksInGroup, task.id, -1) === null}
-                  onClick={() => {
-                    void moveTaskByStep(-1)
-                    closeMenu()
-                  }}
-                  size="sm"
-                  variant="ghost"
-                >
-                  Move up
-                </Button>
-
-                <Button
-                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
-                  disabled={getStepMovePosition(tasksInGroup, task.id, 1) === null}
-                  onClick={() => {
-                    void moveTaskByStep(1)
-                    closeMenu()
-                  }}
-                  size="sm"
-                  variant="ghost"
-                >
-                  Move down
-                </Button>
-
-                <Button
-                  className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
-                  onClick={() => {
-                    setShowMoveMenu((current) => !current)
-                    setShowColorPicker(false)
-                  }}
-                  size="sm"
-                  variant="ghost"
-                >
-                  Move to category
-                </Button>
-
-                {showMoveMenu ? (
-                  <div className="mt-1 space-y-1 border-t border-surface-border pt-1">
+            {isMenuOpen
+              ? createPortal(
+                  <div
+                    aria-label={`${task.name} options`}
+                    className="fixed z-50 max-h-[calc(100vh-1rem)] w-52 overflow-y-auto rounded-[4px] border border-surface-border bg-surface-panel p-1 shadow-xl"
+                    ref={menuRef}
+                    role="menu"
+                    style={menuPosition ? menuPosition : { visibility: 'hidden' }}
+                  >
                     <Button
                       className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
                       onClick={() => {
-                        void onMoveTask({ id: task.id, categoryId: null })
+                        setIsEditing(true)
+                        setDraftName(task.name)
                         closeMenu()
                       }}
                       size="sm"
                       variant="ghost"
                     >
-                      Remove from category
+                      Edit name
                     </Button>
 
-                    {categories.map((category) => (
+                    <Button
+                      className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
+                      disabled={getStepMovePosition(tasksInGroup, task.id, -1) === null}
+                      onClick={() => {
+                        void moveTaskByStep(-1)
+                        closeMenu()
+                      }}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      Move up
+                    </Button>
+
+                    <Button
+                      className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
+                      disabled={getStepMovePosition(tasksInGroup, task.id, 1) === null}
+                      onClick={() => {
+                        void moveTaskByStep(1)
+                        closeMenu()
+                      }}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      Move down
+                    </Button>
+
+                    <Button
+                      className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
+                      onClick={() => {
+                        setShowMoveMenu((current) => !current)
+                        setShowColorPicker(false)
+                      }}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      Move to category
+                    </Button>
+
+                    {showMoveMenu ? (
+                      <div className="mt-1 space-y-1 border-t border-surface-border pt-1">
+                        <Button
+                          className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
+                          onClick={() => {
+                            void onMoveTask({ id: task.id, categoryId: null })
+                            closeMenu()
+                          }}
+                          size="sm"
+                          variant="ghost"
+                        >
+                          Remove from category
+                        </Button>
+
+                        {categories.map((category) => (
+                          <Button
+                            className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
+                            key={category.id}
+                            onClick={() => {
+                              void onMoveTask({ id: task.id, categoryId: category.id })
+                              closeMenu()
+                            }}
+                            size="sm"
+                            variant="ghost"
+                          >
+                            <span
+                              className="inline-block h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: category.color }}
+                            />
+                            {category.name}
+                          </Button>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {task.category_id === null ? (
                       <Button
-                        className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
-                        key={category.id}
+                        className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
                         onClick={() => {
-                          void onMoveTask({ id: task.id, categoryId: category.id })
-                          closeMenu()
+                          setShowColorPicker((current) => !current)
+                          setShowMoveMenu(false)
                         }}
                         size="sm"
                         variant="ghost"
                       >
-                        <span
-                          className="inline-block h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        />
-                        {category.name}
+                        Change color
                       </Button>
-                    ))}
-                  </div>
-                ) : null}
+                    ) : null}
 
-                {task.category_id === null ? (
-                  <Button
-                    className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
-                    onClick={() => {
-                      setShowColorPicker((current) => !current)
-                      setShowMoveMenu(false)
-                    }}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    Change color
-                  </Button>
-                ) : null}
+                    <Button
+                      className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-hover"
+                      onClick={() => {
+                        const confirmed = window.confirm(
+                          `Delete ${task.name} permanently? Its session history will be preserved.`
+                        )
+                        if (!confirmed) return
 
-                <Button
-                  className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-hover"
-                  onClick={() => {
-                    const confirmed = window.confirm(
-                      `Delete ${task.name} permanently? Its session history will be preserved.`
-                    )
-                    if (!confirmed) return
-
-                    closeMenu()
-                    setIsDeleting(true)
-                    window.setTimeout(() => {
-                      void Promise.resolve(onDeleteTask(task.id)).catch(() => {
-                        setIsDeleting(false)
-                      })
-                    }, 300)
-                  }}
-                  size="sm"
-                  variant="ghost"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </Button>
-              </div>
-            ) : null}
+                        closeMenu()
+                        setIsDeleting(true)
+                        window.setTimeout(() => {
+                          void Promise.resolve(onDeleteTask(task.id)).catch(() => {
+                            setIsDeleting(false)
+                          })
+                        }, 300)
+                      }}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>,
+                  document.body
+                )
+              : null}
           </div>
         </div>
 
