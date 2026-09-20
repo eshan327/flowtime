@@ -208,6 +208,12 @@ export function TaskItem({
           dragIntentTaskIdRef.current = null
           setDropPlacement(null)
         }}
+        onDragLeave={(event) => {
+          const nextTarget = event.relatedTarget
+          if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+            setDropPlacement(null)
+          }
+        }}
         onDragOver={(event) => {
           event.preventDefault()
 

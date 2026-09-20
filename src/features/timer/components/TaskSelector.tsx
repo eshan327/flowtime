@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Spinner } from '@/components/ui/Spinner'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
-import type { TaskWithCategory } from '@/types'
+import { sortByPositionAndCreatedAt } from '@/lib/ordering'
+import type { Category, TaskWithCategory } from '@/types'
 
 interface TaskSelectorProps {
   tasks: TaskWithCategory[]
+  categories: Category[]
   selectedTaskId: string | null
   onSelectTask: (taskId: string | null) => void
   onQuickAddTask?: (name: string) => Promise<string | null> | string | null
@@ -40,6 +42,7 @@ function isTypingTarget(target: EventTarget | null) {
 
 export function TaskSelector({
   tasks,
+  categories,
   selectedTaskId,
   onSelectTask,
   onQuickAddTask,
@@ -71,8 +74,13 @@ export function TaskSelector({
       groups.get(key)!.tasks.push(task)
     }
 
-    return Array.from(groups.values())
-  }, [tasks])
+    const ordered = sortByPositionAndCreatedAt(categories)
+      .map((category) => groups.get(category.id))
+      .filter((group): group is GroupedTasks => Boolean(group))
+    const uncategorized = groups.get('uncategorized')
+
+    return uncategorized ? [...ordered, uncategorized] : ordered
+  }, [categories, tasks])
 
   useEffect(() => {
     if (!isOpen) return

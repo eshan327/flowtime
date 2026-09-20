@@ -15,6 +15,7 @@ import { useTimer } from '@/features/timer/hooks/useTimer'
 import { getBreakSeconds, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
+import { useCategories } from '@/features/tasks/hooks/useCategories'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { useUser } from '@/context/UserContext'
 import { getErrorMessage } from '@/lib/errorMessages'
@@ -28,6 +29,7 @@ export function TimerPage() {
   const { user } = useUser()
   const userId = user?.id
   const { activeTasks: tasks, addTask, isLoading: tasksLoading, error: tasksError } = useTasks()
+  const { categories, isLoading: categoriesLoading } = useCategories()
 
   const {
     breakDivisor,
@@ -234,8 +236,9 @@ export function TimerPage() {
       <div className="w-full px-0 py-2 sm:px-2">
         <div className="mx-auto flex max-w-6xl items-center gap-5 border-b border-surface-border pb-1">
           <TaskSelector
+            categories={categories}
             disabled={focusModeLock && phase === 'working'}
-            isLoading={tasksLoading}
+            isLoading={tasksLoading || categoriesLoading}
             label="Active task"
             onQuickAddTask={async (name) => {
               const createdTask = await addTask.mutateAsync({ name, categoryId: null })
