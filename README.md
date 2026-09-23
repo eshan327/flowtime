@@ -119,7 +119,7 @@ Optional fallback:
 
 ## Schema Migrations
 
-This checkout does not currently contain a committed schema baseline. Capture and review the linked project's current schema before introducing the next database migration. After schema changes, run:
+This checkout does not currently contain a committed schema baseline. Capture and review the linked project's current schema before introducing the next database migration. Keep applied migration files in Git even when a later migration reverses them; Supabase Preview compares their versions with the remote history. After schema changes, run:
 
 ```bash
 supabase db push
