@@ -2,6 +2,7 @@ import { twMerge, type ClassNameValue } from 'tailwind-merge'
 import { toHourKey, toLocalDateKey, toStartOfDay, toWeekStart } from '@/lib/dateMath'
 import { snapshotSession } from '@/lib/sessionSnapshot'
 import { DEFAULT_NEUTRAL_COLOR } from '@/lib/colors'
+import { splitSessionTime } from '@/lib/sessionTime'
 import type {
   CategorySeconds,
   CategorySummary,
@@ -13,7 +14,8 @@ import type {
 
 function addSessionToCategoryBuckets(
   buckets: Map<string, CategorySeconds>,
-  session: SessionWithTask
+  session: SessionWithTask,
+  seconds: number
 ) {
   const snapshot = snapshotSession(session)
   const categoryId = snapshot.categoryIdSnapshot
@@ -21,7 +23,7 @@ function addSessionToCategoryBuckets(
   const existing = buckets.get(mapKey)
 
   if (existing) {
-    existing.seconds += session.work_seconds
+    existing.seconds += seconds
     return
   }
 
@@ -29,7 +31,7 @@ function addSessionToCategoryBuckets(
     categoryId,
     categoryName: snapshot.categoryNameSnapshot ?? 'Uncategorized',
     color: snapshot.categoryColorSnapshot ?? snapshot.taskColorSnapshot ?? DEFAULT_NEUTRAL_COLOR,
-    seconds: session.work_seconds,
+    seconds,
   })
 }
 
@@ -59,16 +61,19 @@ function createAggregateMap(keys: string[]) {
 function aggregateSessionsByKeys(
   sessions: SessionWithTask[],
   keys: string[],
-  getSessionKey: (session: SessionWithTask) => string
+  unit: 'day' | 'hour',
+  getKey: (date: Date) => string
 ) {
   const map = createAggregateMap(keys)
 
   for (const session of sessions) {
-    const entry = map.get(getSessionKey(session))
-    if (!entry) continue
+    for (const slice of splitSessionTime(session, unit)) {
+      const entry = map.get(getKey(slice.start))
+      if (!entry) continue
 
-    entry.totalSeconds += session.work_seconds
-    addSessionToCategoryBuckets(entry.byCategory, session)
+      entry.totalSeconds += slice.seconds
+      addSessionToCategoryBuckets(entry.byCategory, session, slice.seconds)
+    }
   }
 
   return Array.from(map.values()).map((entry) => ({
@@ -82,9 +87,17 @@ export function cn(...inputs: ClassNameValue[]) {
   return twMerge(...inputs)
 }
 
-export function computeStreak(sessions: { started_at: string }[]) {
+export function computeStreak(
+  sessions: { started_at: string; ended_at: string; work_seconds: number }[]
+) {
   const uniqueDateKeys = Array.from(
-    new Set(sessions.map((session) => toLocalDateKey(new Date(session.started_at))))
+    new Set(
+      sessions.flatMap((session) =>
+        splitSessionTime(session, 'day')
+          .filter((slice) => slice.seconds > 0)
+          .map((slice) => toLocalDateKey(slice.start))
+      )
+    )
   ).sort()
 
   const today = new Date()
@@ -104,15 +117,13 @@ export function computeStreak(sessions: { started_at: string }[]) {
 
 export function aggregateByHour(sessions: SessionWithTask[], anchorDate: Date): DaySummary[] {
   const dayStart = toStartOfDay(anchorDate)
-  const keys = Array.from({ length: 24 }, (_value, hour) => {
-    const keyDate = new Date(dayStart)
-    keyDate.setHours(hour, 0, 0, 0)
-    return toHourKey(keyDate)
-  })
-
-  return aggregateSessionsByKeys(sessions, keys, (session) =>
-    toHourKey(new Date(session.started_at))
+  const dayKey = toLocalDateKey(dayStart)
+  const keys = Array.from(
+    { length: 24 },
+    (_value, hour) => `${dayKey}T${String(hour).padStart(2, '0')}`
   )
+
+  return aggregateSessionsByKeys(sessions, keys, 'hour', toHourKey)
 }
 
 export function aggregateByDay(sessions: SessionWithTask[], from: Date, to: Date): DaySummary[] {
@@ -126,9 +137,7 @@ export function aggregateByDay(sessions: SessionWithTask[], from: Date, to: Date
     keys.push(toLocalDateKey(cursor))
   }
 
-  return aggregateSessionsByKeys(sessions, keys, (session) =>
-    toLocalDateKey(new Date(session.started_at))
-  )
+  return aggregateSessionsByKeys(sessions, keys, 'day', toLocalDateKey)
 }
 
 export function aggregateByWeek(sessions: SessionWithTask[], from: Date, to: Date): DaySummary[] {
@@ -144,9 +153,7 @@ export function aggregateByWeek(sessions: SessionWithTask[], from: Date, to: Dat
     keys.push(toLocalDateKey(weekStart))
   }
 
-  return aggregateSessionsByKeys(sessions, keys, (session) =>
-    toLocalDateKey(toWeekStart(new Date(session.started_at)))
-  )
+  return aggregateSessionsByKeys(sessions, keys, 'day', (date) => toLocalDateKey(toWeekStart(date)))
 }
 
 export function aggregateByCategory(sessions: SessionWithTask[]): CategorySummary[] {
@@ -254,12 +261,13 @@ export function buildHeatmapData(sessions: SessionWithTask[]): HeatmapDay[] {
   }
 
   for (const session of sessions) {
-    const key = toLocalDateKey(new Date(session.started_at))
-    const entry = map.get(key)
-    if (!entry) continue
+    for (const slice of splitSessionTime(session, 'day')) {
+      const entry = map.get(toLocalDateKey(slice.start))
+      if (!entry) continue
 
-    entry.totalSeconds += session.work_seconds
-    addSessionToCategoryBuckets(entry.byCategory, session)
+      entry.totalSeconds += slice.seconds
+      addSessionToCategoryBuckets(entry.byCategory, session, slice.seconds)
+    }
   }
 
   return Array.from(map.values()).map((entry) => {

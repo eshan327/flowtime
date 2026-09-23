@@ -11,6 +11,7 @@ import { useStats } from '@/features/stats/hooks/useStats'
 import { formatDuration } from '@/lib/formatting'
 import { formatRangeWindow, getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
 import { toLocalDateKey } from '@/lib/dateMath'
+import { splitSessionTime } from '@/lib/sessionTime'
 import { getErrorMessage } from '@/lib/errorMessages'
 import type { SessionWithTask, TimeRange } from '@/types'
 
@@ -68,12 +69,15 @@ export function StatsPage() {
     const map = new Map<string, SessionWithTask[]>()
 
     for (const session of stats.heatmapSessions) {
-      const key = toLocalDateKey(new Date(session.started_at))
-      const existing = map.get(key)
-      if (existing) {
-        existing.push(session)
-      } else {
-        map.set(key, [session])
+      for (const slice of splitSessionTime(session, 'day')) {
+        if (slice.seconds <= 0) continue
+        const key = toLocalDateKey(slice.start)
+        const existing = map.get(key)
+        if (existing) {
+          existing.push(session)
+        } else {
+          map.set(key, [session])
+        }
       }
     }
 
@@ -223,7 +227,14 @@ export function StatsPage() {
               </div>
             </div>
 
-            <SessionLog pageSize={6} sessions={selectedHeatmapSessions} />
+            <SessionLog
+              focusRange={getRangeDatesForAnchor(
+                'day',
+                new Date(`${selectedHeatmapDay.date}T00:00:00`)
+              )}
+              pageSize={6}
+              sessions={selectedHeatmapSessions}
+            />
           </div>
         ) : null}
       </section>

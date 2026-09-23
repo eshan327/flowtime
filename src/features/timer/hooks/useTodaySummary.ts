@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useUser } from '@/context/UserContext'
 import { queryKeys } from '@/lib/queryKeys'
-import { supabase } from '@/lib/supabaseClient'
+import { fetchSessionRows } from '@/features/sessions/api/sessionQueries'
+import { workSecondsInDateRange } from '@/lib/sessionTime'
 
 interface TodaySummary {
   count: number
@@ -13,21 +14,22 @@ export function useTodaySummary() {
 
   const startOfToday = new Date()
   startOfToday.setHours(0, 0, 0, 0)
+  const endOfToday = new Date(startOfToday)
+  endOfToday.setDate(endOfToday.getDate() + 1)
+  endOfToday.setTime(endOfToday.getTime() - 1)
 
   return useQuery<TodaySummary>({
     queryKey: queryKeys.sessionsTodaySummary(user?.id, startOfToday.toISOString()),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sessions')
-        .select('work_seconds')
-        .eq('user_id', user!.id)
-        .is('deleted_at', null)
-        .gte('started_at', startOfToday.toISOString())
-
-      if (error) throw error
-
-      const sessions = data ?? []
-      const totalWorkSeconds = sessions.reduce((sum, session) => sum + session.work_seconds, 0)
+      const sessions = await fetchSessionRows({
+        userId: user!.id,
+        fromIso: startOfToday.toISOString(),
+        toIso: endOfToday.toISOString(),
+      })
+      const totalWorkSeconds = sessions.reduce(
+        (sum, session) => sum + workSecondsInDateRange(session, startOfToday, endOfToday),
+        0
+      )
 
       return {
         count: sessions.length,

@@ -13,6 +13,7 @@ import {
   computeStreak,
 } from '@/lib/utils'
 import { getRangeDatesForAnchor } from '@/lib/dateRange'
+import { workSecondsInDateRange } from '@/lib/sessionTime'
 import type { TimeRange } from '@/types'
 
 export function useStats(range: TimeRange, anchorDate: Date) {
@@ -56,9 +57,17 @@ export function useStats(range: TimeRange, anchorDate: Date) {
   const allSessions = useMemo(() => heatmapQuery.data ?? [], [heatmapQuery.data])
   const streakSessions = useMemo(() => streakQuery.data ?? [], [streakQuery.data])
   const currentStreak = useMemo(() => computeStreak(streakSessions), [streakSessions])
+  const rangeSessions = useMemo(
+    () =>
+      sessions.map((session) => ({
+        ...session,
+        work_seconds: workSecondsInDateRange(session, from, to),
+      })),
+    [sessions, from, to]
+  )
   const totalWorkSeconds = useMemo(
-    () => sessions.reduce((sum, session) => sum + session.work_seconds, 0),
-    [sessions]
+    () => rangeSessions.reduce((sum, session) => sum + session.work_seconds, 0),
+    [rangeSessions]
   )
   const byDay = useMemo(
     () =>
@@ -69,8 +78,8 @@ export function useStats(range: TimeRange, anchorDate: Date) {
           : aggregateByDay(sessions, from, to),
     [range, sessions, from, to]
   )
-  const byCategory = useMemo(() => aggregateByCategory(sessions), [sessions])
-  const byTask = useMemo(() => aggregateByTask(sessions), [sessions])
+  const byCategory = useMemo(() => aggregateByCategory(rangeSessions), [rangeSessions])
+  const byTask = useMemo(() => aggregateByTask(rangeSessions), [rangeSessions])
   const allDays = useMemo(() => buildHeatmapData(allSessions), [allSessions])
   const isLoading =
     (rangeQuery.isLoading && !rangeQuery.data) ||

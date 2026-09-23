@@ -40,7 +40,7 @@ export async function fetchSessionRows({
       .eq('user_id', userId)
       .is('deleted_at', null)
 
-    if (fromIso) request = request.gte('started_at', fromIso)
+    if (fromIso) request = request.gt('ended_at', fromIso)
     if (toIso) request = request.lte('started_at', toIso)
     if (cursor) request = request.or(getCursorFilter(cursor, ascending))
 
@@ -63,13 +63,13 @@ export async function fetchSessionRows({
 }
 
 export async function fetchStreakRows(userId: string) {
-  const sessions: Pick<Session, 'id' | 'started_at' | 'work_seconds'>[] = []
+  const sessions: Pick<Session, 'id' | 'started_at' | 'ended_at' | 'work_seconds'>[] = []
   let cursor: SessionCursor | null = null
 
   for (;;) {
     let request = supabase
       .from('sessions')
-      .select('id, started_at, work_seconds')
+      .select('id, started_at, ended_at, work_seconds')
       .eq('user_id', userId)
       .is('deleted_at', null)
 
@@ -82,7 +82,7 @@ export async function fetchStreakRows(userId: string) {
 
     if (error) throw error
 
-    const page = data as Pick<Session, 'id' | 'started_at' | 'work_seconds'>[]
+    const page = data as Pick<Session, 'id' | 'started_at' | 'ended_at' | 'work_seconds'>[]
     sessions.push(...page)
     if (page.length < SESSION_PAGE_SIZE) break
 

@@ -3,6 +3,7 @@ import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { formatDuration } from '@/lib/formatting'
 import { snapshotSession } from '@/lib/sessionSnapshot'
+import { workSecondsInDateRange } from '@/lib/sessionTime'
 import type { SessionWithTask } from '@/types'
 
 interface SessionLogProps {
@@ -11,6 +12,7 @@ interface SessionLogProps {
   onDelete?: (session: SessionWithTask) => void
   deletingSessionId?: string | null
   pageSize?: number
+  focusRange?: { from: Date | null; to: Date | null }
 }
 
 function toDateLabel(isoString: string) {
@@ -29,12 +31,17 @@ function toTimeLabel(isoString: string) {
   })
 }
 
+function getDisplayStart(session: SessionWithTask, from?: Date | null) {
+  return from && new Date(session.started_at) < from ? from.toISOString() : session.started_at
+}
+
 export function SessionLog({
   sessions,
   onEdit,
   onDelete,
   deletingSessionId = null,
   pageSize = 12,
+  focusRange,
 }: SessionLogProps) {
   const [page, setPage] = useState(1)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
@@ -72,9 +79,11 @@ export function SessionLog({
 
       {pageSessions.map((session, index) => {
         const snapshot = snapshotSession(session)
-        const dateLabel = toDateLabel(session.started_at)
+        const displayStart = getDisplayStart(session, focusRange?.from)
+        const dateLabel = toDateLabel(displayStart)
         const showDateHeader =
-          index === 0 || toDateLabel(pageSessions[index - 1].started_at) !== dateLabel
+          index === 0 ||
+          toDateLabel(getDisplayStart(pageSessions[index - 1], focusRange?.from)) !== dateLabel
 
         return (
           <div key={session.id}>
@@ -85,9 +94,7 @@ export function SessionLog({
             ) : null}
 
             <div className="grid gap-3 border-b border-surface-border-subtle px-3 py-4 transition-colors hover:bg-surface-hover/20 md:grid-cols-[94px_minmax(0,1.3fr)_minmax(0,1fr)_110px_110px_minmax(0,1.2fr)_36px] md:items-center md:gap-4">
-              <p className="text-xs tabular-nums text-ink-tertiary">
-                {toTimeLabel(session.started_at)}
-              </p>
+              <p className="text-xs tabular-nums text-ink-tertiary">{toTimeLabel(displayStart)}</p>
               <p className="truncate text-sm text-ink-primary">
                 {snapshot.taskNameSnapshot ?? 'No task'}
               </p>
@@ -100,7 +107,11 @@ export function SessionLog({
               </p>
               <p className="text-xs tabular-nums text-ink-secondary">
                 <span className="mr-1 text-ink-tertiary md:hidden">Focus</span>
-                {formatDuration(session.work_seconds)}
+                {formatDuration(
+                  focusRange
+                    ? workSecondsInDateRange(session, focusRange.from, focusRange.to)
+                    : session.work_seconds
+                )}
               </p>
               <p className="text-xs tabular-nums text-ink-secondary">
                 <span className="mr-1 text-ink-tertiary md:hidden">Break</span>

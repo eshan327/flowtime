@@ -19,6 +19,7 @@ import { useCategories } from '@/features/tasks/hooks/useCategories'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { getRangeDatesForAnchor } from '@/lib/dateRange'
 import { toEndOfDay, toStartOfDay } from '@/lib/dateMath'
+import { workSecondsInDateRange } from '@/lib/sessionTime'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { EMPTY_SESSION_SNAPSHOT, snapshotSession, snapshotTask } from '@/lib/sessionSnapshot'
 import type { SessionWithTask, TimeRange } from '@/types'
@@ -260,7 +261,11 @@ export function HistoryPage() {
       return values.some((value) => value?.toLocaleLowerCase().includes(search))
     })
   }, [sessionSearch, sessions])
-  const historyFocusSeconds = sessions.reduce((sum, session) => sum + session.work_seconds, 0)
+  const historyFocusSeconds = sessions.reduce(
+    (sum, session) =>
+      sum + workSecondsInDateRange(session, historyWindow?.from ?? null, historyWindow?.to ?? null),
+    0
+  )
 
   const handleExport = async (format: SessionExportFormat) => {
     setActiveExportFormat(format)
@@ -506,6 +511,7 @@ export function HistoryPage() {
           <div className="px-2 pb-2 pt-4 sm:px-4">
             <SessionLog
               deletingSessionId={softDeleteSession.isPending ? softDeleteSession.variables : null}
+              focusRange={historyWindow ?? undefined}
               onDelete={handleDeleteSession}
               onEdit={setEditingSession}
               sessions={filteredSessions}
