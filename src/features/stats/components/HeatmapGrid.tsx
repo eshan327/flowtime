@@ -21,15 +21,6 @@ interface HeatmapTooltipState {
   y: number
 }
 
-function hexToRgba(hex: string, alpha: number) {
-  const sanitized = hex.replace('#', '')
-  const r = Number.parseInt(sanitized.slice(0, 2), 16)
-  const g = Number.parseInt(sanitized.slice(2, 4), 16)
-  const b = Number.parseInt(sanitized.slice(4, 6), 16)
-
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
-
 function getHeatmapColor(day: HeatmapDay) {
   if (!day.dominantColor || day.totalSeconds === 0) {
     return EMPTY_HEATMAP_COLOR
@@ -37,15 +28,15 @@ function getHeatmapColor(day: HeatmapDay) {
 
   const minutes = day.totalSeconds / 60
   if (minutes <= 30) {
-    return hexToRgba(day.dominantColor, 0.3)
+    return `color-mix(in srgb, ${day.dominantColor} 30%, transparent)`
   }
 
   if (minutes <= 60) {
-    return hexToRgba(day.dominantColor, 0.55)
+    return `color-mix(in srgb, ${day.dominantColor} 55%, transparent)`
   }
 
   if (minutes <= 120) {
-    return hexToRgba(day.dominantColor, 0.8)
+    return `color-mix(in srgb, ${day.dominantColor} 80%, transparent)`
   }
 
   return day.dominantColor

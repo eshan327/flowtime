@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchSessionRows } from '@/features/sessions/api/sessionQueries'
 import { useUser } from '@/context/UserContext'
@@ -14,8 +13,8 @@ export function useHistorySessions({ from, to, enabled = true }: UseHistorySessi
   const { user } = useUser()
   const userId = user?.id
 
-  const fromIso = useMemo(() => from?.toISOString() ?? null, [from])
-  const toIso = useMemo(() => to?.toISOString() ?? null, [to])
+  const fromIso = from?.toISOString() ?? null
+  const toIso = to?.toISOString() ?? null
 
   const query = useQuery({
     queryKey: queryKeys.sessionsHistoryRange(userId, fromIso, toIso),

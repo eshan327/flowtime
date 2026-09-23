@@ -4,16 +4,14 @@ import { DEFAULT_DONE_CHIME_ID, DONE_CHIME_OPTIONS, type ChimeOptionId } from '@
 
 export const DEFAULT_BREAK_DIVISOR = 5
 export const MIN_GLOBAL_BREAK_DIVISOR = 1
-export const DEFAULT_FOCUS_MODE_LOCK = true
-export const DEFAULT_SHORTCUTS_ENABLED = true
 
 const DEFAULT_SETTINGS = {
   breakDivisor: DEFAULT_BREAK_DIVISOR,
   notificationsEnabled: true,
   chimeEnabled: true,
   chimeId: DEFAULT_DONE_CHIME_ID,
-  focusModeLock: DEFAULT_FOCUS_MODE_LOCK,
-  shortcutsEnabled: DEFAULT_SHORTCUTS_ENABLED,
+  focusModeLock: true,
+  shortcutsEnabled: true,
 }
 
 export function sanitizeBreakDivisor(value: number) {
