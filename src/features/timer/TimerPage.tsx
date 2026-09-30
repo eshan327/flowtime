@@ -26,7 +26,7 @@ import { snapshotTask } from '@/lib/sessionSnapshot'
 export function TimerPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
-  const { user } = useUser()
+  const { user, timerReady, timerSyncError } = useUser()
   const userId = user?.id
   const { activeTasks: tasks, addTask, isLoading: tasksLoading, error: tasksError } = useTasks()
   const { categories, isLoading: categoriesLoading } = useCategories()
@@ -51,6 +51,7 @@ export function TimerPage() {
 
   const {
     phase,
+    sessionId,
     breakEndAt,
     breakTotal,
     startedAt,
@@ -70,6 +71,7 @@ export function TimerPage() {
   } = useTimerStore(
     useShallow((state) => ({
       phase: state.phase,
+      sessionId: state.sessionId,
       breakEndAt: state.breakEndAt,
       breakTotal: state.breakTotal,
       startedAt: state.startedAt,
@@ -148,19 +150,8 @@ export function TimerPage() {
   )
 
   useEffect(() => {
-    if (phase !== 'idle') return
-    if (!selectedTaskId) return
-    if (selectableTasks.some((task) => task.id === selectedTaskId)) return
-    setSelectedTask(null, userId)
-  }, [phase, selectedTaskId, selectableTasks, setSelectedTask, userId])
-
-  useEffect(() => {
-    if (!selectedTask) {
-      if (phase === 'idle') {
-        setSelectedTaskSnapshot(null)
-      }
-      return
-    }
+    if (!timerReady || tasksLoading || tasksError) return
+    if (!selectedTask) return
 
     setSelectedTaskSnapshot({
       name: selectedTask.name,
@@ -169,17 +160,26 @@ export function TimerPage() {
       categoryName: selectedTask.categories?.name ?? null,
       categoryColor: selectedTask.categories?.color ?? null,
     })
-  }, [phase, selectedTask, selectedTaskColor, setSelectedTaskSnapshot])
+  }, [
+    timerReady,
+    tasksLoading,
+    tasksError,
+    phase,
+    selectedTask,
+    selectedTaskColor,
+    setSelectedTaskSnapshot,
+  ])
 
   const handleStopWork = useCallback(() => {
     if (notificationsEnabled) void requestNotificationPermission()
-    if (isSavingSession) return
+    if (!timerReady || isSavingSession || useTimerStore.getState().phase !== 'working') return
 
     const workSeconds = useTimerStore.getState().workSeconds
     const snapshot = buildSessionSnapshot()
     if (startedAt && userId) {
       void saveTimerSession(
         {
+          id: sessionId ?? undefined,
           user_id: userId,
           task_id: selectedTaskId,
           work_seconds: workSeconds,
@@ -193,6 +193,8 @@ export function TimerPage() {
 
     stopWork({ breakDivisor })
   }, [
+    timerReady,
+    sessionId,
     breakDivisor,
     buildSessionSnapshot,
     isSavingSession,
@@ -205,12 +207,13 @@ export function TimerPage() {
   ])
 
   const handleStartWork = useCallback(() => {
-    if (!canStartWork || !userId) return
+    if (!timerReady || !canStartWork || !userId) return
     startWork(userId)
-  }, [canStartWork, startWork, userId])
+  }, [timerReady, canStartWork, startWork, userId])
 
   useRunawayProtection({
-    runawayDetected,
+    runawayDetected: timerReady && runawayDetected,
+    sessionId,
     startedAt,
     userId,
     isSavingSession,
@@ -220,14 +223,18 @@ export function TimerPage() {
     saveTimerSession,
   })
 
+  const handleSkipBreak = useCallback(() => {
+    if (timerReady) skipBreak()
+  }, [timerReady, skipBreak])
+
   useTimerKeyboardShortcuts({
-    enabled: shortcutsEnabled,
+    enabled: timerReady && shortcutsEnabled,
     phase,
     canStartWork,
     overlaysOpen: isSettingsOpen,
     onStartWork: handleStartWork,
     onStopWork: handleStopWork,
-    onSkipBreak: skipBreak,
+    onSkipBreak: handleSkipBreak,
     onOpenSettings: () => setIsSettingsOpen(true),
   })
 
@@ -237,7 +244,7 @@ export function TimerPage() {
         <div className="mx-auto flex max-w-6xl items-center gap-5 border-b border-surface-border pb-1">
           <TaskSelector
             categories={categories}
-            disabled={focusModeLock && phase === 'working'}
+            disabled={!timerReady || (focusModeLock && phase === 'working')}
             isLoading={tasksLoading || categoriesLoading}
             label="Active task"
             onQuickAddTask={async (name) => {
@@ -246,6 +253,7 @@ export function TimerPage() {
             }}
             onSelectTask={(taskId) => setSelectedTask(taskId, userId)}
             selectedTaskId={selectedTaskId}
+            selectedTaskName={selectedTaskName}
             shortcutsBlocked={isSettingsOpen}
             shortcutsEnabled={shortcutsEnabled}
             tasks={selectableTasks}
@@ -262,6 +270,14 @@ export function TimerPage() {
             <Settings2 className="h-5 w-5" />
           </Button>
         </div>
+
+        {!timerReady || timerSyncError ? (
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-ink-secondary" role="status">
+            {timerSyncError
+              ? 'Timer saved on this device. Cross-device sync will retry when connected.'
+              : 'Loading your timer...'}
+          </p>
+        ) : null}
 
         {tasksError ? (
           <p className="mx-auto mt-3 max-w-2xl rounded-lg border border-red-300/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
@@ -280,13 +296,15 @@ export function TimerPage() {
           />
 
           <div className="mt-8 flex w-full justify-center">
-            <TimerControls
-              canStartWork={canStartWork}
-              onSkipBreak={skipBreak}
-              onStartWork={handleStartWork}
-              onStopWork={handleStopWork}
-              phase={phase}
-            />
+            <fieldset disabled={!timerReady} className="flex w-full justify-center">
+              <TimerControls
+                canStartWork={canStartWork}
+                onSkipBreak={handleSkipBreak}
+                onStartWork={handleStartWork}
+                onStopWork={handleStopWork}
+                phase={phase}
+              />
+            </fieldset>
           </div>
 
           {queuedSessionCount > 0 ? (

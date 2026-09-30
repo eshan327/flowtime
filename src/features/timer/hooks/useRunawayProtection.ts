@@ -5,6 +5,7 @@ import type { SessionSnapshotInput } from '@/lib/sessionSnapshot'
 import type { TimerSessionSavePayload } from '@/features/timer/hooks/useTimerSessionPipeline'
 
 interface UseRunawayProtectionOptions {
+  sessionId: string | null
   runawayDetected: boolean
   startedAt: Date | null
   userId: string | undefined
@@ -19,6 +20,7 @@ interface UseRunawayProtectionOptions {
 }
 
 export function useRunawayProtection({
+  sessionId,
   runawayDetected,
   startedAt,
   userId,
@@ -50,6 +52,7 @@ export function useRunawayProtection({
     const snapshot = buildSessionSnapshot()
     void saveTimerSession(
       {
+        id: sessionId ?? undefined,
         user_id: userId,
         task_id: selectedTaskId,
         work_seconds: MAX_SESSION_SECONDS,
@@ -60,6 +63,7 @@ export function useRunawayProtection({
       snapshot
     ).catch(() => undefined)
   }, [
+    sessionId,
     breakDivisor,
     buildSessionSnapshot,
     isSavingSession,

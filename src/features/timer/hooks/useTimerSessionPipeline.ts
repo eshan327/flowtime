@@ -8,6 +8,7 @@ import {
 import type { SessionSnapshotInput } from '@/lib/sessionSnapshot'
 
 export interface TimerSessionSavePayload {
+  id?: string
   user_id: string
   task_id: string | null
   work_seconds: number
@@ -41,8 +42,8 @@ export function useTimerSessionPipeline({ userId }: UseTimerSessionPipelineOptio
   const saveTimerSession = useCallback(
     async (payload: TimerSessionSavePayload, snapshot: SessionSnapshotInput) => {
       const pendingSession = {
-        id: crypto.randomUUID(),
         ...payload,
+        id: payload.id ?? crypto.randomUUID(),
         notes: null,
         snapshot,
       }

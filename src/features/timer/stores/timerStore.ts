@@ -6,7 +6,10 @@ export type TimerPhase = 'idle' | 'working' | 'breaking' | 'done'
 
 export const MAX_SESSION_SECONDS = 6 * 60 * 60
 
-interface TimerState {
+export interface TimerState {
+  sessionId: string | null
+  syncRevision: string | null
+  syncPending: boolean
   ownerUserId: string | null
   phase: TimerPhase
   workSeconds: number
@@ -40,14 +43,17 @@ interface TimerState {
   dismissRunaway: () => void
 }
 
-function createInitialTimerState() {
+export function createInitialTimerState() {
   return {
+    sessionId: null,
+    syncRevision: null,
+    syncPending: false,
     ownerUserId: null,
     phase: 'idle' as TimerPhase,
     workSeconds: 0,
-    breakEndAt: null,
+    breakEndAt: null as Date | null,
     breakTotal: 0,
-    startedAt: null,
+    startedAt: null as Date | null,
     selectedTaskId: null,
     selectedTaskName: null,
     selectedTaskColor: null,
@@ -70,6 +76,7 @@ export const useTimerStore = create<TimerState>()(
         }
 
         set({
+          sessionId: crypto.randomUUID(),
           ownerUserId: userId,
           phase: 'working',
           workSeconds: 0,
@@ -151,6 +158,11 @@ export const useTimerStore = create<TimerState>()(
     {
       name: 'flowtime-timer-state',
       version: 1,
+      merge: (persisted, current) => {
+        const state = { ...current, ...(persisted as Partial<TimerState>) }
+        if (state.startedAt && !state.sessionId) state.sessionId = crypto.randomUUID()
+        return state
+      },
       storage: createJSONStorage(() => localStorage, {
         reviver: (key, value) => {
           if ((key === 'startedAt' || key === 'breakEndAt') && typeof value === 'string') {

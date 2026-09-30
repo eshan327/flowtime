@@ -10,6 +10,7 @@ import type { Category, TaskWithCategory } from '@/types'
 interface TaskSelectorProps {
   tasks: TaskWithCategory[]
   categories: Category[]
+  selectedTaskName?: string | null
   selectedTaskId: string | null
   onSelectTask: (taskId: string | null) => void
   onQuickAddTask?: (name: string) => Promise<string | null> | string | null
@@ -44,6 +45,7 @@ export function TaskSelector({
   tasks,
   categories,
   selectedTaskId,
+  selectedTaskName,
   onSelectTask,
   onQuickAddTask,
   disabled = false,
@@ -185,7 +187,7 @@ export function TaskSelector({
             <span
               className={`block truncate ${label ? 'mt-1 text-xl font-medium tracking-[-0.025em] text-ink-primary sm:text-2xl' : ''}`}
             >
-              {selectedTask?.name ?? 'Select a task'}
+              {selectedTask?.name ?? selectedTaskName ?? 'Select a task'}
             </span>
           </span>
         )}

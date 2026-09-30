@@ -8,6 +8,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_timers: {
+        Row: {
+          revision: string
+          state: Json
+          user_id: string
+        }
+        Insert: {
+          revision: string
+          state: Json
+          user_id: string
+        }
+        Update: {
+          revision?: string
+          state?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           archived_at: string | null
