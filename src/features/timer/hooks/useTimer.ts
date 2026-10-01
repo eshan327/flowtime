@@ -1,21 +1,14 @@
 import { useEffect, useRef } from 'react'
 import { MAX_SESSION_SECONDS, useTimerStore } from '@/features/timer/stores/timerStore'
 import { playDoneChime, type ChimeOptionId } from '@/lib/audio'
-import { sendNotification } from '@/lib/notifications'
 
 interface UseTimerOptions {
   breakDivisor: number
-  notificationsEnabled: boolean
   chimeEnabled: boolean
   chimeId: ChimeOptionId
 }
 
-export function useTimer({
-  breakDivisor,
-  notificationsEnabled,
-  chimeEnabled,
-  chimeId,
-}: UseTimerOptions) {
+export function useTimer({ breakDivisor, chimeEnabled, chimeId }: UseTimerOptions) {
   const breakCompletionKeyRef = useRef<string | null>(null)
   const phase = useTimerStore((state) => state.phase)
   const startedAt = useTimerStore((state) => state.startedAt)
@@ -52,10 +45,6 @@ export function useTimer({
         if (remaining <= 0) {
           if (breakCompletionKey && breakCompletionKeyRef.current !== breakCompletionKey) {
             breakCompletionKeyRef.current = breakCompletionKey
-            if (notificationsEnabled) {
-              sendNotification('Break complete', 'Time to focus again.')
-            }
-
             if (chimeEnabled) {
               playDoneChime(chimeId)
             }
@@ -90,7 +79,6 @@ export function useTimer({
     finishBreak,
     triggerRunaway,
     breakDivisor,
-    notificationsEnabled,
     chimeEnabled,
     chimeId,
   ])

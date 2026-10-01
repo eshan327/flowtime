@@ -30,6 +30,7 @@ export interface TimerState {
   skipBreak: () => void
   clearUserState: () => void
   setSelectedTask: (taskId: string | null, userId?: string) => void
+  clearUnavailableTask: (tasks: { id: string }[]) => void
   setSelectedTaskSnapshot: (
     task: {
       name: string
@@ -128,6 +129,12 @@ export const useTimerStore = create<TimerState>()(
           selectedCategoryColor:
             taskId !== state.selectedTaskId ? null : state.selectedCategoryColor,
         })),
+
+      clearUnavailableTask: (tasks) => {
+        const { phase, runawayDetected, selectedTaskId, setSelectedTask } = get()
+        if (phase === 'working' || runawayDetected || !selectedTaskId) return
+        if (!tasks.some((task) => task.id === selectedTaskId)) setSelectedTask(null)
+      },
 
       setSelectedTaskSnapshot: (task) =>
         set({

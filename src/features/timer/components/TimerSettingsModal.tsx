@@ -35,13 +35,11 @@ function ToggleRow({
 
 export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps) {
   const breakDivisor = useTimerSettingsStore((state) => state.breakDivisor)
-  const notificationsEnabled = useTimerSettingsStore((state) => state.notificationsEnabled)
   const chimeEnabled = useTimerSettingsStore((state) => state.chimeEnabled)
   const chimeId = useTimerSettingsStore((state) => state.chimeId)
   const focusModeLock = useTimerSettingsStore((state) => state.focusModeLock)
   const shortcutsEnabled = useTimerSettingsStore((state) => state.shortcutsEnabled)
   const setBreakDivisor = useTimerSettingsStore((state) => state.setBreakDivisor)
-  const setNotificationsEnabled = useTimerSettingsStore((state) => state.setNotificationsEnabled)
   const setChimeEnabled = useTimerSettingsStore((state) => state.setChimeEnabled)
   const setChimeId = useTimerSettingsStore((state) => state.setChimeId)
   const setFocusModeLock = useTimerSettingsStore((state) => state.setFocusModeLock)
@@ -96,12 +94,6 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
             checked={shortcutsEnabled}
             label="Keyboard shortcuts"
             onChange={setShortcutsEnabled}
-          />
-
-          <ToggleRow
-            checked={notificationsEnabled}
-            label="Desktop notifications"
-            onChange={setNotificationsEnabled}
           />
 
           <ToggleRow

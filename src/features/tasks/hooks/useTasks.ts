@@ -43,6 +43,10 @@ export function useTasks() {
       return data as TaskWithCategory[]
     },
     enabled: !!user,
+    // ponytail: poll visible task lists; use Realtime if traffic warrants it.
+    refetchInterval: 3000,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
   })
 
   const addTask = useMutation({
@@ -197,6 +201,7 @@ export function useTasks() {
     activeTasks,
     completedTasks,
     isLoading: tasksQuery.isLoading,
+    isFetching: tasksQuery.isFetching,
     error: tasksQuery.error,
     addTask,
     updateTask,

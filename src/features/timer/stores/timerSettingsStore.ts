@@ -7,7 +7,6 @@ export const MIN_GLOBAL_BREAK_DIVISOR = 1
 
 const DEFAULT_SETTINGS = {
   breakDivisor: DEFAULT_BREAK_DIVISOR,
-  notificationsEnabled: true,
   chimeEnabled: true,
   chimeId: DEFAULT_DONE_CHIME_ID,
   focusModeLock: true,
@@ -39,13 +38,11 @@ export function sanitizeChimeId(value: string | null | undefined): ChimeOptionId
 
 interface TimerSettingsState {
   breakDivisor: number
-  notificationsEnabled: boolean
   chimeEnabled: boolean
   chimeId: ChimeOptionId
   focusModeLock: boolean
   shortcutsEnabled: boolean
   setBreakDivisor: (value: number) => void
-  setNotificationsEnabled: (enabled: boolean) => void
   setChimeEnabled: (enabled: boolean) => void
   setChimeId: (chimeId: ChimeOptionId) => void
   setFocusModeLock: (enabled: boolean) => void
@@ -63,7 +60,6 @@ export const useTimerSettingsStore = create<TimerSettingsState>()(
           breakDivisor: sanitizeBreakDivisor(value),
         }),
 
-      setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
       setChimeEnabled: (enabled) => set({ chimeEnabled: enabled }),
       setChimeId: (chimeId) => set({ chimeId: sanitizeChimeId(chimeId) }),
       setFocusModeLock: (enabled) => set({ focusModeLock: enabled }),
@@ -80,10 +76,6 @@ export const useTimerSettingsStore = create<TimerSettingsState>()(
         return {
           ...state,
           breakDivisor: sanitizeBreakDivisor(state.breakDivisor ?? DEFAULT_SETTINGS.breakDivisor),
-          notificationsEnabled:
-            typeof state.notificationsEnabled === 'boolean'
-              ? state.notificationsEnabled
-              : DEFAULT_SETTINGS.notificationsEnabled,
           chimeEnabled:
             typeof state.chimeEnabled === 'boolean'
               ? state.chimeEnabled

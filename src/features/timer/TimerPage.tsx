@@ -20,7 +20,6 @@ import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { useUser } from '@/context/UserContext'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { formatDuration } from '@/lib/formatting'
-import { requestNotificationPermission } from '@/lib/notifications'
 import { snapshotTask } from '@/lib/sessionSnapshot'
 
 export function TimerPage() {
@@ -28,26 +27,25 @@ export function TimerPage() {
 
   const { user, timerReady, timerSyncError } = useUser()
   const userId = user?.id
-  const { activeTasks: tasks, addTask, isLoading: tasksLoading, error: tasksError } = useTasks()
+  const {
+    activeTasks: tasks,
+    addTask,
+    isLoading: tasksLoading,
+    isFetching: tasksFetching,
+    error: tasksError,
+  } = useTasks()
   const { categories, isLoading: categoriesLoading } = useCategories()
 
-  const {
-    breakDivisor,
-    notificationsEnabled,
-    chimeEnabled,
-    chimeId,
-    focusModeLock,
-    shortcutsEnabled,
-  } = useTimerSettingsStore(
-    useShallow((state) => ({
-      breakDivisor: state.breakDivisor,
-      notificationsEnabled: state.notificationsEnabled,
-      chimeEnabled: state.chimeEnabled,
-      chimeId: state.chimeId,
-      focusModeLock: state.focusModeLock,
-      shortcutsEnabled: state.shortcutsEnabled,
-    }))
-  )
+  const { breakDivisor, chimeEnabled, chimeId, focusModeLock, shortcutsEnabled } =
+    useTimerSettingsStore(
+      useShallow((state) => ({
+        breakDivisor: state.breakDivisor,
+        chimeEnabled: state.chimeEnabled,
+        chimeId: state.chimeId,
+        focusModeLock: state.focusModeLock,
+        shortcutsEnabled: state.shortcutsEnabled,
+      }))
+    )
 
   const {
     phase,
@@ -68,6 +66,7 @@ export function TimerPage() {
     skipBreak,
     setSelectedTask,
     setSelectedTaskSnapshot,
+    clearUnavailableTask,
   } = useTimerStore(
     useShallow((state) => ({
       phase: state.phase,
@@ -88,6 +87,7 @@ export function TimerPage() {
       skipBreak: state.skipBreak,
       setSelectedTask: state.setSelectedTask,
       setSelectedTaskSnapshot: state.setSelectedTaskSnapshot,
+      clearUnavailableTask: state.clearUnavailableTask,
     }))
   )
 
@@ -111,7 +111,6 @@ export function TimerPage() {
 
   useTimer({
     breakDivisor,
-    notificationsEnabled,
     chimeEnabled,
     chimeId,
   })
@@ -150,7 +149,11 @@ export function TimerPage() {
   )
 
   useEffect(() => {
-    if (!timerReady || tasksLoading || tasksError) return
+    if (!timerReady || tasksLoading || tasksFetching || tasksError) return
+    if (!selectedTaskIsSelectable) {
+      clearUnavailableTask(selectableTasks)
+      return
+    }
     if (!selectedTask) return
 
     setSelectedTaskSnapshot({
@@ -163,15 +166,20 @@ export function TimerPage() {
   }, [
     timerReady,
     tasksLoading,
+    tasksFetching,
     tasksError,
     phase,
+    runawayDetected,
+    selectedTaskId,
+    selectableTasks,
+    clearUnavailableTask,
     selectedTask,
+    selectedTaskIsSelectable,
     selectedTaskColor,
     setSelectedTaskSnapshot,
   ])
 
   const handleStopWork = useCallback(() => {
-    if (notificationsEnabled) void requestNotificationPermission()
     if (!timerReady || isSavingSession || useTimerStore.getState().phase !== 'working') return
 
     const workSeconds = useTimerStore.getState().workSeconds
@@ -198,7 +206,6 @@ export function TimerPage() {
     breakDivisor,
     buildSessionSnapshot,
     isSavingSession,
-    notificationsEnabled,
     saveTimerSession,
     selectedTaskId,
     startedAt,
