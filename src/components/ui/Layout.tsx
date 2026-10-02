@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button'
 import { FlowtimeMark } from '@/components/FlowtimeMark'
 import { Modal } from '@/components/ui/Modal'
 import { useUser } from '@/context/UserContext'
+import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useTimer } from '@/features/timer/hooks/useTimer'
 import { getQueuedSessions } from '@/features/sessions/lib/sessionOutbox'
 import { supabase } from '@/lib/supabaseClient'
@@ -119,7 +120,8 @@ function UserAvatar({
 }
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { user, timerReady } = useUser()
+  const { user, timerReady, settingsSyncError } = useUser()
+  const settingsPending = useTimerSettingsStore((state) => state.syncPending)
   useTimer(timerReady)
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
@@ -289,16 +291,24 @@ export function Layout({ children }: { children: ReactNode }) {
 
           <div className="mt-auto">
             <div
-              className={`mb-5 flex items-center gap-2 px-3 text-xs ${!isOnline ? 'text-ink-tertiary' : pendingSyncCount > 0 ? 'text-accent-primary' : 'text-cyan-300'}`}
+              className={`mb-5 flex items-center gap-2 px-3 text-xs ${!isOnline || settingsSyncError ? 'text-ink-tertiary' : pendingSyncCount > 0 || settingsPending ? 'text-accent-primary' : 'text-cyan-300'}`}
               role="status"
             >
-              {isOnline ? <CloudCheck className="h-4 w-4" /> : <CloudOff className="h-4 w-4" />}
+              {isOnline && !settingsSyncError ? (
+                <CloudCheck className="h-4 w-4" />
+              ) : (
+                <CloudOff className="h-4 w-4" />
+              )}
               <span>
                 {!isOnline
                   ? 'Offline · changes stay local'
-                  : pendingSyncCount > 0
-                    ? `${pendingSyncCount} ${pendingSyncCount === 1 ? 'session' : 'sessions'} pending`
-                    : 'All changes synced'}
+                  : settingsSyncError
+                    ? 'Settings sync will retry'
+                    : settingsPending
+                      ? 'Settings syncing...'
+                      : pendingSyncCount > 0
+                        ? `${pendingSyncCount} ${pendingSyncCount === 1 ? 'session' : 'sessions'} pending`
+                        : 'All changes synced'}
               </span>
             </div>
 

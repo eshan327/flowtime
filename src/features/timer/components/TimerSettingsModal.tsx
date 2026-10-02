@@ -1,3 +1,4 @@
+import { useUser } from '@/context/UserContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
@@ -34,6 +35,8 @@ function ToggleRow({
 }
 
 export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps) {
+  const { settingsReady, settingsSyncError } = useUser()
+  const syncPending = useTimerSettingsStore((state) => state.syncPending)
   const breakDivisor = useTimerSettingsStore((state) => state.breakDivisor)
   const chimeEnabled = useTimerSettingsStore((state) => state.chimeEnabled)
   const chimeId = useTimerSettingsStore((state) => state.chimeId)
@@ -66,88 +69,102 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
   return (
     <Modal className="max-w-lg" isOpen={isOpen} onClose={onClose} title="Timer settings">
       <div>
-        <div className="border-b border-surface-border-subtle pb-4">
-          <Input
-            containerClassName="max-w-48"
-            defaultValue={String(breakDivisor)}
-            label="Work minutes per break minute"
-            inputMode="numeric"
-            key={breakDivisor}
-            onBlur={(event) => {
-              commitBreakDivisorInput(event.target.value)
-            }}
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter') return
-              event.preventDefault()
-              commitBreakDivisorInput(event.currentTarget.value)
-              event.currentTarget.blur()
-            }}
-            step={1}
-            type="text"
-          />
-        </div>
+        <p className="mb-3 text-sm text-ink-secondary" role="status">
+          {!settingsReady
+            ? 'Loading settings...'
+            : settingsSyncError
+              ? 'Settings saved on this device. Server sync will retry when connected.'
+              : syncPending
+                ? 'Saving settings...'
+                : 'Settings synced.'}
+        </p>
+        <fieldset disabled={!settingsReady}>
+          <div className="border-b border-surface-border-subtle pb-4">
+            <Input
+              containerClassName="max-w-48"
+              defaultValue={String(breakDivisor)}
+              label="Work minutes per break minute"
+              inputMode="numeric"
+              key={breakDivisor}
+              onBlur={(event) => {
+                commitBreakDivisorInput(event.target.value)
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') return
+                event.preventDefault()
+                commitBreakDivisorInput(event.currentTarget.value)
+                event.currentTarget.blur()
+              }}
+              step={1}
+              type="text"
+            />
+          </div>
 
-        <div className="divide-y divide-surface-border-subtle">
-          <ToggleRow checked={focusModeLock} label="Focus mode lock" onChange={setFocusModeLock} />
+          <div className="divide-y divide-surface-border-subtle">
+            <ToggleRow
+              checked={focusModeLock}
+              label="Focus mode lock"
+              onChange={setFocusModeLock}
+            />
 
-          <ToggleRow
-            checked={shortcutsEnabled}
-            label="Keyboard shortcuts"
-            onChange={setShortcutsEnabled}
-          />
+            <ToggleRow
+              checked={shortcutsEnabled}
+              label="Keyboard shortcuts"
+              onChange={setShortcutsEnabled}
+            />
 
-          <ToggleRow
-            checked={chimeEnabled}
-            label="Break completion chime"
-            onChange={setChimeEnabled}
-          />
+            <ToggleRow
+              checked={chimeEnabled}
+              label="Break completion chime"
+              onChange={setChimeEnabled}
+            />
 
-          <div className="py-4">
-            <label
-              className="block text-xs uppercase tracking-[0.1em] text-ink-tertiary"
-              htmlFor="chime-sound"
-            >
-              Chime sound
-            </label>
-
-            <div className="mt-2 flex gap-2">
-              <select
-                className="min-w-0 flex-1 rounded-lg border border-surface-border-subtle bg-surface-sidebar px-3 py-2 text-sm text-ink-primary outline-none transition-colors duration-150 focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!chimeEnabled}
-                id="chime-sound"
-                onChange={(event) => setChimeId(sanitizeChimeId(event.target.value))}
-                value={selectedChime.id}
+            <div className="py-4">
+              <label
+                className="block text-xs uppercase tracking-[0.1em] text-ink-tertiary"
+                htmlFor="chime-sound"
               >
-                {DONE_CHIME_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                  </option>
-                ))}
-              </select>
+                Chime sound
+              </label>
 
-              <Button
-                disabled={!chimeEnabled}
-                onClick={() => {
-                  playDoneChime(selectedChime.id)
-                }}
-                size="sm"
-                variant="outlined"
-              >
-                Preview
-              </Button>
+              <div className="mt-2 flex gap-2">
+                <select
+                  className="min-w-0 flex-1 rounded-lg border border-surface-border-subtle bg-surface-sidebar px-3 py-2 text-sm text-ink-primary outline-none transition-colors duration-150 focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!chimeEnabled}
+                  id="chime-sound"
+                  onChange={(event) => setChimeId(sanitizeChimeId(event.target.value))}
+                  value={selectedChime.id}
+                >
+                  {DONE_CHIME_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+
+                <Button
+                  disabled={!chimeEnabled}
+                  onClick={() => {
+                    playDoneChime(selectedChime.id)
+                  }}
+                  size="sm"
+                  variant="outlined"
+                >
+                  Preview
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-surface-border-subtle pt-4">
-          <Button onClick={resetSettings} variant="ghost">
-            Reset defaults
-          </Button>
-
-          <Button onClick={onClose} variant="filled">
-            Done
-          </Button>
-        </div>
+          <div className="flex items-center justify-between gap-2 border-t border-surface-border-subtle pt-4">
+            <Button onClick={resetSettings} variant="ghost">
+              Reset defaults
+            </Button>
+            <Button onClick={onClose} variant="filled">
+              Done
+            </Button>
+          </div>
+        </fieldset>
       </div>
     </Modal>
   )

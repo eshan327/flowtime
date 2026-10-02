@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
+import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
+import { useTimerSettingsSync } from '@/features/timer/hooks/useTimerSettingsSync'
 import { useTimerSync } from '@/features/timer/hooks/useTimerSync'
 import { queryClient } from '@/lib/queryClient'
 import { supabase } from '@/lib/supabaseClient'
@@ -10,12 +12,16 @@ interface UserContextValue {
   user: User | null
   timerReady: boolean
   timerSyncError: unknown
+  settingsReady: boolean
+  settingsSyncError: unknown
 }
 
 export const UserContext = createContext<UserContextValue>({
   user: null,
   timerReady: false,
   timerSyncError: null,
+  settingsReady: false,
+  settingsSyncError: null,
 })
 
 export function useUser() {
@@ -44,6 +50,7 @@ async function getOrCreateSession() {
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const timerSync = useTimerSync(user?.id)
+  const settingsSync = useTimerSettingsSync(user?.id)
   const previousUserIdRef = useRef<string | null | undefined>(undefined)
 
   const setSessionUser = (session: { user: User } | null) => {
@@ -59,6 +66,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     ) {
       queryClient.clear()
       useTimerStore.getState().clearUserState()
+      useTimerSettingsStore.getState().clearUserState()
     }
 
     previousUserIdRef.current = nextUserId
@@ -102,5 +110,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  return <UserContext.Provider value={{ user, ...timerSync }}>{children}</UserContext.Provider>
+  return (
+    <UserContext.Provider
+      value={{
+        user,
+        ...timerSync,
+        ...settingsSync,
+        timerReady: timerSync.timerReady && settingsSync.settingsReady,
+      }}
+    >
+      {children}
+    </UserContext.Provider>
+  )
 }

@@ -200,6 +200,39 @@ export type Database = {
           },
         ]
       }
+      user_settings: {
+        Row: {
+          break_divisor: number
+          chime_enabled: boolean
+          chime_id: string
+          focus_mode_lock: boolean
+          revision: string
+          shortcuts_enabled: boolean
+          timezone: string
+          user_id: string
+        }
+        Insert: {
+          break_divisor?: number
+          chime_enabled?: boolean
+          chime_id?: string
+          focus_mode_lock?: boolean
+          revision: string
+          shortcuts_enabled?: boolean
+          timezone: string
+          user_id: string
+        }
+        Update: {
+          break_divisor?: number
+          chime_enabled?: boolean
+          chime_id?: string
+          focus_mode_lock?: boolean
+          revision?: string
+          shortcuts_enabled?: boolean
+          timezone?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
