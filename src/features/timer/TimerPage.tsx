@@ -11,7 +11,6 @@ import { useRunawayProtection } from '@/features/timer/hooks/useRunawayProtectio
 import { useTimerKeyboardShortcuts } from '@/features/timer/hooks/useTimerKeyboardShortcuts'
 import { useTimerSessionPipeline } from '@/features/timer/hooks/useTimerSessionPipeline'
 import { useTodaySummary } from '@/features/timer/hooks/useTodaySummary'
-import { useTimer } from '@/features/timer/hooks/useTimer'
 import { getBreakSeconds, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
@@ -36,16 +35,13 @@ export function TimerPage() {
   } = useTasks()
   const { categories, isLoading: categoriesLoading } = useCategories()
 
-  const { breakDivisor, chimeEnabled, chimeId, focusModeLock, shortcutsEnabled } =
-    useTimerSettingsStore(
-      useShallow((state) => ({
-        breakDivisor: state.breakDivisor,
-        chimeEnabled: state.chimeEnabled,
-        chimeId: state.chimeId,
-        focusModeLock: state.focusModeLock,
-        shortcutsEnabled: state.shortcutsEnabled,
-      }))
-    )
+  const { breakDivisor, focusModeLock, shortcutsEnabled } = useTimerSettingsStore(
+    useShallow((state) => ({
+      breakDivisor: state.breakDivisor,
+      focusModeLock: state.focusModeLock,
+      shortcutsEnabled: state.shortcutsEnabled,
+    }))
+  )
 
   const {
     phase,
@@ -109,11 +105,6 @@ export function TimerPage() {
     selectedTask?.categories?.color ?? selectedTask?.color ?? DEFAULT_TASK_COLOR
   const canStartWork = Boolean(selectedTask && selectedTaskIsSelectable)
 
-  useTimer({
-    breakDivisor,
-    chimeEnabled,
-    chimeId,
-  })
   const todaySummary = useTodaySummary()
 
   const selectableTasks = useMemo(

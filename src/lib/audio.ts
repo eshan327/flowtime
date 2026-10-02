@@ -60,48 +60,75 @@ const CHIME_NOTE_MAP: Record<ChimeOptionId, ChimeNote[]> = {
   ],
 }
 
-export function playDoneChime(chimeId: ChimeOptionId = DEFAULT_DONE_CHIME_ID): void {
-  if (typeof window === 'undefined') return
+let audioContext: AudioContext | null = null
 
-  type WindowWithWebkitAudio = Window & {
-    webkitAudioContext?: typeof AudioContext
-  }
-
+function getChimeAudioContext() {
+  if (typeof window === 'undefined') return null
   const AudioContextClass =
-    window.AudioContext || (window as WindowWithWebkitAudio).webkitAudioContext
+    window.AudioContext ||
+    (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!AudioContextClass) return null
+  if (!audioContext || audioContext.state === 'closed') audioContext = new AudioContextClass()
+  return audioContext
+}
 
-  if (!AudioContextClass) return
+export function prepareChimeAudio(): void {
+  const ctx = getChimeAudioContext()
+  if (ctx && ctx.state !== 'running') void ctx.resume().catch(() => undefined)
+}
 
-  const ctx = new AudioContextClass()
+function playNotes(ctx: AudioContext, chimeId: ChimeOptionId, startAt: number) {
   const notes = CHIME_NOTE_MAP[chimeId] ?? CHIME_NOTE_MAP[DEFAULT_DONE_CHIME_ID]
-
-  let maxEndOffset = 0
-
-  for (const note of notes) {
+  const oscillators = notes.map((note) => {
     const oscillator = ctx.createOscillator()
     const gainNode = ctx.createGain()
-
     oscillator.connect(gainNode)
     gainNode.connect(ctx.destination)
-
-    const noteStart = ctx.currentTime + note.startOffset
+    const noteStart = startAt + note.startOffset
     const noteEnd = noteStart + note.duration
-    maxEndOffset = Math.max(maxEndOffset, note.startOffset + note.duration)
-
     oscillator.type = note.waveform
     oscillator.frequency.setValueAtTime(note.frequency, noteStart)
-
     gainNode.gain.setValueAtTime(note.gain, noteStart)
     gainNode.gain.exponentialRampToValueAtTime(0.001, noteEnd)
-
+    oscillator.onended = () => {
+      oscillator.disconnect()
+      gainNode.disconnect()
+    }
     oscillator.start(noteStart)
     oscillator.stop(noteEnd)
-  }
+    return oscillator
+  })
+  return () => oscillators.forEach((oscillator) => oscillator.stop())
+}
 
-  window.setTimeout(
-    () => {
-      void ctx.close()
-    },
-    Math.ceil((maxEndOffset + 0.15) * 1000)
-  )
+export function playDoneChime(chimeId: ChimeOptionId = DEFAULT_DONE_CHIME_ID): void {
+  const ctx = getChimeAudioContext()
+  if (!ctx) return
+  void ctx
+    .resume()
+    .then(() => playNotes(ctx, chimeId, ctx.currentTime))
+    .catch(() => undefined)
+}
+
+export function scheduleDoneChime(deadline: Date, chimeId: ChimeOptionId) {
+  if (deadline.getTime() <= Date.now()) return
+  const ctx = getChimeAudioContext()
+  if (!ctx) return
+  let cancelNotes: (() => void) | undefined
+  const schedule = () => {
+    cancelNotes?.()
+    cancelNotes = undefined
+    const remaining = (deadline.getTime() - Date.now()) / 1000
+    if (ctx.state === 'running' && remaining > 0) {
+      cancelNotes = playNotes(ctx, chimeId, ctx.currentTime + remaining)
+    }
+  }
+  schedule()
+  // Audio time pauses on suspension: re-arm against wall time, never replay an expired break.
+  ctx.addEventListener('statechange', schedule)
+  return () => {
+    ctx.removeEventListener('statechange', schedule)
+    // A normal timer tick marks the break done while the scheduled notes are still ringing.
+    if (Date.now() < deadline.getTime() || ctx.state !== 'running') cancelNotes?.()
+  }
 }

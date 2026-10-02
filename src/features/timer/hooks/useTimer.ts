@@ -1,15 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { MAX_SESSION_SECONDS, useTimerStore } from '@/features/timer/stores/timerStore'
-import { playDoneChime, type ChimeOptionId } from '@/lib/audio'
+import { prepareChimeAudio, scheduleDoneChime } from '@/lib/audio'
+import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 
-interface UseTimerOptions {
-  breakDivisor: number
-  chimeEnabled: boolean
-  chimeId: ChimeOptionId
-}
-
-export function useTimer({ breakDivisor, chimeEnabled, chimeId }: UseTimerOptions) {
-  const breakCompletionKeyRef = useRef<string | null>(null)
+export function useTimer(enabled: boolean) {
+  const breakDivisor = useTimerSettingsStore((state) => state.breakDivisor)
+  const chimeEnabled = useTimerSettingsStore((state) => state.chimeEnabled)
+  const chimeId = useTimerSettingsStore((state) => state.chimeId)
   const phase = useTimerStore((state) => state.phase)
   const startedAt = useTimerStore((state) => state.startedAt)
   const breakEndAt = useTimerStore((state) => state.breakEndAt)
@@ -18,17 +15,22 @@ export function useTimer({ breakDivisor, chimeEnabled, chimeId }: UseTimerOption
   const triggerRunaway = useTimerStore((state) => state.triggerRunaway)
 
   useEffect(() => {
-    if (phase !== 'working' && phase !== 'breaking') {
-      breakCompletionKeyRef.current = null
-      return
+    // Unlock audio during a user gesture, before the browser goes into the background.
+    document.addEventListener('pointerdown', prepareChimeAudio)
+    document.addEventListener('keydown', prepareChimeAudio)
+    return () => {
+      document.removeEventListener('pointerdown', prepareChimeAudio)
+      document.removeEventListener('keydown', prepareChimeAudio)
     }
+  }, [])
 
-    if (phase !== 'breaking') {
-      breakCompletionKeyRef.current = null
-    }
+  useEffect(() => {
+    if (!enabled || !chimeEnabled || phase !== 'breaking' || !breakEndAt) return
+    return scheduleDoneChime(breakEndAt, chimeId)
+  }, [enabled, chimeEnabled, phase, breakEndAt, chimeId])
 
-    const breakCompletionKey =
-      phase === 'breaking' && breakEndAt ? String(breakEndAt.getTime()) : null
+  useEffect(() => {
+    if (!enabled || (phase !== 'working' && phase !== 'breaking')) return
 
     const tick = () => {
       if (phase === 'working' && startedAt) {
@@ -43,13 +45,6 @@ export function useTimer({ breakDivisor, chimeEnabled, chimeId }: UseTimerOption
       } else if (phase === 'breaking' && breakEndAt) {
         const remaining = Math.ceil((breakEndAt.getTime() - Date.now()) / 1000)
         if (remaining <= 0) {
-          if (breakCompletionKey && breakCompletionKeyRef.current !== breakCompletionKey) {
-            breakCompletionKeyRef.current = breakCompletionKey
-            if (chimeEnabled) {
-              playDoneChime(chimeId)
-            }
-          }
-
           finishBreak()
         }
       }
@@ -72,6 +67,7 @@ export function useTimer({ breakDivisor, chimeEnabled, chimeId }: UseTimerOption
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [
+    enabled,
     phase,
     startedAt,
     breakEndAt,
@@ -79,7 +75,5 @@ export function useTimer({ breakDivisor, chimeEnabled, chimeId }: UseTimerOption
     finishBreak,
     triggerRunaway,
     breakDivisor,
-    chimeEnabled,
-    chimeId,
   ])
 }

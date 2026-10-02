@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button'
 import { FlowtimeMark } from '@/components/FlowtimeMark'
 import { Modal } from '@/components/ui/Modal'
 import { useUser } from '@/context/UserContext'
+import { useTimer } from '@/features/timer/hooks/useTimer'
 import { getQueuedSessions } from '@/features/sessions/lib/sessionOutbox'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -118,7 +119,8 @@ function UserAvatar({
 }
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { user } = useUser()
+  const { user, timerReady } = useUser()
+  useTimer(timerReady)
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const [isAccountOpen, setIsAccountOpen] = useState(false)
