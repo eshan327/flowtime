@@ -65,6 +65,21 @@ export function createInitialTimerState() {
   }
 }
 
+// Persist actions immediately, but skip writes when only the derived clock changes.
+let lastPersistedTimer: string | null = null
+const timerStorage = {
+  getItem: (name: string) => localStorage.getItem(name),
+  setItem: (name: string, value: string) => {
+    if (value === lastPersistedTimer) return
+    localStorage.setItem(name, value)
+    lastPersistedTimer = value
+  },
+  removeItem: (name: string) => {
+    localStorage.removeItem(name)
+    lastPersistedTimer = null
+  },
+}
+
 export const useTimerStore = create<TimerState>()(
   persist(
     (set, get) => ({
@@ -103,7 +118,9 @@ export const useTimerStore = create<TimerState>()(
         })
       },
 
-      setWorkSeconds: (seconds) => set({ workSeconds: seconds }),
+      setWorkSeconds: (seconds) => {
+        if (get().workSeconds !== seconds) set({ workSeconds: seconds })
+      },
 
       finishBreak: () => set({ phase: 'done', breakEndAt: null }),
 
@@ -165,12 +182,22 @@ export const useTimerStore = create<TimerState>()(
     {
       name: 'flowtime-timer-state',
       version: 1,
+      partialize: (state) => ({
+        ...state,
+        workSeconds: state.phase === 'working' ? 0 : state.workSeconds,
+      }),
       merge: (persisted, current) => {
         const state = { ...current, ...(persisted as Partial<TimerState>) }
         if (state.startedAt && !state.sessionId) state.sessionId = crypto.randomUUID()
+        if (state.phase === 'working' && state.startedAt) {
+          state.workSeconds = Math.max(
+            0,
+            Math.floor((Date.now() - state.startedAt.getTime()) / 1000)
+          )
+        }
         return state
       },
-      storage: createJSONStorage(() => localStorage, {
+      storage: createJSONStorage(() => timerStorage, {
         reviver: (key, value) => {
           if ((key === 'startedAt' || key === 'breakEndAt') && typeof value === 'string') {
             const date = new Date(value)

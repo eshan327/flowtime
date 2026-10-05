@@ -24,19 +24,27 @@ function getCursorFilter(cursor: SessionCursor, ascending: boolean) {
   return `started_at.${comparison}.${cursor.startedAt},and(started_at.eq.${cursor.startedAt},id.${comparison}.${cursor.id})`
 }
 
-export async function fetchSessionRows({
-  userId,
-  fromIso,
-  toIso,
-  ascending = true,
-}: SessionRangeOptions) {
-  const sessions: SessionWithTask[] = []
+type SessionTimeRow = Pick<Session, 'id' | 'started_at' | 'ended_at' | 'work_seconds'>
+
+export function fetchSessionRows(options: SessionRangeOptions) {
+  return fetchRows<SessionWithTask>(options, SESSION_WITH_TASK_SELECT)
+}
+
+export function fetchSessionTimeRows(options: SessionRangeOptions) {
+  return fetchRows<SessionTimeRow>(options, 'id, started_at, ended_at, work_seconds')
+}
+
+async function fetchRows<T extends SessionTimeRow>(
+  { userId, fromIso, toIso, ascending = true }: SessionRangeOptions,
+  select: string
+): Promise<T[]> {
+  const sessions: T[] = []
   let cursor: SessionCursor | null = null
 
   for (;;) {
     let request = supabase
       .from('sessions')
-      .select(SESSION_WITH_TASK_SELECT)
+      .select(select)
       .eq('user_id', userId)
       .is('deleted_at', null)
 
@@ -51,7 +59,7 @@ export async function fetchSessionRows({
 
     if (error) throw error
 
-    const page = data as SessionWithTask[]
+    const page = data as unknown as T[]
     sessions.push(...page)
     if (page.length < SESSION_PAGE_SIZE) break
 
@@ -62,33 +70,6 @@ export async function fetchSessionRows({
   return sessions
 }
 
-export async function fetchStreakRows(userId: string) {
-  const sessions: Pick<Session, 'id' | 'started_at' | 'ended_at' | 'work_seconds'>[] = []
-  let cursor: SessionCursor | null = null
-
-  for (;;) {
-    let request = supabase
-      .from('sessions')
-      .select('id, started_at, ended_at, work_seconds')
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-
-    if (cursor) request = request.or(getCursorFilter(cursor, true))
-
-    const { data, error } = await request
-      .order('started_at', { ascending: true })
-      .order('id', { ascending: true })
-      .limit(SESSION_PAGE_SIZE)
-
-    if (error) throw error
-
-    const page = data as Pick<Session, 'id' | 'started_at' | 'ended_at' | 'work_seconds'>[]
-    sessions.push(...page)
-    if (page.length < SESSION_PAGE_SIZE) break
-
-    const lastSession = page[page.length - 1]
-    cursor = { id: lastSession.id, startedAt: lastSession.started_at }
-  }
-
-  return sessions
+export function fetchStreakRows(userId: string) {
+  return fetchSessionTimeRows({ userId })
 }

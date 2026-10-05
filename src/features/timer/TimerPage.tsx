@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { CloudUpload, Settings2, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
-import { TimerSettingsModal } from '@/features/timer/components/TimerSettingsModal'
 import { TaskSelector } from '@/features/timer/components/TaskSelector'
 import { TimerClock } from '@/features/timer/components/TimerClock'
 import { TimerControls } from '@/features/timer/components/TimerControls'
@@ -20,6 +19,11 @@ import { useUser } from '@/context/UserContext'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { formatDuration } from '@/lib/formatting'
 import { snapshotTask } from '@/lib/sessionSnapshot'
+
+const loadTimerSettings = () => import('@/features/timer/components/TimerSettingsModal')
+const TimerSettingsModal = lazy(() =>
+  loadTimerSettings().then((mod) => ({ default: mod.TimerSettingsModal }))
+)
 
 export function TimerPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -259,6 +263,8 @@ export function TimerPage() {
 
           <Button
             aria-label="Timer settings"
+            onFocus={() => void loadTimerSettings().catch(() => undefined)}
+            onMouseEnter={() => void loadTimerSettings().catch(() => undefined)}
             className="h-16 w-16 shrink-0"
             onClick={() => setIsSettingsOpen(true)}
             size="icon"
@@ -398,7 +404,11 @@ export function TimerPage() {
         </div>
       </div>
 
-      <TimerSettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      {isSettingsOpen ? (
+        <Suspense fallback={<Spinner />}>
+          <TimerSettingsModal isOpen onClose={() => setIsSettingsOpen(false)} />
+        </Suspense>
+      ) : null}
     </section>
   )
 }

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useUser } from '@/context/UserContext'
 import { queryKeys } from '@/lib/queryKeys'
-import { fetchSessionRows } from '@/features/sessions/api/sessionQueries'
+import { fetchSessionTimeRows } from '@/features/sessions/api/sessionQueries'
 import { workSecondsInDateRange } from '@/lib/sessionTime'
 
 interface TodaySummary {
@@ -21,7 +21,7 @@ export function useTodaySummary() {
   return useQuery<TodaySummary>({
     queryKey: queryKeys.sessionsTodaySummary(user?.id, startOfToday.toISOString()),
     queryFn: async () => {
-      const sessions = await fetchSessionRows({
+      const sessions = await fetchSessionTimeRows({
         userId: user!.id,
         fromIso: startOfToday.toISOString(),
         toIso: endOfToday.toISOString(),

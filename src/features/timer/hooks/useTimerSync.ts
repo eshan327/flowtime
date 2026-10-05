@@ -114,7 +114,12 @@ export function useTimerSync(userId: string | undefined) {
         if (error) throw error
         return data.length > 0
       },
-      onStatus: (error) => setStatus({ userId, ready: true, error }),
+      onStatus: (error) =>
+        setStatus((previous) =>
+          previous.userId === userId && previous.ready && previous.error === error
+            ? previous
+            : { userId, ready: true, error }
+        ),
     })
     const unsubscribe = useTimerStore.subscribe((state, previous) => {
       if (applying || state.ownerUserId !== userId) return

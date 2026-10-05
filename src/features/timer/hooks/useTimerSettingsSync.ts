@@ -86,7 +86,11 @@ export function useTimerSettingsSync(userId: string | undefined) {
       },
       onStatus: (error) => {
         if (useTimerSettingsStore.getState().ownerUserId === userId) {
-          setStatus({ userId, ready: true, error })
+          setStatus((previous) =>
+            previous.userId === userId && previous.ready && previous.error === error
+              ? previous
+              : { userId, ready: true, error }
+          )
         }
       },
     })
