@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { getErrorMessage } from '@/lib/errorMessages'
 import { Input } from '@/components/ui/Input'
 
 interface AddTaskFormProps {
@@ -21,6 +22,7 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
   const [isOpen, setIsOpen] = useState(false)
   const [value, setValue] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -33,7 +35,7 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
 
     const openFromShortcut = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== 'n' || event.metaKey || event.ctrlKey || event.altKey) return
-      if (isTypingTarget(event.target)) return
+      if (isTypingTarget(event.target) || document.querySelector('dialog[open]')) return
       event.preventDefault()
       setIsOpen(true)
     }
@@ -45,6 +47,7 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
   const reset = () => {
     setIsOpen(false)
     setValue('')
+    setError(null)
     setIsSubmitting(false)
   }
 
@@ -53,10 +56,12 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
     if (!trimmed || isSubmitting) return
 
     setIsSubmitting(true)
+    setError(null)
     try {
       await onAdd(trimmed)
       reset()
-    } catch {
+    } catch (submitError) {
+      setError(getErrorMessage(submitError, 'Unable to add task. Please try again.'))
       setIsSubmitting(false)
     }
   }
@@ -88,6 +93,9 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
       className={`flex items-center gap-2 ${prominent ? 'rounded-[4px] border border-surface-border p-2' : ''}`}
     >
       <Input
+        aria-label={label}
+        error={error ?? undefined}
+        disabled={isSubmitting}
         autoCapitalize="off"
         autoComplete="new-password"
         autoCorrect="off"
@@ -124,7 +132,14 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
         {!isSubmitting ? <Check className="h-4 w-4" /> : null}
       </Button>
 
-      <Button aria-label="Cancel" className="p-0" onClick={reset} size="icon" variant="outlined">
+      <Button
+        aria-label="Cancel"
+        disabled={isSubmitting}
+        className="p-0"
+        onClick={reset}
+        size="icon"
+        variant="outlined"
+      >
         <X className="h-4 w-4" />
       </Button>
     </div>

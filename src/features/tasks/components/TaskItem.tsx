@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/Input'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
 import { SubtaskList } from '@/features/tasks/components/SubtaskList'
-import { useSubtasks } from '@/features/tasks/hooks/useSubtasks'
 import {
   getVerticalDropPlacement,
   resolveDraggedId,
@@ -31,6 +30,8 @@ import type { Category, TaskWithCategory } from '@/types'
 
 interface TaskItemProps {
   task: TaskWithCategory
+  totalCount: number
+  completedCount: number
   tasksInGroup: TaskWithCategory[]
   categories: Category[]
   onCompleteTask: (taskId: string) => Promise<void> | void
@@ -42,6 +43,8 @@ interface TaskItemProps {
 
 export function TaskItem({
   task,
+  totalCount,
+  completedCount,
   tasksInGroup,
   categories,
   onCompleteTask,
@@ -51,7 +54,6 @@ export function TaskItem({
   onReorderTask,
 }: TaskItemProps) {
   const accentColor = task.categories?.color ?? task.color ?? DEFAULT_TASK_COLOR
-  const { subtasks, completedCount, totalCount } = useSubtasks(task.id)
 
   const [isExpanded, setIsExpanded] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -188,8 +190,6 @@ export function TaskItem({
       setTaskReorderError(error)
     }
   }
-
-  const showSubtaskToggle = subtasks.length > 0 || isExpanded
 
   return (
     <div className="relative">
@@ -333,21 +333,25 @@ export function TaskItem({
             ) : null}
           </div>
 
-          {showSubtaskToggle ? (
-            <Button
-              aria-label={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
-              className="p-0 text-ink-tertiary transition hover:text-ink-secondary"
-              onClick={() => setIsExpanded((current) => !current)}
-              size="icon"
-              variant="ghost"
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </Button>
-          ) : null}
+          <Button
+            aria-label={
+              isExpanded
+                ? 'Collapse subtasks'
+                : totalCount > completedCount
+                  ? 'Expand subtasks'
+                  : 'Add subtasks'
+            }
+            className="p-0 text-ink-tertiary transition hover:text-ink-secondary"
+            onClick={() => setIsExpanded((current) => !current)}
+            size="icon"
+            variant="ghost"
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </Button>
 
           <div className="relative" ref={menuAnchorRef}>
             <Button

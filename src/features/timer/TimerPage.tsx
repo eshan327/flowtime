@@ -241,9 +241,9 @@ export function TimerPage() {
   })
 
   return (
-    <section className="flex w-full flex-col items-center justify-start md:min-h-[calc(100vh-4.5rem)]">
-      <div className="w-full px-0 py-2 sm:px-2">
-        <div className="mx-auto flex max-w-6xl items-center gap-5 border-b border-surface-border pb-1">
+    <section className="mx-auto flex w-full max-w-4xl flex-col items-center">
+      <div className="w-full">
+        <div className="mx-auto flex max-w-3xl items-center gap-3">
           <TaskSelector
             categories={categories}
             disabled={!timerReady || (focusModeLock && phase === 'working')}
@@ -265,7 +265,7 @@ export function TimerPage() {
             aria-label="Timer settings"
             onFocus={() => void loadTimerSettings().catch(() => undefined)}
             onMouseEnter={() => void loadTimerSettings().catch(() => undefined)}
-            className="h-16 w-16 shrink-0"
+            className="h-20 w-14 shrink-0 rounded-xl border border-surface-border bg-surface-panel/60 sm:w-20"
             onClick={() => setIsSettingsOpen(true)}
             size="icon"
             title="Timer settings"
@@ -289,7 +289,7 @@ export function TimerPage() {
           </p>
         ) : null}
 
-        <div className="mt-7 flex flex-col items-center">
+        <div className="mt-7 flex flex-col items-center sm:mt-8">
           <TimerClock
             accentColor={selectedTaskColor}
             breakEndAt={breakEndAt}
@@ -299,7 +299,7 @@ export function TimerPage() {
             phase={phase}
           />
 
-          <div className="mt-8 flex w-full justify-center">
+          <div className="mt-6 flex w-full justify-center sm:mt-7">
             <fieldset disabled={!timerReady} className="flex w-full justify-center">
               <TimerControls
                 canStartWork={canStartWork}
@@ -310,6 +310,21 @@ export function TimerPage() {
               />
             </fieldset>
           </div>
+
+          {shortcutsEnabled &&
+          timerReady &&
+          (canStartWork || phase === 'working' || phase === 'breaking') ? (
+            <p className="mt-3 hidden items-center gap-2 text-xs text-ink-tertiary sm:flex">
+              <kbd className="rounded border border-surface-border px-2 py-0.5 font-sans text-[11px]">
+                Space
+              </kbd>
+              {phase === 'working'
+                ? 'to take a break'
+                : phase === 'breaking'
+                  ? 'to skip break'
+                  : 'to start'}
+            </p>
+          ) : null}
 
           {queuedSessionCount > 0 ? (
             <div
@@ -384,7 +399,7 @@ export function TimerPage() {
           ) : null}
         </div>
 
-        <div className="mx-auto mt-8 grid min-h-5 w-full max-w-6xl grid-cols-3 items-center divide-x divide-surface-border border-y border-surface-border px-4 py-5 text-center text-sm text-ink-secondary sm:px-1 [&>span]:px-2 sm:[&>span]:px-7">
+        <div className="mx-auto mt-7 grid min-h-5 w-full max-w-2xl grid-cols-3 items-center divide-x divide-surface-border border-y border-surface-border py-4 text-center text-sm text-ink-secondary sm:mt-6 sm:py-5 [&>span]:px-3 sm:[&>span]:px-7">
           {todaySummary.isError ? (
             <p className="col-span-3 text-red-300">Unable to load today's summary.</p>
           ) : todaySummary.isLoading ? (
@@ -395,9 +410,17 @@ export function TimerPage() {
           ) : (
             <>
               <span className="text-left font-medium text-ink-primary">Today</span>
-              <span>{todaySummary.data?.count ?? 0} sessions</span>
-              <span className="text-right">
-                {formatDuration(todaySummary.data?.totalWorkSeconds ?? 0)} focus
+              <span>
+                <span className="block text-xl font-medium tabular-nums tracking-tight text-ink-primary">
+                  {todaySummary.data?.count ?? 0}
+                </span>
+                <span className="mt-1 block text-xs text-ink-tertiary">sessions</span>
+              </span>
+              <span>
+                <span className="block text-xl font-medium tabular-nums tracking-tight text-ink-primary">
+                  {formatDuration(todaySummary.data?.totalWorkSeconds ?? 0)}
+                </span>
+                <span className="mt-1 block text-xs text-ink-tertiary">focus</span>
               </span>
             </>
           )}

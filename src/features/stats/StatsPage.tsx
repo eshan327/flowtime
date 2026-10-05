@@ -13,7 +13,7 @@ import { formatRangeWindow, getRangeDatesForAnchor, shiftRangeAnchor } from '@/l
 import { toLocalDateKey } from '@/lib/dateMath'
 import { splitSessionTime } from '@/lib/sessionTime'
 import { getErrorMessage } from '@/lib/errorMessages'
-import type { SessionWithTask, TimeRange } from '@/types'
+import type { TimeRange } from '@/types'
 
 const DailyBarChart = lazy(() =>
   import('@/features/stats/components/DailyBarChart').then((mod) => ({
@@ -65,29 +65,14 @@ export function StatsPage() {
     return stats.allDays.find((day) => day.date === selectedHeatmapDate) ?? null
   }, [selectedHeatmapDate, stats.allDays])
 
-  const heatmapSessionsByDate = useMemo(() => {
-    const map = new Map<string, SessionWithTask[]>()
-
-    for (const session of stats.heatmapSessions) {
-      for (const slice of splitSessionTime(session, 'day')) {
-        if (slice.seconds <= 0) continue
-        const key = toLocalDateKey(slice.start)
-        const existing = map.get(key)
-        if (existing) {
-          existing.push(session)
-        } else {
-          map.set(key, [session])
-        }
-      }
-    }
-
-    return map
-  }, [stats.heatmapSessions])
-
   const selectedHeatmapSessions = useMemo(() => {
     if (!selectedHeatmapDate) return []
-    return heatmapSessionsByDate.get(selectedHeatmapDate) ?? []
-  }, [heatmapSessionsByDate, selectedHeatmapDate])
+    return stats.heatmapSessions.filter((session) =>
+      splitSessionTime(session, 'day').some(
+        (slice) => slice.seconds > 0 && toLocalDateKey(slice.start) === selectedHeatmapDate
+      )
+    )
+  }, [stats.heatmapSessions, selectedHeatmapDate])
 
   const header = (
     <header className="flex flex-wrap items-end justify-between gap-4 border-b border-surface-border pb-5">

@@ -38,7 +38,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-[4px] font-medium tracking-[-0.01em] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-hover/30 disabled:text-ink-tertiary/50 disabled:opacity-100',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium tracking-[-0.01em] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-hover/30 disabled:text-ink-tertiary/80 disabled:opacity-100',
         variantClasses[variant],
         sizeClasses[size],
         className

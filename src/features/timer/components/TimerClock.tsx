@@ -25,8 +25,20 @@ export function TimerClock({
 
   useEffect(() => {
     if (phase !== 'breaking') return
-    const interval = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(interval)
+    let interval: number | undefined
+    const updateClock = () => {
+      window.clearInterval(interval)
+      interval = undefined
+      if (document.visibilityState !== 'visible') return
+      setNow(Date.now())
+      interval = window.setInterval(() => setNow(Date.now()), 1000)
+    }
+    updateClock()
+    document.addEventListener('visibilitychange', updateClock)
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', updateClock)
+    }
   }, [phase])
 
   const seconds =
@@ -52,7 +64,7 @@ export function TimerClock({
 
   return (
     <div
-      className={`timer-dial relative mx-auto flex h-[min(21rem,82vw)] w-[min(21rem,82vw)] shrink-0 items-center justify-center rounded-full sm:h-96 sm:w-96 lg:h-[min(31rem,59vh)] lg:w-[min(31rem,59vh)] ${phase === 'working' ? 'is-running' : ''}`}
+      className={`timer-dial relative mx-auto flex h-[min(20rem,76vw)] w-[min(20rem,76vw)] shrink-0 items-center justify-center rounded-full sm:h-[min(25rem,45vh)] sm:w-[min(25rem,45vh)] ${phase === 'working' ? 'is-running' : ''}`}
       style={
         {
           '--timer-accent': accent,
@@ -62,7 +74,7 @@ export function TimerClock({
     >
       <div className="relative z-[1] flex w-[78%] flex-col items-center">
         <p
-          className={`whitespace-nowrap font-medium leading-none tabular-nums text-ink-primary ${clock.length > 5 ? 'text-[48px] tracking-[-0.055em] sm:text-[70px] lg:text-[86px]' : 'text-[72px] tracking-[-0.065em] sm:text-[104px] lg:text-[118px]'}`}
+          className={`whitespace-nowrap font-medium leading-none tabular-nums text-ink-primary ${clock.length > 5 ? 'text-[48px] tracking-[-0.055em] sm:text-[70px] lg:text-[86px]' : 'text-[72px] tracking-[-0.065em] sm:text-[104px]'}`}
         >
           {clock}
         </p>

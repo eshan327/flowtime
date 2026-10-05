@@ -127,6 +127,7 @@ export function useTasks() {
         queryClient.removeQueries({ queryKey: queryKeys.subtasks(variables.id) })
       return Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.subtaskCounts(user?.id) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user?.id) }),
       ])
     },
@@ -141,7 +142,10 @@ export function useTasks() {
     },
     onSuccess: (_result, id) => {
       queryClient.removeQueries({ queryKey: queryKeys.subtasks(id) })
-      return queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) })
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.subtaskCounts(user?.id) }),
+      ])
     },
   })
 

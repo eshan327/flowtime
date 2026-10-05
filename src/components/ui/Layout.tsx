@@ -19,7 +19,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useUser } from '@/context/UserContext'
 import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useTimer } from '@/features/timer/hooks/useTimer'
-import { getQueuedSessions } from '@/features/sessions/lib/sessionOutbox'
+import { getQueuedSessionCount } from '@/features/sessions/lib/sessionOutbox'
 import { supabase } from '@/lib/supabaseClient'
 
 const NAV_ITEMS = [
@@ -49,17 +49,19 @@ const MAX_AVATAR_SIZE = 5 * 1024 * 1024
 
 function desktopNavClassName(isActive: boolean) {
   return [
-    'flex items-center gap-4 rounded-[4px] px-4 py-4 text-[15px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70',
+    'flex items-center gap-3 rounded-lg px-4 py-3 text-[14px] outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent-primary/70',
     isActive
-      ? 'font-medium text-ink-primary [&>svg]:text-accent-primary'
+      ? 'bg-accent-primary/10 font-medium text-ink-primary [&>svg]:text-accent-primary'
       : 'text-ink-secondary hover:text-ink-primary hover:[&>svg]:text-accent-primary/80',
   ].join(' ')
 }
 
 function mobileNavClassName(isActive: boolean) {
   return [
-    'flex flex-col items-center justify-center gap-1 py-2 text-[11px] transition-colors',
-    isActive ? 'text-accent-primary' : 'text-ink-tertiary hover:text-ink-secondary',
+    'flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg py-2 text-[11px] transition-colors',
+    isActive
+      ? 'bg-accent-primary/10 text-accent-primary'
+      : 'text-ink-tertiary hover:text-ink-secondary',
   ].join(' ')
 }
 
@@ -146,21 +148,39 @@ export function Layout({ children }: { children: ReactNode }) {
     user?.user_metadata?.picture
 
   useEffect(() => {
+    let active = true
+    let interval: number | undefined
     const refresh = () => {
+      if (document.visibilityState !== 'visible') return
       setIsOnline(navigator.onLine)
       if (user?.id) {
-        void getQueuedSessions(user.id).then((sessions) => setPendingSyncCount(sessions.length))
+        void getQueuedSessionCount(user.id)
+          .then((count) => {
+            if (active) setPendingSyncCount(count)
+          })
+          .catch(() => undefined)
+      } else {
+        setPendingSyncCount(0)
       }
     }
+    const updatePolling = () => {
+      window.clearInterval(interval)
+      interval = undefined
+      if (document.visibilityState !== 'visible') return
+      refresh()
+      interval = window.setInterval(refresh, 5000)
+    }
 
-    refresh()
-    const interval = window.setInterval(refresh, 5000)
+    updatePolling()
     window.addEventListener('online', refresh)
     window.addEventListener('offline', refresh)
+    document.addEventListener('visibilitychange', updatePolling)
     return () => {
+      active = false
       window.clearInterval(interval)
       window.removeEventListener('online', refresh)
       window.removeEventListener('offline', refresh)
+      document.removeEventListener('visibilitychange', updatePolling)
     }
   }, [user?.id])
 
@@ -268,13 +288,13 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen text-ink-primary">
       <div className="flex min-h-screen md:flex-row">
-        <aside className="hidden border-r border-surface-border bg-surface-sidebar/55 px-4 py-9 md:sticky md:top-0 md:flex md:h-screen md:w-[248px] md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
+        <aside className="hidden border-r border-surface-border bg-surface-sidebar/55 px-4 py-8 md:sticky md:top-0 md:flex md:h-screen md:w-[232px] md:shrink-0 md:flex-col md:self-start md:overflow-y-auto">
           <div className="flex items-center gap-3 px-3 text-ink-primary">
             <FlowtimeMark className="h-9 w-9 text-accent-primary" />
             <p className="text-[22px] font-semibold tracking-[-0.035em]">Flowtime</p>
           </div>
 
-          <nav className="mt-12 grid gap-2">
+          <nav className="mt-10 grid gap-1.5">
             {NAV_ITEMS.map(({ to, label, icon: Icon, preload }) => (
               <NavLink
                 className={({ isActive }) => desktopNavClassName(isActive)}
@@ -345,7 +365,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col pb-20 md:pb-0">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
           <header className="flex items-center justify-between border-b border-surface-border-subtle bg-surface-sidebar px-4 py-3 md:hidden">
             <div className="flex items-center gap-2">
               <FlowtimeMark className="h-7 w-7 text-accent-primary" />
@@ -384,14 +404,14 @@ export function Layout({ children }: { children: ReactNode }) {
             </p>
           ) : null}
 
-          <main className="flex-1 px-4 py-6 md:px-10 md:py-9 xl:px-12">
+          <main className="flex-1 px-4 py-6 md:px-10 md:py-12 xl:px-12">
             <div className="mx-auto w-full max-w-[1320px]">{children}</div>
           </main>
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-border-subtle bg-surface-sidebar md:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-4">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-surface-border-subtle bg-surface-sidebar pb-[env(safe-area-inset-bottom)] md:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1 px-2 py-1">
           {NAV_ITEMS.map(({ to, label, icon: Icon, preload }) => (
             <NavLink
               aria-label={label}

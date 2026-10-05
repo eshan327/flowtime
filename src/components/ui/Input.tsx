@@ -27,7 +27,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
       <input
         className={cn(
-          'w-full rounded-[4px] border border-surface-border bg-transparent px-3 py-2 text-sm text-ink-primary outline-none transition-colors duration-150 placeholder:text-ink-tertiary focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15',
+          'w-full rounded-lg border border-surface-border bg-transparent px-3 py-2 text-sm text-ink-primary outline-none transition-colors duration-150 placeholder:text-ink-tertiary focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15',
           label ? 'mt-2' : '',
           error ? 'border-red-400/70 focus:border-red-300' : '',
           className
@@ -35,9 +35,19 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         id={inputId}
         ref={ref}
         {...props}
+        aria-invalid={error ? true : props['aria-invalid']}
+        aria-describedby={
+          [props['aria-describedby'], error ? `${inputId}-error` : undefined]
+            .filter(Boolean)
+            .join(' ') || undefined
+        }
       />
 
-      {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
+      {error ? (
+        <p id={`${inputId}-error`} role="alert" className="mt-2 text-sm text-red-300">
+          {error}
+        </p>
+      ) : null}
     </div>
   )
 })

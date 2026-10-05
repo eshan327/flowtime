@@ -160,7 +160,7 @@ export function TaskSelector({
         aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className={`${label ? 'h-[72px]' : 'h-11'} w-full justify-between border-x-0 border-t-0 px-0 text-base hover:bg-transparent`}
+        className={`${label ? 'h-20 px-4 sm:px-5' : 'h-11 px-3'} w-full justify-between rounded-xl border-surface-border bg-surface-panel/60 text-base hover:border-accent-primary/40 hover:bg-surface-panel`}
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
         onKeyDown={(event) => {
@@ -185,8 +185,18 @@ export function TaskSelector({
               </span>
             ) : null}
             <span
-              className={`block truncate ${label ? 'mt-1 text-xl font-medium tracking-[-0.025em] text-ink-primary sm:text-2xl' : ''}`}
+              className={`block truncate ${label ? 'mt-1 text-lg font-medium tracking-[-0.025em] text-ink-primary sm:text-xl' : ''}`}
             >
+              {selectedTaskId ? (
+                <span
+                  aria-hidden="true"
+                  className="mr-2.5 inline-block h-2.5 w-2.5 rounded-full"
+                  style={{
+                    backgroundColor:
+                      selectedTask?.categories?.color ?? selectedTask?.color ?? DEFAULT_TASK_COLOR,
+                  }}
+                />
+              ) : null}
               {selectedTask?.name ?? selectedTaskName ?? 'Select a task'}
             </span>
           </span>
@@ -195,7 +205,7 @@ export function TaskSelector({
       </Button>
 
       {isOpen && !disabled ? (
-        <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-[4px] border border-surface-border bg-surface-panel p-1 shadow-xl">
+        <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-surface-border bg-surface-panel p-1.5 shadow-xl">
           {onQuickAddTask ? (
             <div className="mb-2 flex items-center gap-2 border-b border-surface-border px-2 pb-2">
               <Input

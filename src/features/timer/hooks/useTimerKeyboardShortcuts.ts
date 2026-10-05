@@ -42,7 +42,7 @@ export function useTimerKeyboardShortcuts({
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return
+      if (event.defaultPrevented || event.repeat || document.querySelector('dialog[open]')) return
       if (event.metaKey || event.ctrlKey || event.altKey) return
       if (isTypingTarget(event.target)) return
 
@@ -55,6 +55,27 @@ export function useTimerKeyboardShortcuts({
       }
 
       if (overlaysOpen) {
+        return
+      }
+
+      if (
+        key === ' ' &&
+        !(
+          event.target instanceof HTMLElement &&
+          event.target.closest('button, a, [role="combobox"], [role="option"]')
+        )
+      ) {
+        if (overlaysOpen) return
+        if (phase === 'working') {
+          event.preventDefault()
+          onStopWork()
+        } else if (phase === 'breaking') {
+          event.preventDefault()
+          onSkipBreak()
+        } else if (canStartWork) {
+          event.preventDefault()
+          onStartWork()
+        }
         return
       }
 

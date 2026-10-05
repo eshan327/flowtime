@@ -97,3 +97,17 @@ export async function getQueuedSessions(userId: string) {
     database.close()
   }
 }
+
+export async function getQueuedSessionCount(userId: string) {
+  const database = await openOutboxDatabase()
+  if (!database) return 0
+
+  try {
+    const transaction = database.transaction(STORE_NAME, 'readonly')
+    return await requestToPromise(
+      transaction.objectStore(STORE_NAME).index(USER_ID_INDEX).count(userId)
+    )
+  } finally {
+    database.close()
+  }
+}

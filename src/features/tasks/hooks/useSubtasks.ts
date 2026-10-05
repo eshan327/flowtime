@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { fetchSubtaskCounts } from '@/features/tasks/api/subtaskQueries'
 import { useUser } from '@/context/UserContext'
 import {
   getNextPosition,
@@ -10,6 +11,15 @@ import {
 import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabaseClient'
 import type { Subtask } from '@/types'
+
+export function useSubtaskCounts(enabled: boolean) {
+  const { user } = useUser()
+  return useQuery({
+    queryKey: queryKeys.subtaskCounts(user?.id),
+    queryFn: () => fetchSubtaskCounts(requireUserId(user?.id)),
+    enabled: enabled && !!user,
+  })
+}
 
 export function useSubtasks(taskId: string | null) {
   const queryClient = useQueryClient()
@@ -37,6 +47,12 @@ export function useSubtasks(taskId: string | null) {
     enabled: !!user && !!taskId,
   })
 
+  const invalidateSubtasks = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtasks(taskId ?? undefined) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtaskCounts(user?.id) }),
+    ])
+
   const addSubtask = useMutation({
     mutationFn: async (name: string) => {
       const userId = requireCurrentUserId()
@@ -57,8 +73,7 @@ export function useSubtasks(taskId: string | null) {
       if (error) throw error
       return data as Subtask
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.subtasks(taskId ?? undefined) }),
+    onSuccess: invalidateSubtasks,
   })
 
   const updateSubtask = useMutation({
@@ -83,8 +98,7 @@ export function useSubtasks(taskId: string | null) {
 
       if (error) throw error
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.subtasks(taskId ?? undefined) }),
+    onSuccess: invalidateSubtasks,
   })
 
   const deleteSubtask = useMutation({
@@ -94,8 +108,7 @@ export function useSubtasks(taskId: string | null) {
 
       if (error) throw error
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.subtasks(taskId ?? undefined) }),
+    onSuccess: invalidateSubtasks,
   })
 
   const reorderSubtask = useMutation({
@@ -113,8 +126,7 @@ export function useSubtasks(taskId: string | null) {
       })
       if (error) throw error
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.subtasks(taskId ?? undefined) }),
+    onSuccess: invalidateSubtasks,
   })
 
   const allSubtasks = useMemo(() => subtasksQuery.data ?? [], [subtasksQuery.data])
