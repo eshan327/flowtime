@@ -10,14 +10,6 @@ export function requireUserId(userId?: string): string {
   return userId
 }
 
-export function requireTaskId(taskId?: string): string {
-  if (!taskId) {
-    throw new Error('Task is required for subtask operations')
-  }
-
-  return taskId
-}
-
 export function getNextPosition(items: Array<{ position: number }>) {
   const maxPosition = items.length > 0 ? Math.max(...items.map((item) => item.position)) : -1
   return maxPosition + 1

@@ -122,15 +122,11 @@ export function useTasks() {
 
       if (error) throw error
     },
-    onSuccess: (_result, variables) => {
-      if (variables.completedAt)
-        queryClient.removeQueries({ queryKey: queryKeys.subtasks(variables.id) })
-      return Promise.all([
+    onSuccess: () =>
+      Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.subtaskCounts(user?.id) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user?.id) }),
-      ])
-    },
+      ]),
   })
 
   const deleteTask = useMutation({
@@ -140,13 +136,7 @@ export function useTasks() {
 
       if (error) throw error
     },
-    onSuccess: (_result, id) => {
-      queryClient.removeQueries({ queryKey: queryKeys.subtasks(id) })
-      return Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.subtaskCounts(user?.id) }),
-      ])
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
   })
 
   const reorderTask = useMutation({

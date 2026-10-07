@@ -241,9 +241,9 @@ export function TimerPage() {
   })
 
   return (
-    <section className="mx-auto flex w-full max-w-4xl flex-col items-center">
+    <section className="mx-auto flex w-full max-w-2xl flex-col items-center">
       <div className="w-full">
-        <div className="mx-auto flex max-w-3xl items-center gap-3">
+        <div className="mx-auto flex max-w-xl items-center gap-3">
           <TaskSelector
             categories={categories}
             disabled={!timerReady || (focusModeLock && phase === 'working')}
@@ -265,7 +265,7 @@ export function TimerPage() {
             aria-label="Timer settings"
             onFocus={() => void loadTimerSettings().catch(() => undefined)}
             onMouseEnter={() => void loadTimerSettings().catch(() => undefined)}
-            className="h-20 w-14 shrink-0 rounded-xl border border-surface-border bg-surface-panel/60 sm:w-20"
+            className="h-16 w-14 shrink-0 rounded-xl border border-surface-border bg-surface-panel/60 sm:w-16"
             onClick={() => setIsSettingsOpen(true)}
             size="icon"
             title="Timer settings"
@@ -289,7 +289,7 @@ export function TimerPage() {
           </p>
         ) : null}
 
-        <div className="mt-7 flex flex-col items-center sm:mt-8">
+        <div className="mt-6 flex flex-col items-center">
           <TimerClock
             accentColor={selectedTaskColor}
             breakEndAt={breakEndAt}
@@ -299,7 +299,7 @@ export function TimerPage() {
             phase={phase}
           />
 
-          <div className="mt-6 flex w-full justify-center sm:mt-7">
+          <div className="mt-5 flex w-full justify-center">
             <fieldset disabled={!timerReady} className="flex w-full justify-center">
               <TimerControls
                 canStartWork={canStartWork}
@@ -399,7 +399,7 @@ export function TimerPage() {
           ) : null}
         </div>
 
-        <div className="mx-auto mt-7 grid min-h-5 w-full max-w-2xl grid-cols-3 items-center divide-x divide-surface-border border-y border-surface-border py-4 text-center text-sm text-ink-secondary sm:mt-6 sm:py-5 [&>span]:px-3 sm:[&>span]:px-7">
+        <div className="mx-auto mt-7 grid min-h-5 w-full max-w-xl grid-cols-3 items-center divide-x divide-surface-border border-y border-surface-border py-4 text-center text-sm text-ink-secondary sm:mt-5 sm:py-4 [&>span]:px-3 sm:[&>span]:px-7">
           {todaySummary.isError ? (
             <p className="col-span-3 text-red-300">Unable to load today's summary.</p>
           ) : todaySummary.isLoading ? (

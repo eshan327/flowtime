@@ -2,7 +2,6 @@ import type { Database } from '@/types/supabase'
 
 export type Category = Database['public']['Tables']['categories']['Row']
 export type Task = Database['public']['Tables']['tasks']['Row']
-export type Subtask = Database['public']['Tables']['subtasks']['Row']
 export type Session = Database['public']['Tables']['sessions']['Row']
 
 export type TimeRange = 'day' | 'week' | 'month' | 'year'

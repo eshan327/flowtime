@@ -1,18 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  Check,
-  ChevronDown,
-  ChevronRight,
-  GripVertical,
-  MoreHorizontal,
-  Trash2,
-} from 'lucide-react'
+import { Check, GripVertical, MoreHorizontal, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { ColorPicker } from '@/features/tasks/components/ColorPicker'
-import { SubtaskList } from '@/features/tasks/components/SubtaskList'
 import {
   getVerticalDropPlacement,
   resolveDraggedId,
@@ -30,8 +22,6 @@ import type { Category, TaskWithCategory } from '@/types'
 
 interface TaskItemProps {
   task: TaskWithCategory
-  totalCount: number
-  completedCount: number
   tasksInGroup: TaskWithCategory[]
   categories: Category[]
   onCompleteTask: (taskId: string) => Promise<void> | void
@@ -43,8 +33,6 @@ interface TaskItemProps {
 
 export function TaskItem({
   task,
-  totalCount,
-  completedCount,
   tasksInGroup,
   categories,
   onCompleteTask,
@@ -55,7 +43,6 @@ export function TaskItem({
 }: TaskItemProps) {
   const accentColor = task.categories?.color ?? task.color ?? DEFAULT_TASK_COLOR
 
-  const [isExpanded, setIsExpanded] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [draftName, setDraftName] = useState(task.name)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -325,33 +312,7 @@ export function TaskItem({
                 {task.name}
               </Button>
             )}
-
-            {totalCount > 0 ? (
-              <p className="mt-0.5 text-xs text-ink-tertiary">
-                {completedCount}/{totalCount} done
-              </p>
-            ) : null}
           </div>
-
-          <Button
-            aria-label={
-              isExpanded
-                ? 'Collapse subtasks'
-                : totalCount > completedCount
-                  ? 'Expand subtasks'
-                  : 'Add subtasks'
-            }
-            className="p-0 text-ink-tertiary transition hover:text-ink-secondary"
-            onClick={() => setIsExpanded((current) => !current)}
-            size="icon"
-            variant="ghost"
-          >
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-          </Button>
 
           <div className="relative" ref={menuAnchorRef}>
             <Button
@@ -518,12 +479,6 @@ export function TaskItem({
               }}
               value={task.color ?? DEFAULT_TASK_COLOR}
             />
-          </div>
-        ) : null}
-
-        {isExpanded ? (
-          <div className="border-t border-surface-border px-3 py-3">
-            <SubtaskList accentColor={accentColor} taskId={task.id} />
           </div>
         ) : null}
       </div>

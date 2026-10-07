@@ -20,7 +20,6 @@ Live app: https://flowtimeboard.vercel.app
   - Categories and uncategorized tasks.
   - Category archive lifecycle (archive, restore, archived views).
   - Active/completed task split with a completed archive toggle.
-  - Subtasks with completion and reorder support.
   - Reordering via drag-and-drop plus move up/down fallback controls.
 - Timer workflow:
   - Start work only after selecting a task.

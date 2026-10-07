@@ -160,7 +160,7 @@ export function TaskSelector({
         aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className={`${label ? 'h-20 px-4 sm:px-5' : 'h-11 px-3'} w-full justify-between rounded-xl border-surface-border bg-surface-panel/60 text-base hover:border-accent-primary/40 hover:bg-surface-panel`}
+        className={`${label ? 'h-16 px-4 sm:px-5' : 'h-11 px-3'} w-full justify-between rounded-xl border-surface-border bg-surface-panel/60 text-base hover:border-accent-primary/40 hover:bg-surface-panel`}
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
         onKeyDown={(event) => {

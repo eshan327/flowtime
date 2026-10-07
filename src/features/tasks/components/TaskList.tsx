@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, ListTodo } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { AddTaskForm } from '@/features/tasks/components/AddTaskForm'
-import { useSubtaskCounts } from '@/features/tasks/hooks/useSubtasks'
 import { TaskItem } from '@/features/tasks/components/TaskItem'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { sortByPositionAndCreatedAt } from '@/lib/ordering'
@@ -109,7 +108,6 @@ export function TaskList({
   onMoveTask,
   onReorderTask,
 }: TaskListProps) {
-  const { data: subtaskCounts } = useSubtaskCounts(tasks.length > 0)
   const sections = useMemo(
     () => buildSections(tasks, categories, activeTab),
     [tasks, categories, activeTab]
@@ -187,8 +185,6 @@ export function TaskList({
               {section.tasks.map((task) => (
                 <TaskItem
                   categories={categories}
-                  totalCount={subtaskCounts?.[task.id]?.total ?? 0}
-                  completedCount={subtaskCounts?.[task.id]?.completed ?? 0}
                   key={task.id}
                   onCompleteTask={onCompleteTask}
                   onDeleteTask={onDeleteTask}

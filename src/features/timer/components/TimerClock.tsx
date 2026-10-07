@@ -64,7 +64,7 @@ export function TimerClock({
 
   return (
     <div
-      className={`timer-dial relative mx-auto flex h-[min(20rem,76vw)] w-[min(20rem,76vw)] shrink-0 items-center justify-center rounded-full sm:h-[min(25rem,45vh)] sm:w-[min(25rem,45vh)] ${phase === 'working' ? 'is-running' : ''}`}
+      className={`timer-dial relative mx-auto flex aspect-square w-full max-w-[32rem] [container-type:inline-size] shrink-0 items-center justify-center rounded-full sm:w-[min(32rem,calc(100svh-20rem),100%)] ${phase === 'working' ? 'is-running' : ''}`}
       style={
         {
           '--timer-accent': accent,
@@ -74,21 +74,21 @@ export function TimerClock({
     >
       <div className="relative z-[1] flex w-[78%] flex-col items-center">
         <p
-          className={`whitespace-nowrap font-medium leading-none tabular-nums text-ink-primary ${clock.length > 5 ? 'text-[48px] tracking-[-0.055em] sm:text-[70px] lg:text-[86px]' : 'text-[72px] tracking-[-0.065em] sm:text-[104px]'}`}
+          className={`whitespace-nowrap font-medium leading-none tabular-nums text-ink-primary ${clock.length > 5 ? 'text-[19cqw] tracking-[-0.055em]' : 'text-[27cqw] tracking-[-0.065em]'}`}
         >
           {clock}
         </p>
         {phase === 'working' || phase === 'breaking' ? (
-          <div className="mt-6">
-            <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-accent-primary">
+          <div className="mt-[5cqw]">
+            <p className="text-[clamp(11px,2.8cqw,15px)] font-medium uppercase tracking-[0.32em] text-accent-primary">
               {phase === 'working' ? 'Focus' : 'Recover'}
             </p>
           </div>
         ) : null}
         {supportingValue ? (
-          <div className="mt-6 text-center">
-            <p className="text-xs text-ink-tertiary sm:text-sm">Break earned</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-accent-primary sm:text-3xl">
+          <div className="mt-[6cqw] text-center">
+            <p className="text-[clamp(12px,3.2cqw,17px)] text-ink-tertiary">Break earned</p>
+            <p className="mt-1 text-[8cqw] font-semibold leading-tight tabular-nums text-accent-primary">
               {supportingValue}
             </p>
           </div>
