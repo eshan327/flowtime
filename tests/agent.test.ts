@@ -243,6 +243,11 @@ test('MCP and REST verify signed OAuth tokens, expose identical tools and fail c
   const discovery = await handler(new Request(config.resourceUrl + '/oauth-protected-resource'))
   assert.equal(discovery.status, 200)
   assert.equal((await discovery.json()).resource, config.resourceUrl)
+  const gatewayDiscovery = await handler(
+    new Request(config.resourceUrl.replace('/functions/v1', '') + '/oauth-protected-resource')
+  )
+  assert.equal(gatewayDiscovery.status, 200)
+  assert.equal((await gatewayDiscovery.json()).resource, config.resourceUrl)
   const missing = await handler(new Request(config.resourceUrl, { method: 'POST' }))
   assert.equal(missing.status, 401)
   assert.match(missing.headers.get('www-authenticate')!, /resource_metadata/)

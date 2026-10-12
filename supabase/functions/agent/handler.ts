@@ -72,7 +72,13 @@ export function createAgentHandler(config: AgentConfig) {
   const challenge = { 'WWW-Authenticate': `Bearer resource_metadata="${metadataUrl}"` }
   return async (request: Request): Promise<Response> => {
     try {
-      const path = new URL(request.url).pathname
+      const incomingPath = new URL(request.url).pathname
+      // Supabase's gateway strips /functions/v1 before forwarding to the worker.
+      const workerPath = resource.pathname.replace(/^\/functions\/v1(?=\/)/, '')
+      const path =
+        incomingPath === workerPath || incomingPath.startsWith(`${workerPath}/`)
+          ? resource.pathname + incomingPath.slice(workerPath.length)
+          : incomingPath
       if (request.method === 'GET' && path === `${resource.pathname}/oauth-protected-resource`) {
         return json({
           resource: config.resourceUrl,

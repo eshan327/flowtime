@@ -6,7 +6,9 @@ Expose Flowtime capabilities through one Supabase Edge Function, with an MCP tra
 
 Muse's suggestion correctly identifies Supabase as the data source, but its proposed administrator credential bypasses RLS. The attached ChatGPT assessment is the better starting point. One extra protection is essential: narrow tool definitions alone do not restrict a Supabase OAuth token's direct database access. The migration also restricts OAuth clients in Postgres.
 
-This is a connection foundation, not a published or activated plugin. Pushing the code does not enable Supabase OAuth, apply the migration, deploy the Edge Function, register clients, or connect either assistant. No OpenAI API key or model calls are needed: the assistant supplies the intelligence and Flowtime supplies tools.
+The backend was activated and smoke-tested on October 12, 2026: the migration is present, the Edge Function is deployed, Supabase OAuth and the private token hook are enabled, and public discovery responds successfully. The frontend includes the consent and connections routes. Dynamic registration is disabled. No permanent assistant clients are allowlisted yet, so neither ChatGPT nor Muse is connected and tool requests fail closed until registration.
+
+To finish linking, obtain each assistant's exact OAuth callback URL and supported client authentication method from its connection setup. Register a separate client, add its ID to `FLOWTIME_AGENT_CLIENT_IDS`, then complete the user's sign-in and consent in that assistant. For Muse, first confirm OAuth support; the screenshot does not establish it. Do not guess callback URLs or substitute an administrator key. No OpenAI API key or model calls are needed: the assistant supplies the intelligence and Flowtime supplies tools.
 
 ## Capabilities
 
@@ -90,7 +92,9 @@ pnpm format:check
 deno check --frozen --config supabase/functions/agent/deno.json supabase/functions/agent/index.ts
 ```
 
-Tests use signed test JWTs and mock Auth/Data API responses for the HTTP boundary, plus real embedded PostgreSQL (PGlite) and isolated schema fixtures for RLS. They verify ownership, cross-user denial, protected-table writes/deletes, audience checks, anonymous denial, browser behavior, token-hook privileges, retries, pagination, summaries, and MCP discovery/initialization/calls. They do not connect ChatGPT/Muse, issue tokens through hosted Supabase OAuth, or exercise live RLS under a real user session.
+Tests use signed test JWTs and mock Auth/Data API responses for the HTTP boundary, plus real embedded PostgreSQL (PGlite) and isolated schema fixtures for RLS. They verify ownership, cross-user denial, protected-table writes/deletes, audience checks, anonymous denial, browser behavior, token-hook privileges, retries, pagination, summaries, and MCP discovery/initialization/calls. They do not connect ChatGPT/Muse or replace hosted acceptance testing.
+
+A separate hosted smoke test on October 12, 2026 used a disposable account and public OAuth client. It verified normal password sign-in, consent, PKCE token exchange, dedicated token audience, authenticated tool access, refresh, task creation with an idempotent retry, completion, browser-token readback, direct OAuth task-deletion denial, and grant revocation preventing refresh. The temporary user/client were deleted and the client allowlist restored to empty. This did not exercise Google sign-in, the rendered consent UI, cross-account live isolation, timer round trips, or an actual ChatGPT/Muse connection; local policy tests cover cross-account isolation.
 
 Round-trip acceptance test: connect test user A, create a task from the assistant, verify it appears in the app, complete it in the app, then list completed tasks from the assistant. Repeat creation with the same UUID and verify one row. Start work in the app, check the assistant's timer snapshot, stop in the app, and compare saved history. Test user B must never see A's rows. Attempt a direct OAuth Data API timer/history write and task deletion: all must be rejected. Revoke the grant and verify refresh fails; retest after the access token expires.
 
