@@ -6,7 +6,7 @@ Expose Flowtime capabilities through one Supabase Edge Function, with an MCP tra
 
 Muse's suggestion correctly identifies Supabase as the data source, but its proposed administrator credential bypasses RLS. The attached ChatGPT assessment is the better starting point. One extra protection is essential: narrow tool definitions alone do not restrict a Supabase OAuth token's direct database access. The migration also restricts OAuth clients in Postgres.
 
-The backend was activated and smoke-tested on October 12, 2026: the migration is present, the Edge Function is deployed, Supabase OAuth and the private token hook are enabled, and public discovery responds successfully. The frontend includes the consent and connections routes. Dynamic registration is disabled. No permanent assistant clients are allowlisted yet, so neither ChatGPT nor Muse is connected and tool requests fail closed until registration.
+The backend was activated and smoke-tested on October 12, 2026: the migration is present, the Edge Function is deployed, Supabase OAuth and the private token hook are enabled, and public discovery responds successfully. The frontend includes the consent and connections routes. Dynamic registration is disabled. Muse is registered and allowlisted as a public OAuth client; ChatGPT registration remains pending. Muse still needs to configure its connector and initiate user consent before it can access account data.
 
 To finish linking, obtain each assistant's exact OAuth callback URL and supported client authentication method from its connection setup. Register a separate client, add its ID to `FLOWTIME_AGENT_CLIENT_IDS`, then complete the user's sign-in and consent in that assistant. For Muse, first confirm OAuth support; the screenshot does not establish it. Do not guess callback URLs or substitute an administrator key. No OpenAI API key or model calls are needed: the assistant supplies the intelligence and Flowtime supplies tools.
 
@@ -64,7 +64,16 @@ Official references: [OpenAI MCP connections](https://developers.openai.com/api/
 
 ### Muse
 
-The screenshot establishes that Muse can build a skill for an HTTP API; it does not establish which OAuth grants or MCP transports its connector currently supports. Prefer the same MCP endpoint if Muse supports OAuth-authenticated Streamable HTTP. Otherwise use the JSON API with an OAuth-capable credential manager:
+Muse confirmed authorization-code OAuth with S256 PKCE, client authentication `none`, and JSON API support (not arbitrary MCP connections). Its registered configuration is:
+
+- Client ID: `7b56d04e-3de8-4475-97e0-f153c34810d0` (public identifier, not a secret).
+- Exact callback: `https://agent.meta.ai/api/hatch/oauth/callback`.
+- Authorization endpoint: `https://dnnoyvwsvkdquijfdgtj.supabase.co/auth/v1/oauth/authorize`.
+- Token endpoint: `https://dnnoyvwsvkdquijfdgtj.supabase.co/auth/v1/oauth/token`.
+- Scopes: `openid offline_access`; resource: the canonical agent URL above.
+- Client secret: none. Send PKCE `code_challenge_method=S256` and exchange using the corresponding verifier.
+
+Registration readback, the allowlist digest, the PKCE redirect to the canonical consent page, and the unauthenticated API's 401 challenge were verified. Muse's actual connector and user consent remain pending. Use the JSON API:
 
 - `GET <agent URL>/tools` returns tool descriptions and JSON Schemas.
 - `POST <agent URL>/tools/<name>` executes that tool with a JSON argument object.
