@@ -16,6 +16,10 @@ const HistoryPage = lazy(() =>
   import('@/features/history/HistoryPage').then((mod) => ({ default: mod.HistoryPage }))
 )
 
+const ConnectionsPage = lazy(() =>
+  import('@/features/connections/ConnectionsPage').then((mod) => ({ default: mod.ConnectionsPage }))
+)
+
 export function Router() {
   return (
     <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
@@ -32,6 +36,8 @@ export function Router() {
             <Route element={<TasksPage />} path="/tasks" />
             <Route element={<StatsPage />} path="/stats" />
             <Route element={<HistoryPage />} path="/history" />
+            <Route element={<ConnectionsPage />} path="/connections" />
+            <Route element={<ConnectionsPage />} path="/oauth/consent" />
             <Route element={<Navigate replace to="/" />} path="*" />
           </Routes>
         </Suspense>

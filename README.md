@@ -65,6 +65,10 @@ Live app: https://flowtimeboard.vercel.app
 - Reusable domain workflows live in a dedicated feature (for example, [src/features/sessions](src/features/sessions)) and are imported directly by their consumers.
 - Shared data shapes live in [src/types](src/types); feature folders should not duplicate them.
 
+## AI Agent Connections
+
+Flowtime includes a user-scoped MCP and JSON API foundation for ChatGPT and Muse, plus OAuth consent and revocation screens. It is not activated by a frontend deploy: apply the restrictive policies and configure OAuth before connecting an assistant. See [agent architecture, setup, and verification](docs/agent-connections.md).
+
 ## Local Development
 
 1. Install dependencies:

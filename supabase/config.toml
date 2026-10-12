@@ -1,0 +1,3 @@
+# The handler validates OAuth JWTs; discovery must be reachable without one.
+[functions.agent]
+verify_jwt = false

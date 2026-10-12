@@ -12,7 +12,7 @@ import {
   LogIn,
   LogOut,
 } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { FlowtimeMark } from '@/components/FlowtimeMark'
 import { Modal } from '@/components/ui/Modal'
@@ -470,6 +470,14 @@ export function Layout({ children }: { children: ReactNode }) {
             </dd>
           </div>
         </dl>
+
+        <Link
+          to="/connections"
+          onClick={() => setIsAccountOpen(false)}
+          className="mt-5 block text-accent-primary underline"
+        >
+          Agent connections
+        </Link>
 
         <Button
           className="mt-5 w-full"
