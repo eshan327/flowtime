@@ -6,7 +6,7 @@ Expose Flowtime capabilities through one Supabase Edge Function, with an MCP tra
 
 Muse's suggestion correctly identifies Supabase as the data source, but its proposed administrator credential bypasses RLS. The attached ChatGPT assessment is the better starting point. One extra protection is essential: narrow tool definitions alone do not restrict a Supabase OAuth token's direct database access. The migration also restricts OAuth clients in Postgres.
 
-The backend was activated and smoke-tested on October 12, 2026: the migration is present, the Edge Function is deployed, Supabase OAuth and the private token hook are enabled, and public discovery responds successfully. The frontend includes the consent and connections routes. Dynamic registration is disabled. Muse is registered and allowlisted as a public OAuth client; ChatGPT registration remains pending. Muse still needs to configure its connector and initiate user consent before it can access account data.
+The backend was activated and smoke-tested on October 12, 2026: the migration is present, the Edge Function is deployed, Supabase OAuth and the private token hook are enabled, and public discovery responds successfully. The frontend includes the consent and connections routes. Dynamic registration is disabled. Muse is registered and allowlisted as a public OAuth client; ChatGPT is also registered and allowlisted; its ChatGPT-side sign-in/consent is pending verification. Muse still needs to configure its connector and initiate user consent before it can access account data.
 
 To finish linking, obtain each assistant's exact OAuth callback URL and supported client authentication method from its connection setup. Register a separate client, add its ID to `FLOWTIME_AGENT_CLIENT_IDS`, then complete the user's sign-in and consent in that assistant. For Muse, first confirm OAuth support; the screenshot does not establish it. Do not guess callback URLs or substitute an administrator key. No OpenAI API key or model calls are needed: the assistant supplies the intelligence and Flowtime supplies tools.
 
@@ -57,6 +57,10 @@ Remote start/stop, settings writes, category management, session edits, SQL, del
 8. Run the round-trip test below before connecting the account containing your real study history.
 
 ### ChatGPT
+
+A private portable plugin package is saved in `plugins/flowtime` and uploaded at https://chatgpt.com/plugins/plugins_6acd74e367fc81919cef8d88c11ad20b (release `pluginrel_6acd74e44d0c81918b89e6a9a7c08ff5`). The browser's separate custom MCP connection setup reached **Continue to Flowtime**; completion and live tool discovery are not yet verified. Package upload alone does not establish OAuth access.
+
+The ChatGPT custom MCP setup uses public client ID `f63444b4-d1b2-448d-b20c-194048a94eac`, auth method `none`, the exact displayed callback `https://chatgpt.com/connector/oauth/-_-dxb_gDlGD`, and base scopes `openid offline_access`. This client was registered and read back successfully; its ID was appended to the allowlist while preserving Muse's ID. Keep the current setup rather than recreating it: a new setup can generate a different callback URL. Complete user sign-in/consent in the host before testing a read-only tool. No client secret belongs in the package.
 
 Create a custom MCP connection/plugin using the agent URL and OAuth, with the registered client credentials if required. Use the exact callback URL displayed for that connection, not a guessed historical callback. Account/workspace eligibility and publishing are separate setup steps. The server supports stateless Streamable HTTP with JSON responses and exposes OAuth resource metadata in its 401 challenge. It does not implement the obsolete `ai-plugin.json` HTTP plugin protocol.
 
