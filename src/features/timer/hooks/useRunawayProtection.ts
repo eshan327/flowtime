@@ -1,18 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { getBreakSeconds } from '@/features/timer/stores/timerSettingsStore'
-import { MAX_SESSION_SECONDS } from '@/features/timer/stores/timerStore'
+import { getBreakSeconds, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
+import { MAX_SESSION_SECONDS, useTimerStore } from '@/features/timer/stores/timerStore'
 import type { SessionSnapshotInput } from '@/lib/sessionSnapshot'
 import type { TimerSessionSavePayload } from '@/features/timer/hooks/useTimerSessionPipeline'
 
 interface UseRunawayProtectionOptions {
-  sessionId: string | null
-  runawayDetected: boolean
-  startedAt: Date | null
+  enabled: boolean
   userId: string | undefined
   isSavingSession: boolean
-  selectedTaskId: string | null
-  breakDivisor: number
-  buildSessionSnapshot: () => SessionSnapshotInput
   saveTimerSession: (
     payload: TimerSessionSavePayload,
     snapshot: SessionSnapshotInput
@@ -20,16 +15,13 @@ interface UseRunawayProtectionOptions {
 }
 
 export function useRunawayProtection({
-  sessionId,
-  runawayDetected,
-  startedAt,
+  enabled,
   userId,
   isSavingSession,
-  selectedTaskId,
-  breakDivisor,
-  buildSessionSnapshot,
   saveTimerSession,
 }: UseRunawayProtectionOptions) {
+  const runawayDetected = useTimerStore((state) => state.runawayDetected)
+  const breakDivisor = useTimerSettingsStore((state) => state.breakDivisor)
   const runawaySaveKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -37,40 +29,32 @@ export function useRunawayProtection({
       runawaySaveKeyRef.current = null
       return
     }
-
-    if (!startedAt || !userId || isSavingSession) {
+    const timer = useTimerStore.getState()
+    if (!enabled || !timer.startedAt || !userId || timer.ownerUserId !== userId || isSavingSession)
       return
-    }
 
-    const saveKey = `${userId}:${startedAt.toISOString()}`
-    if (runawaySaveKeyRef.current === saveKey) {
-      return
-    }
-
+    const saveKey = `${userId}:${timer.sessionId ?? timer.startedAt.toISOString()}`
+    if (runawaySaveKeyRef.current === saveKey) return
     runawaySaveKeyRef.current = saveKey
 
-    const snapshot = buildSessionSnapshot()
     void saveTimerSession(
       {
-        id: sessionId ?? undefined,
+        id: timer.sessionId ?? undefined,
         user_id: userId,
-        task_id: selectedTaskId,
+        task_id: timer.selectedTaskId,
         work_seconds: MAX_SESSION_SECONDS,
         break_seconds: getBreakSeconds(MAX_SESSION_SECONDS, breakDivisor),
-        started_at: startedAt.toISOString(),
-        ended_at: new Date().toISOString(),
+        started_at: timer.startedAt.toISOString(),
+        ended_at: new Date(timer.startedAt.getTime() + MAX_SESSION_SECONDS * 1000).toISOString(),
       },
-      snapshot
+      {
+        taskIdSnapshot: timer.selectedTaskId,
+        taskNameSnapshot: timer.selectedTaskName,
+        taskColorSnapshot: timer.selectedTaskColor,
+        categoryIdSnapshot: timer.selectedCategoryId,
+        categoryNameSnapshot: timer.selectedCategoryName,
+        categoryColorSnapshot: timer.selectedCategoryColor,
+      }
     ).catch(() => undefined)
-  }, [
-    sessionId,
-    breakDivisor,
-    buildSessionSnapshot,
-    isSavingSession,
-    runawayDetected,
-    saveTimerSession,
-    selectedTaskId,
-    startedAt,
-    userId,
-  ])
+  }, [enabled, userId, isSavingSession, saveTimerSession, runawayDetected, breakDivisor])
 }

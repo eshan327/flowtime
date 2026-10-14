@@ -359,17 +359,13 @@ export async function runTool(db: AgentDatabase, userId: string, tool: ToolName,
           .maybeSingle()
       )
       const state = timer?.state
-      const fields = [
-        'phase',
-        'selectedTaskId',
-        'startedAt',
-        'breakEndAt',
-        'workSeconds',
-        'breakSeconds',
-      ]
+      const fields = ['phase', 'selectedTaskId', 'startedAt', 'breakEndAt', 'workSeconds']
       const snapshot =
         state && typeof state === 'object' && !Array.isArray(state)
-          ? Object.fromEntries(fields.map((key) => [key, state[key] ?? null]))
+          ? {
+              ...Object.fromEntries(fields.map((key) => [key, state[key] ?? null])),
+              breakSeconds: state.breakTotal ?? null,
+            }
           : null
       return {
         snapshot,

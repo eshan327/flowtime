@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { createContext, useCallback, useEffect, useState } from 'react'
 import { useSessionSave } from '@/features/sessions/hooks/useSessionSave'
 import {
   getQueuedSessions,
@@ -72,22 +72,6 @@ export function useTimerSessionPipeline({ userId }: UseTimerSessionPipelineOptio
     [mutateSession, refreshQueuedSessionCount]
   )
 
-  const retryLastSessionSave = useCallback(async () => {
-    const queuedSessions = await refreshQueuedSessionCount()
-    const pendingSession = saveSession.variables ?? queuedSessions[0]?.payload
-    if (!pendingSession) return
-
-    try {
-      await mutateSession(pendingSession)
-      await removeQueuedSession(pendingSession.id)
-      await refreshQueuedSessionCount()
-      setLastSaveQueued(false)
-    } catch {
-      setLastSaveQueued(true)
-      // The mutation retains the error so the retry control remains visible.
-    }
-  }, [mutateSession, refreshQueuedSessionCount, saveSession.variables])
-
   const flushQueuedSessions = useCallback(async () => {
     const queuedSessions = await refreshQueuedSessionCount()
 
@@ -107,19 +91,43 @@ export function useTimerSessionPipeline({ userId }: UseTimerSessionPipelineOptio
     }
   }, [mutateSession, refreshQueuedSessionCount])
 
+  const retryLastSessionSave = useCallback(async () => {
+    try {
+      const queuedSessions = await refreshQueuedSessionCount()
+      if (queuedSessions.length > 0) {
+        await flushQueuedSessions()
+        return
+      }
+      if (!saveSession.isError || !saveSession.variables) return
+      await mutateSession(saveSession.variables)
+      setLastSaveQueued(false)
+    } catch {
+      setLastSaveQueued(true)
+      // The mutation retains the error so the retry control remains visible.
+    }
+  }, [
+    flushQueuedSessions,
+    mutateSession,
+    refreshQueuedSessionCount,
+    saveSession.isError,
+    saveSession.variables,
+  ])
+
   useEffect(() => {
     if (!userId) return
 
     const handleOnline = () => {
-      void flushQueuedSessions()
+      void flushQueuedSessions().catch(setOutboxError)
     }
 
     const initialSyncTimeout = window.setTimeout(() => {
-      void refreshQueuedSessionCount().then((queuedSessions) => {
-        if (queuedSessions.length > 0 && navigator.onLine) {
-          void flushQueuedSessions()
-        }
-      })
+      void refreshQueuedSessionCount()
+        .then((queuedSessions) => {
+          if (queuedSessions.length > 0 && navigator.onLine) {
+            void flushQueuedSessions().catch(setOutboxError)
+          }
+        })
+        .catch(setOutboxError)
     }, 0)
 
     window.addEventListener('online', handleOnline)
@@ -139,3 +147,7 @@ export function useTimerSessionPipeline({ userId }: UseTimerSessionPipelineOptio
     isSavingSession: saveSession.isPending,
   }
 }
+
+export const TimerSessionContext = createContext<ReturnType<typeof useTimerSessionPipeline> | null>(
+  null
+)

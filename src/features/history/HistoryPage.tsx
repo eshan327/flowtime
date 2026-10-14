@@ -297,11 +297,14 @@ export function HistoryPage() {
     const selectedTask = values.taskId
       ? (sessionTasks.find((task) => task.id === values.taskId) ?? null)
       : null
-    const snapshot = !values.taskId
-      ? EMPTY_SESSION_SNAPSHOT
-      : selectedTask
-        ? snapshotTask(selectedTask)
-        : { ...snapshotSession(editingSession), taskIdSnapshot: values.taskId }
+    const snapshot =
+      values.taskId === editingSession.task_id
+        ? snapshotSession(editingSession)
+        : !values.taskId
+          ? EMPTY_SESSION_SNAPSHOT
+          : selectedTask
+            ? snapshotTask(selectedTask)
+            : { ...snapshotSession(editingSession), taskIdSnapshot: values.taskId }
 
     await updateSession.mutateAsync({
       id: values.id,

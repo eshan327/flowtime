@@ -19,6 +19,11 @@ import { Modal } from '@/components/ui/Modal'
 import { useUser } from '@/context/UserContext'
 import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useTimer } from '@/features/timer/hooks/useTimer'
+import { useRunawayProtection } from '@/features/timer/hooks/useRunawayProtection'
+import {
+  TimerSessionContext,
+  useTimerSessionPipeline,
+} from '@/features/timer/hooks/useTimerSessionPipeline'
 import { getQueuedSessionCount } from '@/features/sessions/lib/sessionOutbox'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -125,6 +130,13 @@ export function Layout({ children }: { children: ReactNode }) {
   const { user, timerReady, settingsSyncError } = useUser()
   const settingsPending = useTimerSettingsStore((state) => state.syncPending)
   useTimer(timerReady)
+  const sessions = useTimerSessionPipeline({ userId: user?.id })
+  useRunawayProtection({
+    enabled: timerReady,
+    userId: user?.id,
+    isSavingSession: sessions.isSavingSession,
+    saveTimerSession: sessions.saveTimerSession,
+  })
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const [isAccountOpen, setIsAccountOpen] = useState(false)
@@ -405,7 +417,11 @@ export function Layout({ children }: { children: ReactNode }) {
           ) : null}
 
           <main className="flex-1 px-4 py-6 md:px-10 md:py-12 xl:px-12">
-            <div className="mx-auto w-full max-w-[1320px]">{children}</div>
+            <div className="mx-auto w-full max-w-[1320px]">
+              <TimerSessionContext.Provider value={sessions}>
+                {children}
+              </TimerSessionContext.Provider>
+            </div>
           </main>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { CloudUpload, Settings2, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/Button'
@@ -6,9 +6,8 @@ import { Spinner } from '@/components/ui/Spinner'
 import { TaskSelector } from '@/features/timer/components/TaskSelector'
 import { TimerClock } from '@/features/timer/components/TimerClock'
 import { TimerControls } from '@/features/timer/components/TimerControls'
-import { useRunawayProtection } from '@/features/timer/hooks/useRunawayProtection'
 import { useTimerKeyboardShortcuts } from '@/features/timer/hooks/useTimerKeyboardShortcuts'
-import { useTimerSessionPipeline } from '@/features/timer/hooks/useTimerSessionPipeline'
+import { TimerSessionContext } from '@/features/timer/hooks/useTimerSessionPipeline'
 import { useTodaySummary } from '@/features/timer/hooks/useTodaySummary'
 import { getBreakSeconds, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
@@ -99,7 +98,7 @@ export function TimerPage() {
     lastSaveQueued,
     outboxError,
     isSavingSession,
-  } = useTimerSessionPipeline({ userId })
+  } = useContext(TimerSessionContext)!
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId)
   const selectedTaskIsSelectable = selectedTask
@@ -212,18 +211,6 @@ export function TimerPage() {
     if (!timerReady || !canStartWork || !userId) return
     startWork(userId)
   }, [timerReady, canStartWork, startWork, userId])
-
-  useRunawayProtection({
-    runawayDetected: timerReady && runawayDetected,
-    sessionId,
-    startedAt,
-    userId,
-    isSavingSession,
-    selectedTaskId,
-    breakDivisor,
-    buildSessionSnapshot,
-    saveTimerSession,
-  })
 
   const handleSkipBreak = useCallback(() => {
     if (timerReady) skipBreak()

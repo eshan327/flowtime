@@ -29,11 +29,7 @@ function toLocalInputValue(isoString: string) {
   const date = new Date(isoString)
   const offsetMs = date.getTimezoneOffset() * 60 * 1000
   const local = new Date(date.getTime() - offsetMs)
-  return local.toISOString().slice(0, 16)
-}
-
-function toIsoFromLocalInput(localValue: string) {
-  return new Date(localValue).toISOString()
+  return local.toISOString().slice(0, -1)
 }
 
 export function SessionEditModal({
@@ -154,6 +150,7 @@ function SessionEditModalContent({
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
             label="Started"
+            step="0.001"
             onChange={(event) => setStartedAt(event.target.value)}
             type="datetime-local"
             value={startedAt}
@@ -161,6 +158,7 @@ function SessionEditModalContent({
 
           <Input
             label="Ended"
+            step="0.001"
             onChange={(event) => setEndedAt(event.target.value)}
             type="datetime-local"
             value={endedAt}
@@ -200,20 +198,24 @@ function SessionEditModalContent({
                 return
               }
 
-              const startedIso = toIsoFromLocalInput(startedAt)
-              const endedIso = toIsoFromLocalInput(endedAt)
+              const parsedStart = new Date(
+                startedAt === toLocalInputValue(session.started_at) ? session.started_at : startedAt
+              )
+              const parsedEnd = new Date(
+                endedAt === toLocalInputValue(session.ended_at) ? session.ended_at : endedAt
+              )
 
-              if (Number.isNaN(new Date(startedIso).getTime())) {
+              if (Number.isNaN(parsedStart.getTime())) {
                 setValidationError('Start time is invalid.')
                 return
               }
 
-              if (Number.isNaN(new Date(endedIso).getTime())) {
+              if (Number.isNaN(parsedEnd.getTime())) {
                 setValidationError('End time is invalid.')
                 return
               }
 
-              if (new Date(endedIso).getTime() <= new Date(startedIso).getTime()) {
+              if (parsedEnd.getTime() <= parsedStart.getTime()) {
                 setValidationError('End time must be after start time.')
                 return
               }
@@ -226,8 +228,14 @@ function SessionEditModalContent({
                 taskId: taskId || null,
                 workSeconds: Math.round(parsedWorkMinutes * 60),
                 breakSeconds: Math.round(parsedBreakMinutes * 60),
-                startedAt: startedIso,
-                endedAt: endedIso,
+                startedAt:
+                  startedAt === toLocalInputValue(session.started_at)
+                    ? session.started_at
+                    : parsedStart.toISOString(),
+                endedAt:
+                  endedAt === toLocalInputValue(session.ended_at)
+                    ? session.ended_at
+                    : parsedEnd.toISOString(),
                 notes: normalizedNotes,
               })
             }}

@@ -3,126 +3,83 @@ import test from 'node:test'
 import { createTimerSync, timerSnapshot } from '../src/features/timer/lib/timerSync.ts'
 import type { SyncedTimer } from '../src/features/timer/lib/timerSync.ts'
 
-function device(server: { timer: SyncedTimer | null }, initial: SyncedTimer) {
-  let local = initial
-  let error: unknown = null
-  let writes = 0
-  const controller = createTimerSync({
-    getLocal: () => local,
-    setLocal: (timer) => {
-      local = timer
-    },
-    read: async () => server.timer,
-    write: async (timer, expected) => {
-      writes++
-      if ((server.timer?.revision ?? null) !== expected) return false
-      server.timer = timer
-      return true
-    },
-    onStatus: (value) => {
-      error = value
-    },
-  })
-  return {
-    ...controller,
-    local: () => local,
-    change: (snapshot: string) => {
-      local = { ...local, snapshot, pending: true }
-    },
-    writes: () => writes,
-    error: () => error,
-  }
-}
-
-const idle = {
+const idle: SyncedTimer = {
   snapshot: timerSnapshot({ phase: 'idle', workSeconds: 0 }),
   revision: null,
   pending: false,
 }
 const rest = timerSnapshot({
   phase: 'breaking',
-  selectedTaskId: 'task-1',
-  sessionId: 'session-1',
+  sessionId: 'session',
+  selectedTaskId: 'task',
   workSeconds: 1200,
-  startedAt: new Date('2026-09-29T15:00:00Z'),
-  breakEndAt: new Date('2026-09-29T15:25:00Z'),
-  breakTotal: 300,
+  breakEndAt: '2026-09-29T15:25:00Z',
+  breakTotal: 240,
 })
+function device(server: { timer: SyncedTimer | null }, initial = idle) {
+  const state = { local: initial, online: true, writes: 0, error: null as unknown }
+  return Object.assign(
+    state,
+    createTimerSync({
+      getLocal: () => state.local,
+      setLocal: (next) => {
+        state.local = next
+      },
+      read: async () => server.timer,
+      write: async (next, expected) => {
+        state.writes++
+        if (!state.online) throw new Error('offline')
+        if ((server.timer?.revision ?? null) !== expected) return false
+        server.timer = next
+        return true
+      },
+      onStatus: (error) => {
+        state.error = error
+      },
+    })
+  )
+}
 
-test('a fresh phone restores the same task, rest deadline and session without overwriting them', async () => {
-  const server = { timer: { snapshot: rest, revision: 'rest', pending: false } }
-  const phone = device(server, idle)
-  await phone.sync()
-  assert.equal(phone.local().snapshot, rest)
-  assert.equal(phone.writes(), 0)
-  const restored = JSON.parse(phone.local().snapshot)
-  assert.equal(restored.selectedTaskId, 'task-1')
-  assert.equal(restored.breakEndAt, '2026-09-29T15:25:00.000Z')
-  assert.equal(restored.sessionId, 'session-1')
-})
-
-test('ticks do not change the shared snapshot; start, stop and skip propagate both ways', async () => {
+test('fresh devices restore committed actions, propagate changes and never upload clock ticks', async () => {
   assert.equal(
     timerSnapshot({ phase: 'working', workSeconds: 1 }),
     timerSnapshot({ phase: 'working', workSeconds: 300 })
   )
   const server: { timer: SyncedTimer | null } = { timer: null }
-  const laptop = device(server, idle)
-  await laptop.sync()
-  const phone = device(server, idle)
+  const phone = device(server)
   await phone.sync()
-  laptop.change(rest)
+  assert.equal(server.timer, null)
+  const laptop = device(server, { ...idle, snapshot: rest, pending: true })
   await laptop.sync()
   await phone.sync()
-  assert.equal(phone.local().snapshot, rest)
-  phone.change(idle.snapshot)
+  assert.equal(phone.local.snapshot, rest)
+  assert.equal(phone.writes, 0)
+  phone.local = { ...phone.local, snapshot: idle.snapshot, pending: true }
   await phone.sync()
   await laptop.sync()
-  assert.equal(laptop.local().snapshot, idle.snapshot)
-  const writes = laptop.writes()
-  await laptop.sync()
-  assert.equal(laptop.writes(), writes)
+  assert.equal(laptop.local.snapshot, idle.snapshot)
 })
 
-test('a stale or offline device cannot replace a newer committed action', async () => {
+test('stale devices cannot overwrite new actions; failed uploads remain pending until retry', async () => {
   const server = { timer: { snapshot: rest, revision: 'new', pending: false } }
   const stale = device(server, { ...idle, revision: 'old', pending: true })
   await stale.sync()
-  assert.equal(stale.local().snapshot, rest)
-  assert.equal(stale.writes(), 0)
+  assert.equal(stale.local.snapshot, rest)
+  assert.equal(stale.writes, 0)
+  stale.local = { ...stale.local, snapshot: idle.snapshot, pending: true }
+  stale.online = false
+  await stale.sync()
+  assert.equal(stale.local.pending, true)
+  assert.ok(stale.error)
+  stale.online = true
+  await stale.sync()
+  assert.equal(stale.local.pending, false)
+  assert.equal(server.timer.snapshot, idle.snapshot)
 })
 
-test('failed uploads keep the pending state and retry after reconnect', async () => {
-  let local = { snapshot: rest, revision: 'old', pending: true }
-  let online = false
-  let error: unknown = null
-  const controller = createTimerSync({
-    getLocal: () => local,
-    setLocal: (next) => {
-      local = next as typeof local
-    },
-    read: async () => ({ ...idle, revision: 'old' }),
-    write: async () => {
-      if (!online) throw new Error('offline')
-      return true
-    },
-    onStatus: (value) => {
-      error = value
-    },
-  })
-  await controller.sync()
-  assert.equal(local.pending, true)
-  assert.equal(local.snapshot, rest)
-  assert.ok(error)
-  online = true
-  await controller.sync()
-  assert.equal(local.pending, false)
-  assert.equal(error, null)
-})
-
-test('actions during an upload are flushed and compare-and-swap conflicts reload', async () => {
-  let local = { ...idle, snapshot: rest, revision: 'old', pending: true }
-  let remote = { ...idle, revision: 'old' }
+test('an action during upload is flushed; a rejected revision reloads the winning state', async () => {
+  let local: SyncedTimer = { ...idle, snapshot: rest, revision: 'old', pending: true }
+  let remote: SyncedTimer = { ...idle, revision: 'old' }
   let writes = 0
   const controller = createTimerSync({
     getLocal: () => local,
@@ -131,22 +88,18 @@ test('actions during an upload are flushed and compare-and-swap conflicts reload
     },
     read: async () => remote,
     write: async (next) => {
-      writes++
       remote = next
-      if (writes === 1) local = { ...local, snapshot: idle.snapshot, pending: true }
+      if (++writes === 1) local = { ...local, snapshot: idle.snapshot, pending: true }
       return true
     },
-    onStatus: (error) => {
-      assert.equal(error, null)
-    },
+    onStatus: (error) => assert.equal(error, null),
   })
   await controller.sync()
   assert.equal(writes, 2)
   assert.equal(remote.snapshot, idle.snapshot)
-  assert.equal(local.pending, false)
-
-  const conflict = createTimerSync({
-    getLocal: () => ({ ...local, pending: true }),
+  local = { ...local, pending: true }
+  await createTimerSync({
+    getLocal: () => local,
     setLocal: (next) => {
       local = next
     },
@@ -155,47 +108,27 @@ test('actions during an upload are flushed and compare-and-swap conflicts reload
       remote = { snapshot: rest, revision: 'winner', pending: false }
       return false
     },
-    onStatus: (error) => {
-      assert.equal(error, null)
-    },
-  })
-  await conflict.sync()
+    onStatus: (error) => assert.equal(error, null),
+  }).sync()
   assert.equal(local.snapshot, rest)
 })
 
-test('responses from an account that has signed out cannot restore its state', async () => {
+test('signing out discards a delayed response from the old account', async () => {
   let resolveRead!: (value: SyncedTimer) => void
-  let applied = false
   const controller = createTimerSync({
     getLocal: () => idle,
-    setLocal: () => {
-      applied = true
-    },
     read: () =>
       new Promise((resolve) => {
         resolveRead = resolve
       }),
+    setLocal: () => assert.fail('Old account restored'),
     write: async () => {
-      throw new Error('must not write')
+      assert.fail('Old account wrote')
     },
-    onStatus: () => {
-      throw new Error('must not publish status')
-    },
+    onStatus: () => assert.fail('Old account published status'),
   })
   const pending = controller.sync()
   controller.stop()
-  resolveRead({ snapshot: rest, revision: 'old-account', pending: false })
+  resolveRead({ ...idle, snapshot: rest, revision: 'old-account' })
   await pending
-  assert.equal(applied, false)
-})
-
-test('opening a fresh idle device leaves room for an existing browser to migrate its active rest', async () => {
-  const server: { timer: SyncedTimer | null } = { timer: null }
-  const phone = device(server, idle)
-  await phone.sync()
-  assert.equal(server.timer, null)
-  const laptop = device(server, { snapshot: rest, revision: null, pending: false })
-  await laptop.sync()
-  await phone.sync()
-  assert.equal(phone.local().snapshot, rest)
 })

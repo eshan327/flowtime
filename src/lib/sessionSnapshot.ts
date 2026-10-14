@@ -1,5 +1,4 @@
-import { DEFAULT_NEUTRAL_COLOR } from '@/lib/colors'
-import type { Session, SessionWithTask, TaskWithCategory } from '@/types'
+import type { SessionWithTask, TaskWithCategory } from '@/types'
 
 export interface SessionSnapshotInput {
   taskIdSnapshot: string | null
@@ -31,14 +30,20 @@ export function snapshotTask(task: TaskWithCategory): SessionSnapshotInput {
 }
 
 export function snapshotSession(session: SessionWithTask): SessionSnapshotInput {
+  const hasSnapshot = session.task_id_snapshot !== null || session.task_name_snapshot !== null
   return {
-    taskIdSnapshot: session.task_id_snapshot ?? session.task_id,
-    taskNameSnapshot: session.tasks?.name ?? session.task_name_snapshot ?? null,
-    taskColorSnapshot: session.task_color_snapshot ?? session.tasks?.color ?? null,
-    categoryIdSnapshot: session.category_id_snapshot ?? session.tasks?.category_id ?? null,
-    categoryNameSnapshot: session.category_name_snapshot ?? session.tasks?.categories?.name ?? null,
-    categoryColorSnapshot:
-      session.category_color_snapshot ?? session.tasks?.categories?.color ?? null,
+    taskIdSnapshot: hasSnapshot ? session.task_id_snapshot : session.task_id,
+    taskNameSnapshot: hasSnapshot ? session.task_name_snapshot : (session.tasks?.name ?? null),
+    taskColorSnapshot: hasSnapshot ? session.task_color_snapshot : (session.tasks?.color ?? null),
+    categoryIdSnapshot: hasSnapshot
+      ? session.category_id_snapshot
+      : (session.tasks?.category_id ?? null),
+    categoryNameSnapshot: hasSnapshot
+      ? session.category_name_snapshot
+      : (session.tasks?.categories?.name ?? null),
+    categoryColorSnapshot: hasSnapshot
+      ? session.category_color_snapshot
+      : (session.tasks?.categories?.color ?? null),
   }
 }
 
@@ -50,28 +55,5 @@ export function snapshotColumns(snapshot: SessionSnapshotInput) {
     category_id_snapshot: snapshot.categoryIdSnapshot,
     category_name_snapshot: snapshot.categoryNameSnapshot,
     category_color_snapshot: snapshot.categoryColorSnapshot,
-  }
-}
-
-export function hydrateSession(session: Session, snapshot: SessionSnapshotInput): SessionWithTask {
-  return {
-    ...session,
-    ...snapshotColumns(snapshot),
-    tasks: snapshot.taskIdSnapshot
-      ? {
-          id: snapshot.taskIdSnapshot,
-          name: snapshot.taskNameSnapshot ?? 'Task',
-          color: snapshot.taskColorSnapshot,
-          category_id: snapshot.categoryIdSnapshot,
-          categories: snapshot.categoryIdSnapshot
-            ? {
-                id: snapshot.categoryIdSnapshot,
-                name: snapshot.categoryNameSnapshot ?? 'Category',
-                color: snapshot.categoryColorSnapshot ?? DEFAULT_NEUTRAL_COLOR,
-                archived_at: null,
-              }
-            : null,
-        }
-      : null,
   }
 }

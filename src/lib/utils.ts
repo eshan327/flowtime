@@ -62,12 +62,15 @@ function aggregateSessionsByKeys(
   sessions: SessionWithTask[],
   keys: string[],
   unit: 'day' | 'hour',
-  getKey: (date: Date) => string
+  getKey: (date: Date) => string,
+  from?: Date,
+  to?: Date
 ) {
   const map = createAggregateMap(keys)
 
   for (const session of sessions) {
     for (const slice of splitSessionTime(session, unit)) {
+      if ((from && slice.start < from) || (to && slice.start > to)) continue
       const entry = map.get(getKey(slice.start))
       if (!entry) continue
 
@@ -153,7 +156,14 @@ export function aggregateByWeek(sessions: SessionWithTask[], from: Date, to: Dat
     keys.push(toLocalDateKey(weekStart))
   }
 
-  return aggregateSessionsByKeys(sessions, keys, 'day', (date) => toLocalDateKey(toWeekStart(date)))
+  return aggregateSessionsByKeys(
+    sessions,
+    keys,
+    'day',
+    (date) => toLocalDateKey(toWeekStart(date)),
+    from,
+    to
+  )
 }
 
 export function aggregateByCategory(sessions: SessionWithTask[]): CategorySummary[] {
@@ -223,7 +233,7 @@ export function aggregateByTask(sessions: SessionWithTask[]): TaskSummary[] {
     map.set(mapKey, {
       taskId,
       taskName,
-      categoryName: session.category_name_snapshot ?? session.tasks?.categories?.name ?? null,
+      categoryName: snapshot.categoryNameSnapshot,
       color: snapshot.taskColorSnapshot ?? snapshot.categoryColorSnapshot ?? DEFAULT_NEUTRAL_COLOR,
       totalSeconds: session.work_seconds,
       sessionCount: 1,

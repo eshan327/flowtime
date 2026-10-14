@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from '@/components/ui/Layout'
 import { Spinner } from '@/components/ui/Spinner'
+import { useUser } from '@/context/UserContext'
 
 const TimerPage = lazy(() =>
   import('@/features/timer/TimerPage').then((mod) => ({ default: mod.TimerPage }))
@@ -21,9 +22,10 @@ const ConnectionsPage = lazy(() =>
 )
 
 export function Router() {
+  const { user } = useUser()
   return (
     <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-      <Layout>
+      <Layout key={user?.id}>
         <Suspense
           fallback={
             <div className="flex h-[60vh] items-center justify-center">

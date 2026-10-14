@@ -104,13 +104,24 @@ export function useCategories() {
 
       const cached = queryClient.getQueryData<Category[]>(queryKeys.categories(userId)) ?? []
       const activeCategories = cached.filter((category) => category.archived_at === null)
+      if (!activeCategories.some((category) => category.id === id)) return
       const reordered = sortByPositionAndCreatedAt(
         activeCategories.map((category) =>
           category.id === id ? { ...category, position: newPosition } : category
         )
-      ).map((category, position) => ({ ...category, position }))
-      const { error } = await supabase.from('categories').upsert(reordered, { onConflict: 'id' })
-      if (error) throw error
+      )
+      await Promise.all(
+        reordered.map(async (category, position) => {
+          if (category.id !== id && category.position === position) return
+          const { error } = await supabase
+            .from('categories')
+            .update({ position })
+            .eq('id', category.id)
+            .eq('user_id', userId)
+            .is('archived_at', null)
+          if (error) throw error
+        })
+      )
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.categories(user?.id) }),
   })

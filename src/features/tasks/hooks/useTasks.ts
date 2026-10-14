@@ -10,19 +10,6 @@ import type { Task, TaskWithCategory } from '@/types'
 const TASK_WITH_CATEGORY_SELECT =
   'id, user_id, category_id, name, color, position, completed_at, created_at, categories(id, name, color, archived_at)'
 
-function toTaskRow(task: TaskWithCategory, position: number): Task {
-  return {
-    id: task.id,
-    user_id: task.user_id,
-    category_id: task.category_id,
-    name: task.name,
-    color: task.color,
-    position,
-    completed_at: task.completed_at,
-    created_at: task.created_at,
-  }
-}
-
 export function useTasks() {
   const queryClient = useQueryClient()
   const { user } = useUser()
@@ -146,21 +133,32 @@ export function useTasks() {
       const cached = queryClient.getQueryData<TaskWithCategory[]>(queryKeys.tasks(userId)) ?? []
       const movedTask = cached.find((task) => task.id === id)
       if (!movedTask) return
-
       const bucket = cached.filter(
         (task) =>
           task.completed_at === null &&
           task.category_id === movedTask.category_id &&
-          task.user_id === movedTask.user_id
+          task.user_id === userId
       )
-
       const reordered = sortByPositionAndCreatedAt(
         bucket.map((task) => (task.id === id ? { ...task, position: newPosition } : task))
-      ).map((task, index) => toTaskRow(task, index))
-      const { error } = await supabase.from('tasks').upsert(reordered, {
-        onConflict: 'id',
-      })
-      if (error) throw error
+      )
+      await Promise.all(
+        reordered.map(async (task, position) => {
+          if (task.id !== id && task.position === position) return
+          let request = supabase
+            .from('tasks')
+            .update({ position })
+            .eq('id', task.id)
+            .eq('user_id', userId)
+            .is('completed_at', null)
+          request =
+            movedTask.category_id === null
+              ? request.is('category_id', null)
+              : request.eq('category_id', movedTask.category_id)
+          const { error } = await request
+          if (error) throw error
+        })
+      )
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
   })

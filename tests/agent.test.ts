@@ -301,3 +301,22 @@ test('MCP and REST verify signed OAuth tokens, expose identical tools and fail c
   assert.equal(databaseReads, 2)
   assert.equal((await createAgentHandler({ ...config, clientIds: [] })(request())).status, 503)
 })
+
+test('timer responses expose the saved break total as breakSeconds', async () => {
+  const { db } = database([
+    {
+      state: {
+        phase: 'breaking',
+        workSeconds: 3600,
+        breakTotal: 720,
+        breakEndAt: '2026-10-13T18:00:00Z',
+      },
+      revision: 'revision',
+    },
+    { timezone: 'America/New_York', break_divisor: 5 },
+  ])
+  const result = await runTool(db, userId, 'get_timer', {})
+  assert.ok('snapshot' in result && result.snapshot)
+  assert.equal(result.snapshot.breakSeconds, 720)
+  assert.equal(result.snapshot.workSeconds, 3600)
+})
