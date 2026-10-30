@@ -86,6 +86,12 @@ export async function setup() {
       'utf8'
     )
   )
+  await db.exec(
+    await readFile(
+      new URL('../../supabase/migrations/20261030034114_empty_trash.sql', import.meta.url),
+      'utf8'
+    )
+  )
   await db.exec(`insert into private.flowtime_agent_clients values ('${client}');`)
   async function claims(user = owner, oauth = false, extra = {}) {
     await db.exec('reset role')

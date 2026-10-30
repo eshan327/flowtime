@@ -118,7 +118,7 @@ export function TasksPage() {
           setActiveTab(category.id)
         }}
       />
-      <Trash />
+      {resolvedActiveTab === 'all' ? <Trash /> : null}
     </section>
   )
 }

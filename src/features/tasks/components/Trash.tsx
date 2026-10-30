@@ -20,27 +20,50 @@ export function Trash() {
     enabled: !!user,
     refetchInterval: 5000,
   })
+  const invalidateTrash = () =>
+    Promise.all([
+      client.invalidateQueries({ queryKey: ['trash', user?.id] }),
+      client.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
+      client.invalidateQueries({ queryKey: queryKeys.categories(user?.id) }),
+      client.invalidateQueries({ queryKey: queryKeys.sessions(user?.id) }),
+    ])
+  const emptyTrash = useMutation({
+    mutationFn: () => commandFlowtime('empty_trash', { confirmed: true }),
+    onSuccess: invalidateTrash,
+  })
   const restore = useMutation({
     mutationFn: ({ kind, id }: { kind: string; id: string }) =>
       commandFlowtime(kind, { operations: [{ action: 'restore', id }] }),
-    onSuccess: () =>
-      Promise.all([
-        client.invalidateQueries({ queryKey: ['trash', user?.id] }),
-        client.invalidateQueries({ queryKey: queryKeys.tasks(user?.id) }),
-        client.invalidateQueries({ queryKey: queryKeys.categories(user?.id) }),
-        client.invalidateQueries({ queryKey: queryKeys.sessions(user?.id) }),
-      ]),
+    onSuccess: invalidateTrash,
   })
   return (
     <details className="w-full border-y border-surface-border p-4">
       <summary className="cursor-pointer font-medium">Trash</summary>
-      <p className="my-3 text-sm text-ink-secondary">
-        Restoring a category keeps its previous archive status and reveals its tasks. Individually
-        trashed tasks stay in Trash.
-      </p>
+      {query.data &&
+      (query.data.categories.length > 0 ||
+        query.data.tasks.length > 0 ||
+        query.data.sessions.length > 0) ? (
+        <Button
+          className="my-3"
+          size="sm"
+          disabled={restore.isPending}
+          loading={emptyTrash.isPending}
+          onClick={() => {
+            if (
+              window.confirm(
+                'Permanently delete everything in Trash, including tasks in trashed categories? This cannot be undone.'
+              )
+            ) {
+              emptyTrash.mutate()
+            }
+          }}
+        >
+          Empty Trash
+        </Button>
+      ) : null}
       {query.isLoading ? <p>Loading…</p> : null}
-      {query.error || restore.error ? (
-        <p role="alert">{(query.error ?? restore.error)?.message}</p>
+      {query.error || restore.error || emptyTrash.error ? (
+        <p role="alert">{(query.error ?? restore.error ?? emptyTrash.error)?.message}</p>
       ) : null}
       {query.data?.categories.map((c) => (
         <div key={c.id} className="flex items-center justify-between gap-3 py-2">
@@ -51,6 +74,7 @@ export function Trash() {
           <Button
             size="sm"
             loading={restore.isPending}
+            disabled={emptyTrash.isPending}
             onClick={() => restore.mutate({ kind: 'categories', id: c.id })}
           >
             Restore
@@ -65,7 +89,7 @@ export function Trash() {
           </span>
           <Button
             size="sm"
-            disabled={!t.deleted_at || !!t.categories?.deleted_at}
+            disabled={emptyTrash.isPending || !t.deleted_at || !!t.categories?.deleted_at}
             loading={restore.isPending}
             onClick={() => restore.mutate({ kind: 'tasks', id: t.id })}
           >
@@ -81,6 +105,7 @@ export function Trash() {
           <Button
             size="sm"
             loading={restore.isPending}
+            disabled={emptyTrash.isPending}
             onClick={() => restore.mutate({ kind: 'sessions', id: s.id })}
           >
             Restore session

@@ -415,3 +415,69 @@ test('explicitly clearing attribution works after a legacy task deletion, while 
   assert.equal((await read('session', { id })).task_id_snapshot, null)
   assert.equal((await read('session', { id })).task_name_snapshot, null)
 })
+
+test('empty Trash requires browser confirmation, isolates users and preserves surviving history', async (t) => {
+  const { db, command, read, claims } = await setup()
+  t.after(() => db.close())
+  const category = crypto.randomUUID()
+  const task = crypto.randomUUID()
+  const active = crypto.randomUUID()
+  const session = crypto.randomUUID()
+  const trashedSession = crypto.randomUUID()
+  await command('categories', {
+    operations: [{ action: 'create', id: category, name: 'Deleted course' }],
+  })
+  await command('tasks', {
+    operations: [
+      { action: 'create', id: task, name: 'Keep history', category_id: category },
+      { action: 'create', id: active, name: 'Active' },
+    ],
+  })
+  for (const id of [session, trashedSession]) {
+    await command('sessions', {
+      operations: [
+        {
+          action: 'create',
+          id,
+          task_id: task,
+          started_at: '2026-01-01T12:00:00Z',
+          ended_at: '2026-01-01T12:01:00Z',
+          work_seconds: 60,
+        },
+      ],
+    })
+  }
+  const snapshot = (await read('session', { id: session })).task_name_snapshot
+  await command('sessions', { operations: [{ action: 'trash', id: trashedSession }] })
+  await command('categories', { operations: [{ action: 'trash', id: category }] })
+  await claims(other)
+  const otherTask = crypto.randomUUID()
+  await command('tasks', { operations: [{ action: 'create', id: otherTask, name: 'Other trash' }] })
+  await command('tasks', { operations: [{ action: 'trash', id: otherTask }] })
+  await claims()
+  await assert.rejects(command('empty_trash', {}), /Confirm permanent/)
+  await db.query('select public.flowtime_access($1,true)', [client])
+  await claims(owner, true)
+  await assert.rejects(command('empty_trash', { confirmed: true }), /only in the Flowtime app/)
+  await claims()
+  const request = crypto.randomUUID()
+  await command('empty_trash', { confirmed: true }, request)
+  await command('empty_trash', { confirmed: true }, request)
+  for (const operation of ['tasks', 'categories', 'sessions']) {
+    assert.equal(
+      (
+        await read(operation, {
+          trash: 'only',
+          ...(operation === 'tasks' ? { status: 'all' } : {}),
+        })
+      ).items.length,
+      0
+    )
+  }
+  assert.equal((await read('tasks')).items[0].id, active)
+  const kept = await read('session', { id: session })
+  assert.equal(kept.task_id, null)
+  assert.equal(kept.task_name_snapshot, snapshot)
+  await claims(other)
+  assert.equal((await read('tasks', { trash: 'only' })).items[0].id, otherTask)
+})
