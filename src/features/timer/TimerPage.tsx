@@ -18,6 +18,7 @@ import { useUser } from '@/context/UserContext'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { formatDuration } from '@/lib/formatting'
 import { sendTimerCommand, useTimerCommandStatus } from '@/features/timer/hooks/useTimerSync'
+import { resolveTimerTask } from '@/features/timer/lib/timerTask'
 import { TimerRecovery } from '@/features/timer/components/TimerRecovery'
 
 const loadTimerSettings = () => import('@/features/timer/components/TimerSettingsModal')
@@ -40,17 +41,19 @@ export function TimerPage() {
     }))
   )
 
-  const { phase, breakEndAt, breakTotal, selectedTaskId, selectedTaskName, runawayDetected } =
-    useTimerStore(
-      useShallow((state) => ({
-        phase: state.phase,
-        breakEndAt: state.breakEndAt,
-        breakTotal: state.breakTotal,
-        selectedTaskId: state.selectedTaskId,
-        selectedTaskName: state.selectedTaskName,
-        runawayDetected: state.runawayDetected,
-      }))
-    )
+  const timer = useTimerStore(
+    useShallow((state) => ({
+      phase: state.phase,
+      breakEndAt: state.breakEndAt,
+      breakTotal: state.breakTotal,
+      selectedTaskId: state.selectedTaskId,
+      selectedTaskName: state.selectedTaskName,
+      selectedTaskColor: state.selectedTaskColor,
+      runawayDetected: state.runawayDetected,
+    }))
+  )
+
+  const { phase, breakEndAt, breakTotal, selectedTaskId, runawayDetected } = timer
 
   const { saveSession, retryLastSessionSave, queuedSessionCount, lastSaveQueued, outboxError } =
     useContext(TimerSessionContext)!
@@ -59,8 +62,8 @@ export function TimerPage() {
   const selectedTaskIsSelectable = selectedTask
     ? selectedTask.category_id === null || selectedTask.categories?.archived_at === null
     : false
-  const selectedTaskColor =
-    selectedTask?.categories?.color ?? selectedTask?.color ?? DEFAULT_TASK_COLOR
+  const displayedTask = resolveTimerTask(timer, selectedTaskIsSelectable ? selectedTask : undefined)
+  const selectedTaskColor = displayedTask?.color ?? DEFAULT_TASK_COLOR
   const canStartWork = Boolean(selectedTask && selectedTaskIsSelectable)
 
   const todaySummary = useTodaySummary()
@@ -113,8 +116,9 @@ export function TimerPage() {
             onSelectTask={(taskId) => {
               void sendTimerCommand('select_task', taskId)
             }}
-            selectedTaskId={selectedTaskId}
-            selectedTaskName={selectedTaskName}
+            selectedTaskId={displayedTask?.id ?? null}
+            selectedTaskName={displayedTask?.name}
+            selectedTaskColor={displayedTask?.color}
             shortcutsBlocked={isSettingsOpen}
             shortcutsEnabled={shortcutsEnabled}
             tasks={selectableTasks}

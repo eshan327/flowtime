@@ -11,6 +11,7 @@ interface TaskSelectorProps {
   tasks: TaskWithCategory[]
   categories: Category[]
   selectedTaskName?: string | null
+  selectedTaskColor?: string | null
   selectedTaskId: string | null
   onSelectTask: (taskId: string | null) => void
   onQuickAddTask?: (name: string) => Promise<string | null> | string | null
@@ -46,6 +47,7 @@ export function TaskSelector({
   categories,
   selectedTaskId,
   selectedTaskName,
+  selectedTaskColor,
   onSelectTask,
   onQuickAddTask,
   disabled = false,
@@ -193,7 +195,10 @@ export function TaskSelector({
                   className="mr-2.5 inline-block h-2.5 w-2.5 rounded-full"
                   style={{
                     backgroundColor:
-                      selectedTask?.categories?.color ?? selectedTask?.color ?? DEFAULT_TASK_COLOR,
+                      selectedTask?.categories?.color ??
+                      selectedTask?.color ??
+                      selectedTaskColor ??
+                      DEFAULT_TASK_COLOR,
                   }}
                 />
               ) : null}
