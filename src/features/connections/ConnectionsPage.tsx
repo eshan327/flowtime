@@ -183,6 +183,11 @@ export function ConnectionsPage() {
           {!authorizationId && grants.data && (
             <>
               <p className="text-sm text-ink-secondary">
+                Expanded control lets an assistant manage task context, categories and Trash,
+                correct or manually add study history, control your timer, and update synced
+                settings. Enable it only for an assistant you trust with these changes.
+              </p>
+              <p className="text-sm text-ink-secondary">
                 Disabling expanded control blocks those operations immediately. Revoking also stops
                 token refresh. Basic access may remain usable until it expires.
               </p>
