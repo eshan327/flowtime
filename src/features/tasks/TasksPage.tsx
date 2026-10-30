@@ -1,4 +1,3 @@
-import { Trash } from '@/features/tasks/components/Trash'
 import { useState } from 'react'
 import { Spinner } from '@/components/ui/Spinner'
 import { AddCategoryForm } from '@/features/tasks/components/AddCategoryForm'
@@ -118,7 +117,6 @@ export function TasksPage() {
           setActiveTab(category.id)
         }}
       />
-      {resolvedActiveTab === 'all' ? <Trash /> : null}
     </section>
   )
 }
