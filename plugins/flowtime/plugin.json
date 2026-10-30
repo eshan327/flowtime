@@ -1,22 +1,24 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "flowtime",
-  "version": "1.0.0",
-  "description": "Manage Flowtime tasks and understand recorded study sessions through your connected account.",
   "author": {
-    "name": "Eshan"
+    "email": "eshank142236@gmail.com",
+    "name": "Eshan Khan"
   },
+  "description": "Manage Flowtime tasks, categories, recorded history, synced preferences and focus timer through your connected account.",
   "extensions": {
     "com.openai": {
       "interface": {
-        "displayName": "Flowtime",
-        "shortDescription": "Tasks and study insights",
-        "longDescription": "Read and manage tasks, review recorded focus history, and inspect the last synchronized study timer. Requires your Flowtime account. Timer control and deletion are not supported.",
-        "developerName": "Eshan",
         "category": "Productivity",
         "defaultPrompt": "Review my Flowtime tasks and recent study sessions.",
-        "logo": "./assets/icon.png"
+        "developerName": "Eshan Khan",
+        "displayName": "Flowtime",
+        "logo": "./assets/icon.png",
+        "longDescription": "Manage tasks and categories with recoverable trash, review and correct recorded focus history, update synced preferences, and control the focus timer. Expanded control requires approval in your existing Flowtime connection.",
+        "shortDescription": "Focus control and study insights",
+        "capabilities": []
       }
     }
-  }
+  },
+  "name": "flowtime",
+  "version": "2.0.0"
 }

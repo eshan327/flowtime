@@ -67,7 +67,7 @@ Live app: https://flowtimeboard.vercel.app
 
 ## AI Agent Connections
 
-Flowtime includes a user-scoped MCP and JSON API foundation for ChatGPT and Muse, plus OAuth consent and revocation screens. It is not activated by a frontend deploy: apply the restrictive policies and configure OAuth before connecting an assistant. See [agent architecture, setup, and verification](docs/agent-connections.md).
+Flowtime includes a user-scoped MCP and JSON API foundation for ChatGPT and Muse, plus OAuth consent and revocation screens. The expanded integration adds transactional timer control, recoverable trash, history corrections, synced settings and compact ChatGPT controls. Expanded privileges require explicit approval for the existing connection in Agent connections. See [agent architecture, setup, and verification](docs/agent-connections.md).
 
 ## Local Development
 
@@ -122,7 +122,7 @@ Optional fallback:
 
 ## Schema Migrations
 
-This checkout does not currently contain a committed schema baseline. Capture and review the linked project's current schema before introducing the next database migration. Keep applied migration files in Git even when a later migration reverses them; Supabase Preview compares their versions with the remote history. After schema changes, run:
+A schema-only baseline is captured in `supabase/baseline/20261029.json` for review and isolated tests; do not apply it as a production migration. Inspect linked migration history before introducing the next database migration. Keep applied migration files in Git even when a later migration reverses them; Supabase Preview compares their versions with the remote history. After schema changes, run:
 
 ```bash
 supabase db push
