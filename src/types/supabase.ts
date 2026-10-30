@@ -4,7 +4,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.5'
+    PostgrestVersion: '14.15'
   }
   public: {
     Tables: {
@@ -31,6 +31,7 @@ export type Database = {
           archived_at: string | null
           color: string
           created_at: string
+          deleted_at: string | null
           id: string
           name: string
           position: number
@@ -40,6 +41,7 @@ export type Database = {
           archived_at?: string | null
           color?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name: string
           position?: number
@@ -49,6 +51,7 @@ export type Database = {
           archived_at?: string | null
           color?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name?: string
           position?: number
@@ -65,8 +68,10 @@ export type Database = {
           deleted_at: string | null
           edited_at: string | null
           ended_at: string
+          entry_source: string
           id: string
           notes: string | null
+          run_id: string | null
           started_at: string
           task_color_snapshot: string | null
           task_id: string | null
@@ -83,8 +88,10 @@ export type Database = {
           deleted_at?: string | null
           edited_at?: string | null
           ended_at?: string
+          entry_source?: string
           id?: string
           notes?: string | null
+          run_id?: string | null
           started_at: string
           task_color_snapshot?: string | null
           task_id?: string | null
@@ -101,8 +108,10 @@ export type Database = {
           deleted_at?: string | null
           edited_at?: string | null
           ended_at?: string
+          entry_source?: string
           id?: string
           notes?: string | null
+          run_id?: string | null
           started_at?: string
           task_color_snapshot?: string | null
           task_id?: string | null
@@ -165,9 +174,14 @@ export type Database = {
           color: string | null
           completed_at: string | null
           created_at: string
+          deleted_at: string | null
+          due_date: string | null
           id: string
           name: string
+          notes: string | null
           position: number
+          priority: string | null
+          reference_url: string | null
           user_id: string
         }
         Insert: {
@@ -175,9 +189,14 @@ export type Database = {
           color?: string | null
           completed_at?: string | null
           created_at?: string
+          deleted_at?: string | null
+          due_date?: string | null
           id?: string
           name: string
+          notes?: string | null
           position?: number
+          priority?: string | null
+          reference_url?: string | null
           user_id: string
         }
         Update: {
@@ -185,9 +204,14 @@ export type Database = {
           color?: string | null
           completed_at?: string | null
           created_at?: string
+          deleted_at?: string | null
+          due_date?: string | null
           id?: string
           name?: string
+          notes?: string | null
           position?: number
+          priority?: string | null
+          reference_url?: string | null
           user_id?: string
         }
         Relationships: [
@@ -238,7 +262,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      flowtime_access: {
+        Args: { approve?: boolean; client?: string }
+        Returns: Json
+      }
+      flowtime_command: {
+        Args: { input: Json; operation: string; request_id: string }
+        Returns: Json
+      }
+      flowtime_read: {
+        Args: { input?: Json; operation: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
