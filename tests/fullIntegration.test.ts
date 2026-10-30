@@ -387,3 +387,31 @@ test('a zero-second rounded midnight slice does not inflate the streak', async (
   assert.equal(summary.by_day[0].work_seconds, 0)
   assert.equal(summary.by_day[1].work_seconds, 1)
 })
+
+test('explicitly clearing attribution works after a legacy task deletion, while note-only edits preserve snapshots', async (t) => {
+  const { db, command, read } = await setup()
+  t.after(() => db.close())
+  const task = crypto.randomUUID(),
+    id = crypto.randomUUID()
+  await command('tasks', { operations: [{ action: 'create', id: task, name: 'Historical task' }] })
+  await command('sessions', {
+    operations: [
+      {
+        action: 'create',
+        id,
+        task_id: task,
+        started_at: '2026-10-01T12:00:00Z',
+        ended_at: '2026-10-01T13:00:00Z',
+        work_seconds: 3600,
+      },
+    ],
+  })
+  await db.query('update sessions set task_id=null where id=$1', [id])
+  await command('sessions', {
+    operations: [{ action: 'update', id, notes: 'Keep historical attribution' }],
+  })
+  assert.equal((await read('session', { id })).task_name_snapshot, 'Historical task')
+  await command('sessions', { operations: [{ action: 'update', id, task_id: null }] })
+  assert.equal((await read('session', { id })).task_id_snapshot, null)
+  assert.equal((await read('session', { id })).task_name_snapshot, null)
+})

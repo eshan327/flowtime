@@ -24,7 +24,7 @@ import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { getRangeDatesForAnchor } from '@/lib/dateRange'
 import { workSecondsInDateRange } from '@/lib/sessionTime'
 import { getErrorMessage } from '@/lib/errorMessages'
-import { EMPTY_SESSION_SNAPSHOT, snapshotSession, snapshotTask } from '@/lib/sessionSnapshot'
+import { snapshotSession } from '@/lib/sessionSnapshot'
 import type { SessionWithTask, TimeRange } from '@/types'
 
 type HistoryRange = TimeRange | 'all-time' | 'custom'
@@ -300,28 +300,19 @@ export function HistoryPage() {
   const handleSaveSessionEdit = async (values: SessionEditValues) => {
     if (!editingSession) return
 
-    const selectedTask = values.taskId
-      ? (sessionTasks.find((task) => task.id === values.taskId) ?? null)
-      : null
-    const snapshot =
-      values.taskId === editingSession.task_id
-        ? snapshotSession(editingSession)
-        : !values.taskId
-          ? EMPTY_SESSION_SNAPSHOT
-          : selectedTask
-            ? snapshotTask(selectedTask)
-            : { ...snapshotSession(editingSession), taskIdSnapshot: values.taskId }
-
-    await updateSession.mutateAsync({
-      id: values.id,
-      taskId: values.taskId,
-      workSeconds: values.workSeconds,
-      breakSeconds: values.breakSeconds,
-      startedAt: values.startedAt,
-      endedAt: values.endedAt,
-      notes: values.notes,
-      snapshot,
-    })
+    const changes = {
+      ...(values.taskChanged ? { taskId: values.taskId } : {}),
+      ...(values.workSeconds !== editingSession.work_seconds
+        ? { workSeconds: values.workSeconds }
+        : {}),
+      ...(values.breakSeconds !== editingSession.break_seconds
+        ? { breakSeconds: values.breakSeconds }
+        : {}),
+      ...(values.startedAt !== editingSession.started_at ? { startedAt: values.startedAt } : {}),
+      ...(values.endedAt !== editingSession.ended_at ? { endedAt: values.endedAt } : {}),
+      ...(values.notes !== editingSession.notes ? { notes: values.notes } : {}),
+    }
+    if (Object.keys(changes).length) await updateSession.mutateAsync({ id: values.id, ...changes })
     setEditingSession(null)
   }
 

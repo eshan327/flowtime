@@ -10,6 +10,7 @@ import type { SessionWithTask, TaskWithCategory } from '@/types'
 export interface SessionEditValues {
   id: string
   taskId: string | null
+  taskChanged: boolean
   workSeconds: number
   breakSeconds: number
   startedAt: string
@@ -77,7 +78,9 @@ function SessionEditModalContent({
   onSave,
 }: SessionEditModalContentProps) {
   const [timezone] = useState(() => useTimerSettingsStore.getState().timezone)
-  const [taskId, setTaskId] = useState<string>(session.task_id ?? '')
+  const [taskChanged, setTaskChanged] = useState(false)
+  const initialTaskId = session.task_id ?? snapshotSession(session).taskIdSnapshot
+  const [taskId, setTaskId] = useState<string>(initialTaskId ?? '')
   const [workMinutes, setWorkMinutes] = useState(
     String(Math.max(0, Number((session.work_seconds / 60).toFixed(2))))
   )
@@ -90,17 +93,17 @@ function SessionEditModalContent({
   const [validationError, setValidationError] = useState<string | null>(null)
 
   const currentTaskFallbackOption = useMemo(() => {
-    if (!session.task_id) return null
-    if (tasks.some((task) => task.id === session.task_id)) return null
+    if (!initialTaskId) return null
+    if (tasks.some((task) => task.id === initialTaskId)) return null
 
     const fallbackTaskName = snapshotSession(session).taskNameSnapshot
     if (!fallbackTaskName) return null
 
     return {
-      id: session.task_id,
+      id: initialTaskId,
       name: `${fallbackTaskName} (not active)`,
     }
-  }, [session, tasks])
+  }, [session, tasks, initialTaskId])
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit session">
@@ -112,7 +115,10 @@ function SessionEditModalContent({
           <p className="mb-2 text-xs uppercase tracking-[0.1em] text-ink-tertiary">Task</p>
           <select
             className="h-10 w-full rounded-lg border border-surface-border-subtle bg-surface-sidebar px-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
-            onChange={(event) => setTaskId(event.target.value)}
+            onChange={(event) => {
+              setTaskId(event.target.value)
+              setTaskChanged(true)
+            }}
             value={taskId}
           >
             <option value="">No task</option>
@@ -239,6 +245,7 @@ function SessionEditModalContent({
               void onSave({
                 id: session.id,
                 taskId: taskId || null,
+                taskChanged,
                 workSeconds: Math.round(parsedWorkMinutes * 60),
                 breakSeconds: Math.round(parsedBreakMinutes * 60),
                 startedAt:

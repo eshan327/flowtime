@@ -1,18 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useUser } from '@/context/UserContext'
 import { queryKeys } from '@/lib/queryKeys'
-import type { SessionSnapshotInput } from '@/lib/sessionSnapshot'
 import { commandFlowtime } from '@/lib/flowtimeApi'
 
 export interface SessionUpdateInput {
   id: string
-  taskId: string | null
-  workSeconds: number
-  breakSeconds: number
-  startedAt: string
-  endedAt: string
-  notes: string | null
-  snapshot: SessionSnapshotInput
+  taskId?: string | null
+  workSeconds?: number
+  breakSeconds?: number
+  startedAt?: string
+  endedAt?: string
+  notes?: string | null
 }
 
 export function useSessionMutations() {
@@ -28,12 +26,12 @@ export function useSessionMutations() {
       mutate({
         action: 'update',
         id: p.id,
-        task_id: p.taskId,
-        work_seconds: p.workSeconds,
-        break_seconds: p.breakSeconds,
-        started_at: p.startedAt,
-        ended_at: p.endedAt,
-        notes: p.notes,
+        ...(p.taskId !== undefined ? { task_id: p.taskId } : {}),
+        ...(p.workSeconds !== undefined ? { work_seconds: p.workSeconds } : {}),
+        ...(p.breakSeconds !== undefined ? { break_seconds: p.breakSeconds } : {}),
+        ...(p.startedAt !== undefined ? { started_at: p.startedAt } : {}),
+        ...(p.endedAt !== undefined ? { ended_at: p.endedAt } : {}),
+        ...(p.notes !== undefined ? { notes: p.notes } : {}),
       }),
     onSuccess: invalidate,
   })
