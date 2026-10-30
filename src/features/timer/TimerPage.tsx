@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useContext, useMemo, useState } from 'react'
 import { CloudUpload, Settings2, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/components/ui/Button'
@@ -9,7 +9,7 @@ import { TimerControls } from '@/features/timer/components/TimerControls'
 import { useTimerKeyboardShortcuts } from '@/features/timer/hooks/useTimerKeyboardShortcuts'
 import { TimerSessionContext } from '@/features/timer/hooks/useTimerSessionPipeline'
 import { useTodaySummary } from '@/features/timer/hooks/useTodaySummary'
-import { getBreakSeconds, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
+import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { useCategories } from '@/features/tasks/hooks/useCategories'
@@ -17,7 +17,8 @@ import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { useUser } from '@/context/UserContext'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { formatDuration } from '@/lib/formatting'
-import { snapshotTask } from '@/lib/sessionSnapshot'
+import { sendTimerCommand, useTimerCommandStatus } from '@/features/timer/hooks/useTimerSync'
+import { TimerRecovery } from '@/features/timer/components/TimerRecovery'
 
 const loadTimerSettings = () => import('@/features/timer/components/TimerSettingsModal')
 const TimerSettingsModal = lazy(() =>
@@ -27,15 +28,8 @@ const TimerSettingsModal = lazy(() =>
 export function TimerPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
-  const { user, timerReady, timerSyncError } = useUser()
-  const userId = user?.id
-  const {
-    activeTasks: tasks,
-    addTask,
-    isLoading: tasksLoading,
-    isFetching: tasksFetching,
-    error: tasksError,
-  } = useTasks()
+  const { timerReady, timerSyncError } = useUser()
+  const { activeTasks: tasks, addTask, isLoading: tasksLoading, error: tasksError } = useTasks()
   const { categories, isLoading: categoriesLoading } = useCategories()
 
   const { breakDivisor, focusModeLock, shortcutsEnabled } = useTimerSettingsStore(
@@ -46,59 +40,20 @@ export function TimerPage() {
     }))
   )
 
-  const {
-    phase,
-    sessionId,
-    breakEndAt,
-    breakTotal,
-    startedAt,
-    selectedTaskId,
-    selectedTaskName,
-    selectedTaskColorSnapshot,
-    selectedCategoryId,
-    selectedCategoryName,
-    selectedCategoryColor,
-    runawayDetected,
-    dismissRunaway,
-    startWork,
-    stopWork,
-    skipBreak,
-    setSelectedTask,
-    setSelectedTaskSnapshot,
-    clearUnavailableTask,
-  } = useTimerStore(
-    useShallow((state) => ({
-      phase: state.phase,
-      sessionId: state.sessionId,
-      breakEndAt: state.breakEndAt,
-      breakTotal: state.breakTotal,
-      startedAt: state.startedAt,
-      selectedTaskId: state.selectedTaskId,
-      selectedTaskName: state.selectedTaskName,
-      selectedTaskColorSnapshot: state.selectedTaskColor,
-      selectedCategoryId: state.selectedCategoryId,
-      selectedCategoryName: state.selectedCategoryName,
-      selectedCategoryColor: state.selectedCategoryColor,
-      runawayDetected: state.runawayDetected,
-      dismissRunaway: state.dismissRunaway,
-      startWork: state.startWork,
-      stopWork: state.stopWork,
-      skipBreak: state.skipBreak,
-      setSelectedTask: state.setSelectedTask,
-      setSelectedTaskSnapshot: state.setSelectedTaskSnapshot,
-      clearUnavailableTask: state.clearUnavailableTask,
-    }))
-  )
+  const { phase, breakEndAt, breakTotal, selectedTaskId, selectedTaskName, runawayDetected } =
+    useTimerStore(
+      useShallow((state) => ({
+        phase: state.phase,
+        breakEndAt: state.breakEndAt,
+        breakTotal: state.breakTotal,
+        selectedTaskId: state.selectedTaskId,
+        selectedTaskName: state.selectedTaskName,
+        runawayDetected: state.runawayDetected,
+      }))
+    )
 
-  const {
-    saveSession,
-    saveTimerSession,
-    retryLastSessionSave,
-    queuedSessionCount,
-    lastSaveQueued,
-    outboxError,
-    isSavingSession,
-  } = useContext(TimerSessionContext)!
+  const { saveSession, retryLastSessionSave, queuedSessionCount, lastSaveQueued, outboxError } =
+    useContext(TimerSessionContext)!
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId)
   const selectedTaskIsSelectable = selectedTask
@@ -119,102 +74,17 @@ export function TimerPage() {
     [tasks]
   )
 
-  const buildSessionSnapshot = useCallback(
-    () =>
-      selectedTask
-        ? snapshotTask(selectedTask)
-        : {
-            taskIdSnapshot: selectedTaskId,
-            taskNameSnapshot: selectedTaskName,
-            taskColorSnapshot: selectedTaskColorSnapshot,
-            categoryIdSnapshot: selectedCategoryId,
-            categoryNameSnapshot: selectedCategoryName,
-            categoryColorSnapshot: selectedCategoryColor,
-          },
-    [
-      selectedTask,
-      selectedTaskId,
-      selectedTaskName,
-      selectedTaskColorSnapshot,
-      selectedCategoryId,
-      selectedCategoryName,
-      selectedCategoryColor,
-    ]
-  )
-
-  useEffect(() => {
-    if (!timerReady || tasksLoading || tasksFetching || tasksError) return
-    if (!selectedTaskIsSelectable) {
-      clearUnavailableTask(selectableTasks)
-      return
-    }
-    if (!selectedTask) return
-
-    setSelectedTaskSnapshot({
-      name: selectedTask.name,
-      color: selectedTaskColor,
-      categoryId: selectedTask.category_id,
-      categoryName: selectedTask.categories?.name ?? null,
-      categoryColor: selectedTask.categories?.color ?? null,
-    })
-  }, [
-    timerReady,
-    tasksLoading,
-    tasksFetching,
-    tasksError,
-    phase,
-    runawayDetected,
-    selectedTaskId,
-    selectableTasks,
-    clearUnavailableTask,
-    selectedTask,
-    selectedTaskIsSelectable,
-    selectedTaskColor,
-    setSelectedTaskSnapshot,
-  ])
-
+  const runDivisor = useTimerStore((s) => s.runBreakDivisor)
+  const commandError = useTimerCommandStatus((state) => state.error)
   const handleStopWork = useCallback(() => {
-    if (!timerReady || isSavingSession || useTimerStore.getState().phase !== 'working') return
-
-    const workSeconds = useTimerStore.getState().workSeconds
-    const snapshot = buildSessionSnapshot()
-    if (startedAt && userId) {
-      void saveTimerSession(
-        {
-          id: sessionId ?? undefined,
-          user_id: userId,
-          task_id: selectedTaskId,
-          work_seconds: workSeconds,
-          break_seconds: getBreakSeconds(workSeconds, breakDivisor),
-          started_at: startedAt.toISOString(),
-          ended_at: new Date().toISOString(),
-        },
-        snapshot
-      ).catch(() => undefined)
-    }
-
-    stopWork({ breakDivisor })
-  }, [
-    timerReady,
-    sessionId,
-    breakDivisor,
-    buildSessionSnapshot,
-    isSavingSession,
-    saveTimerSession,
-    selectedTaskId,
-    startedAt,
-    stopWork,
-    userId,
-  ])
-
+    if (timerReady) void sendTimerCommand('stop_work')
+  }, [timerReady])
   const handleStartWork = useCallback(() => {
-    if (!timerReady || !canStartWork || !userId) return
-    startWork(userId)
-  }, [timerReady, canStartWork, startWork, userId])
-
+    if (timerReady && canStartWork) void sendTimerCommand('start_work')
+  }, [timerReady, canStartWork])
   const handleSkipBreak = useCallback(() => {
-    if (timerReady) skipBreak()
-  }, [timerReady, skipBreak])
+    if (timerReady) void sendTimerCommand('skip_break')
+  }, [timerReady])
 
   useTimerKeyboardShortcuts({
     enabled: timerReady && shortcutsEnabled,
@@ -240,7 +110,9 @@ export function TimerPage() {
               const createdTask = await addTask.mutateAsync({ name, categoryId: null })
               return createdTask.id
             }}
-            onSelectTask={(taskId) => setSelectedTask(taskId, userId)}
+            onSelectTask={(taskId) => {
+              void sendTimerCommand('select_task', taskId)
+            }}
             selectedTaskId={selectedTaskId}
             selectedTaskName={selectedTaskName}
             shortcutsBlocked={isSettingsOpen}
@@ -280,7 +152,7 @@ export function TimerPage() {
           <TimerClock
             accentColor={selectedTaskColor}
             breakEndAt={breakEndAt}
-            breakDivisor={breakDivisor}
+            breakDivisor={phase === 'working' ? (runDivisor ?? breakDivisor) : breakDivisor}
             breakTotal={breakTotal}
             key={phase}
             phase={phase}
@@ -313,6 +185,12 @@ export function TimerPage() {
             </p>
           ) : null}
 
+          {commandError ? (
+            <p role="alert" className="mt-3 text-sm text-red-300">
+              {commandError}
+            </p>
+          ) : null}
+          <TimerRecovery />
           {queuedSessionCount > 0 ? (
             <div
               aria-live="polite"
@@ -376,7 +254,9 @@ export function TimerPage() {
               <Button
                 aria-label="Dismiss runaway warning"
                 className="p-0 transition hover:bg-amber-900/40"
-                onClick={dismissRunaway}
+                onClick={() => {
+                  void sendTimerCommand('acknowledge_runaway')
+                }}
                 size="icon"
                 variant="ghost"
               >

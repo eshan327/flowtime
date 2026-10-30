@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && tsc -p tsconfig.agent.json && vite build",
-    "format": "prettier --write src supabase/functions/agent tests/agent*.test.ts",
-    "format:check": "prettier --check src supabase/functions/agent tests/agent*.test.ts",
+    "format": "prettier --write src supabase/functions/agent tests/agent*.test.ts tests/fullIntegration.test.ts tests/timerCommands.test.ts tests/helpers/*.ts",
+    "format:check": "prettier --check src supabase/functions/agent tests/agent*.test.ts tests/fullIntegration.test.ts tests/timerCommands.test.ts tests/helpers/*.ts",
     "lint": "eslint src supabase/functions/agent --ext .ts,.tsx",
     "prepare": "git config core.hooksPath .githooks || true",
     "preview": "vite preview",

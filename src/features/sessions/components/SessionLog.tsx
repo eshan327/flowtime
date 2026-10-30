@@ -1,3 +1,4 @@
+import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useMemo, useState } from 'react'
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -15,8 +16,9 @@ interface SessionLogProps {
   focusRange?: { from: Date | null; to: Date | null }
 }
 
-function toDateLabel(isoString: string) {
+function toDateLabel(isoString: string, timezone: string) {
   return new Date(isoString).toLocaleDateString('en-US', {
+    timeZone: timezone,
     weekday: 'long',
     month: 'short',
     day: 'numeric',
@@ -24,8 +26,9 @@ function toDateLabel(isoString: string) {
   })
 }
 
-function toTimeLabel(isoString: string) {
+function toTimeLabel(isoString: string, timezone: string) {
   return new Date(isoString).toLocaleTimeString('en-US', {
+    timeZone: timezone,
     hour: 'numeric',
     minute: '2-digit',
   })
@@ -43,6 +46,7 @@ export function SessionLog({
   pageSize = 12,
   focusRange,
 }: SessionLogProps) {
+  const timezone = useTimerSettingsStore((s) => s.timezone)
   const [page, setPage] = useState(1)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
@@ -80,10 +84,11 @@ export function SessionLog({
       {pageSessions.map((session, index) => {
         const snapshot = snapshotSession(session)
         const displayStart = getDisplayStart(session, focusRange?.from)
-        const dateLabel = toDateLabel(displayStart)
+        const dateLabel = toDateLabel(displayStart, timezone)
         const showDateHeader =
           index === 0 ||
-          toDateLabel(getDisplayStart(pageSessions[index - 1], focusRange?.from)) !== dateLabel
+          toDateLabel(getDisplayStart(pageSessions[index - 1], focusRange?.from), timezone) !==
+            dateLabel
 
         return (
           <div key={session.id}>
@@ -94,9 +99,14 @@ export function SessionLog({
             ) : null}
 
             <div className="grid gap-3 border-b border-surface-border-subtle px-3 py-4 transition-colors hover:bg-surface-hover/20 md:grid-cols-[94px_minmax(0,1.3fr)_minmax(0,1fr)_110px_110px_minmax(0,1.2fr)_36px] md:items-center md:gap-4">
-              <p className="text-xs tabular-nums text-ink-tertiary">{toTimeLabel(displayStart)}</p>
+              <p className="text-xs tabular-nums text-ink-tertiary">
+                {toTimeLabel(displayStart, timezone)}
+              </p>
               <p className="truncate text-sm text-ink-primary">
                 {snapshot.taskNameSnapshot ?? 'No task'}
+                {session.entry_source === 'manual' ? (
+                  <span className="ml-2 text-xs text-ink-tertiary"> · Manual</span>
+                ) : null}
               </p>
               <p className="flex min-w-0 items-center gap-2 text-xs text-ink-secondary">
                 <span

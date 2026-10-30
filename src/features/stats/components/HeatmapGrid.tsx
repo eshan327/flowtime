@@ -1,3 +1,5 @@
+import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
+import { dateKeyInZone } from '@/lib/timezone'
 import { useMemo, useState } from 'react'
 import { DEFAULT_NEUTRAL_COLOR, EMPTY_HEATMAP_COLOR } from '@/lib/colors'
 import { formatDuration } from '@/lib/formatting'
@@ -43,12 +45,13 @@ function getHeatmapColor(day: HeatmapDay) {
 }
 
 export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapGridProps) {
+  const timezone = useTimerSettingsStore((s) => s.timezone)
   const [tooltip, setTooltip] = useState<HeatmapTooltipState | null>(null)
 
   const { weeks, monthRanges } = useMemo(() => {
     const map = new Map(data.map((entry) => [entry.date, entry]))
 
-    const today = new Date()
+    const today = new Date(dateKeyInZone(new Date(), timezone) + 'T00:00:00')
     today.setHours(0, 0, 0, 0)
 
     const currentWeekStart = new Date(today)
@@ -99,7 +102,7 @@ export function HeatmapGrid({ data, selectedDate = null, onSelectDay }: HeatmapG
     }))
 
     return { weeks: nextWeeks, monthRanges: ranges }
-  }, [data])
+  }, [data, timezone])
 
   const tooltipPosition = useMemo(() => {
     if (!tooltip || typeof window === 'undefined') return null

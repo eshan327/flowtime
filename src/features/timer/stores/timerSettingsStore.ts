@@ -68,6 +68,7 @@ interface TimerSettingsState {
   ownerUserId: string | null
   syncRevision: string | null
   syncPending: boolean
+  setTimezone: (value: string) => void
   setBreakDivisor: (value: number) => void
   setChimeEnabled: (enabled: boolean) => void
   setChimeId: (chimeId: ChimeOptionId) => void
@@ -85,6 +86,12 @@ export const useTimerSettingsStore = create<TimerSettingsState>()(
       ownerUserId: null,
       syncRevision: null,
       syncPending: false,
+      setTimezone: (timezone) =>
+        set({
+          timezone: new Intl.DateTimeFormat('en', { timeZone: timezone }).resolvedOptions()
+            .timeZone,
+          syncPending: true,
+        }),
       setBreakDivisor: (value) =>
         set({ breakDivisor: sanitizeBreakDivisor(value), syncPending: true }),
       setChimeEnabled: (enabled) => set({ chimeEnabled: enabled, syncPending: true }),

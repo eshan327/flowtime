@@ -1,3 +1,4 @@
+import { TaskContextModal } from './TaskContextModal'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, GripVertical, MoreHorizontal, Trash2 } from 'lucide-react'
@@ -43,6 +44,7 @@ export function TaskItem({
 }: TaskItemProps) {
   const accentColor = task.categories?.color ?? task.color ?? DEFAULT_TASK_COLOR
 
+  const [showDetails, setShowDetails] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [draftName, setDraftName] = useState(task.name)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -180,6 +182,7 @@ export function TaskItem({
 
   return (
     <div className="relative">
+      {showDetails ? <TaskContextModal task={task} onClose={() => setShowDetails(false)} /> : null}
       {dropPlacement === 'before' ? (
         <span className="absolute -top-1 left-0 right-0 h-0.5 bg-ink-primary" />
       ) : null}
@@ -427,6 +430,17 @@ export function TaskItem({
                       </div>
                     ) : null}
 
+                    <Button
+                      className="w-full justify-start"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        closeMenu()
+                        setShowDetails(true)
+                      }}
+                    >
+                      Task details
+                    </Button>
                     {task.category_id === null ? (
                       <Button
                         className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
@@ -445,7 +459,7 @@ export function TaskItem({
                       className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-sm text-red-300 transition hover:bg-surface-hover"
                       onClick={() => {
                         const confirmed = window.confirm(
-                          `Delete ${task.name} permanently? Its session history will be preserved.`
+                          `Move ${task.name} to Trash? Its session history will be preserved.`
                         )
                         if (!confirmed) return
 

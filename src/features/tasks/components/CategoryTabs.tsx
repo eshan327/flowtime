@@ -274,7 +274,7 @@ export function CategoryTabs({
                       onClick={() => {
                         if (
                           !window.confirm(
-                            `Delete ${selectedCategory.name} permanently? Its tasks will become uncategorized.`
+                            `Move ${selectedCategory.name} and its tasks to Trash? You can restore them later.`
                           )
                         )
                           return

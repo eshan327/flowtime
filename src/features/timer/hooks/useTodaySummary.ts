@@ -1,41 +1,24 @@
 import { useQuery } from '@tanstack/react-query'
 import { useUser } from '@/context/UserContext'
-import { queryKeys } from '@/lib/queryKeys'
-import { fetchSessionTimeRows } from '@/features/sessions/api/sessionQueries'
-import { workSecondsInDateRange } from '@/lib/sessionTime'
-
-interface TodaySummary {
-  count: number
-  totalWorkSeconds: number
-}
-
+import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
+import { fetchFocusSummary } from '@/lib/focusSummary'
+import { dateKeyInZone } from '@/lib/timezone'
 export function useTodaySummary() {
   const { user } = useUser()
-
-  const startOfToday = new Date()
-  startOfToday.setHours(0, 0, 0, 0)
-  const endOfToday = new Date(startOfToday)
-  endOfToday.setDate(endOfToday.getDate() + 1)
-  endOfToday.setTime(endOfToday.getTime() - 1)
-
-  return useQuery<TodaySummary>({
-    queryKey: queryKeys.sessionsTodaySummary(user?.id, startOfToday.toISOString()),
-    queryFn: async () => {
-      const sessions = await fetchSessionTimeRows({
-        userId: user!.id,
-        fromIso: startOfToday.toISOString(),
-        toIso: endOfToday.toISOString(),
-      })
-      const totalWorkSeconds = sessions.reduce(
-        (sum, session) => sum + workSecondsInDateRange(session, startOfToday, endOfToday),
-        0
-      )
-
-      return {
-        count: sessions.length,
-        totalWorkSeconds,
-      }
-    },
+  const timezone = useTimerSettingsStore((s) => s.timezone)
+  return useQuery({
+    queryKey: [
+      'sessions',
+      user?.id,
+      'today-summary',
+      dateKeyInZone(new Date(), timezone),
+      timezone,
+    ],
     enabled: !!user,
+    refetchInterval: 5000,
+    queryFn: async () => {
+      const s = await fetchFocusSummary({ period: 'day', timezone })
+      return { count: s.session_count, totalWorkSeconds: s.work_seconds }
+    },
   })
 }

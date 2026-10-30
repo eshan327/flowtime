@@ -20,6 +20,8 @@ export interface SessionExportRecord {
   categoryName: string
   categoryColor: string | null
   notes: string | null
+  entrySource: string
+  runId: string | null
   editedAt: string | null
 }
 
@@ -98,6 +100,8 @@ function toSessionExportRecord(session: SessionWithTask): SessionExportRecord {
     categoryColor: snapshot.categoryColorSnapshot,
     notes: session.notes,
     editedAt: session.edited_at,
+    entrySource: session.entry_source ?? 'legacy',
+    runId: session.run_id ?? null,
   }
 }
 
@@ -143,6 +147,8 @@ const CSV_FIELDS = [
   ['category_color', 'categoryColor'],
   ['notes', 'notes'],
   ['edited_at', 'editedAt'],
+  ['entry_source', 'entrySource'],
+  ['run_id', 'runId'],
 ] as const satisfies ReadonlyArray<readonly [string, keyof SessionExportRecord]>
 
 function serializeSessionExportCsv(records: SessionExportRecord[]) {

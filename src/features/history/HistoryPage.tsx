@@ -1,3 +1,7 @@
+import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
+import { midnightInZone, shiftDateKey } from '@/lib/timezone'
+import { ManualSessionModal } from '@/features/sessions/components/ManualSessionModal'
+import { Trash } from '@/features/tasks/components/Trash'
 import { useMemo, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronRight, Download, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -18,7 +22,6 @@ import { useHistorySessions } from '@/features/history/hooks/useHistorySessions'
 import { useCategories } from '@/features/tasks/hooks/useCategories'
 import { useTasks } from '@/features/tasks/hooks/useTasks'
 import { getRangeDatesForAnchor } from '@/lib/dateRange'
-import { toEndOfDay, toStartOfDay } from '@/lib/dateMath'
 import { workSecondsInDateRange } from '@/lib/sessionTime'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { EMPTY_SESSION_SNAPSHOT, snapshotSession, snapshotTask } from '@/lib/sessionSnapshot'
@@ -56,7 +59,8 @@ function toParsedDate(value: string) {
 function getHistoryWindow(
   range: HistoryRange,
   customFrom: string,
-  customTo: string
+  customTo: string,
+  timezone: string
 ): HistoryWindow | null {
   if (range === 'all-time') {
     return { from: null, to: null }
@@ -72,12 +76,12 @@ function getHistoryWindow(
     }
 
     return {
-      from: toStartOfDay(parsedFrom),
-      to: toEndOfDay(parsedTo),
+      from: midnightInZone(customFrom, timezone),
+      to: midnightInZone(shiftDateKey(customTo, 1), timezone),
     }
   }
 
-  return getRangeDatesForAnchor(range, new Date())
+  return getRangeDatesForAnchor(range, new Date(), timezone)
 }
 
 function isWithinWindow(value: string | null | undefined, from: Date | null, to: Date | null) {
@@ -96,7 +100,7 @@ function isWithinWindow(value: string | null | undefined, from: Date | null, to:
     return false
   }
 
-  if (to && time > to.getTime()) {
+  if (to && time >= to.getTime()) {
     return false
   }
 
@@ -176,6 +180,8 @@ function ArchivedItemsSection<T extends { id: string }>({
 }
 
 export function HistoryPage() {
+  const timezone = useTimerSettingsStore((s) => s.timezone)
+  const [manualOpen, setManualOpen] = useState(false)
   const now = useMemo(() => new Date(), [])
   const [range, setRange] = useState<HistoryRange>('month')
   const [customFrom, setCustomFrom] = useState(
@@ -213,8 +219,8 @@ export function HistoryPage() {
   )
 
   const historyWindow = useMemo(
-    () => getHistoryWindow(range, customFrom, customTo),
-    [range, customFrom, customTo]
+    () => getHistoryWindow(range, customFrom, customTo, timezone),
+    [range, customFrom, customTo, timezone]
   )
   const isHistoryWindowValid = historyWindow !== null
   const isAllTimeRange = range === 'all-time'
@@ -371,6 +377,9 @@ export function HistoryPage() {
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-surface-border pb-5">
         <h1 className="text-4xl font-semibold tracking-[-0.045em]">History</h1>
         <div className="flex gap-2">
+          <Button size="sm" onClick={() => setManualOpen(true)}>
+            Add session
+          </Button>
           {(['csv', 'json'] as const).map((format) => (
             <Button
               disabled={!isHistoryWindowValid || sessionsLoading}
@@ -527,7 +536,7 @@ export function HistoryPage() {
 
       <ArchivedItemsSection
         deleteConfirmation={(category) =>
-          `Delete ${category.name} permanently? Its tasks will become uncategorized.`
+          `Move ${category.name} and its tasks to Trash? You can restore them later.`
         }
         emptyMessage="No archived categories."
         items={filteredArchivedCategories}
@@ -549,7 +558,7 @@ export function HistoryPage() {
 
       <ArchivedItemsSection
         deleteConfirmation={(task) =>
-          `Delete ${task.name} permanently? Its session history will be preserved.`
+          `Move ${task.name} to Trash? Its session history will be preserved.`
         }
         emptyMessage="No completed tasks."
         items={filteredCompletedTasks}
@@ -585,6 +594,10 @@ export function HistoryPage() {
         session={editingSession}
         tasks={sessionTasks}
       />
+      {manualOpen ? (
+        <ManualSessionModal tasks={sessionTasks} onClose={() => setManualOpen(false)} />
+      ) : null}
+      <Trash />
     </section>
   )
 }

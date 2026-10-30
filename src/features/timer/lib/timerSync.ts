@@ -16,7 +16,7 @@ interface TimerSyncOptions {
   getLocal: () => SyncedTimer
   setLocal: (timer: SyncedTimer) => void
   read: () => Promise<SyncedTimer | null>
-  write: (timer: SyncedTimer, expectedRevision: string | null) => Promise<boolean>
+  write: (timer: SyncedTimer, expectedRevision: string | null) => Promise<boolean | string>
   onStatus: (error: unknown) => void
 }
 
@@ -42,13 +42,14 @@ export function createTimerSync({ getLocal, setLocal, read, write, onStatus }: T
           continue
         }
         if (!remote || (local.pending && local.revision === remote.revision)) {
-          const next = { ...local, revision: crypto.randomUUID(), pending: false }
+          const next: SyncedTimer = { ...local, revision: crypto.randomUUID(), pending: false }
           const saved = await write(next, remote?.revision ?? null)
           if (stopped) return
           if (!saved) {
             requested = true
             continue
           }
+          if (typeof saved === 'string') next.revision = saved
           const latest = getLocal()
           setLocal({
             ...latest,

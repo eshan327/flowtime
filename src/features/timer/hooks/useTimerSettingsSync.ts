@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createTimerSync } from '@/features/timer/lib/timerSync'
 import { sanitizeSettings, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { supabase } from '@/lib/supabaseClient'
+import { commandFlowtime } from '@/lib/flowtimeApi'
 
 export function useTimerSettingsSync(userId: string | undefined) {
   const [status, setStatus] = useState<{ userId?: string; ready: boolean; error: unknown }>({
@@ -61,28 +62,20 @@ export function useTimerSettingsSync(userId: string | undefined) {
       },
       write: async (settings, expectedRevision) => {
         const state = sanitizeSettings(JSON.parse(settings.snapshot))
-        const row = {
-          user_id: userId,
-          timezone: state.timezone,
-          break_divisor: state.breakDivisor,
-          chime_enabled: state.chimeEnabled,
-          chime_id: state.chimeId,
-          focus_mode_lock: state.focusModeLock,
-          shortcuts_enabled: state.shortcutsEnabled,
-          revision: settings.revision!,
-        }
-        const query = expectedRevision
-          ? supabase
-              .from('user_settings')
-              .update(row)
-              .eq('user_id', userId)
-              .eq('revision', expectedRevision)
-          : supabase
-              .from('user_settings')
-              .upsert(row, { onConflict: 'user_id', ignoreDuplicates: true })
-        const { data, error } = await query.select('revision')
-        if (error) throw error
-        return data.length > 0
+        const saved = await commandFlowtime<{ revision: string }>(
+          'settings',
+          {
+            expected_revision: expectedRevision,
+            timezone: state.timezone,
+            break_divisor: state.breakDivisor,
+            chime_enabled: state.chimeEnabled,
+            chime_id: state.chimeId,
+            focus_mode_lock: state.focusModeLock,
+            shortcuts_enabled: state.shortcutsEnabled,
+          },
+          settings.revision!
+        )
+        return saved.revision
       },
       onStatus: (error) => {
         if (useTimerSettingsStore.getState().ownerUserId === userId) {

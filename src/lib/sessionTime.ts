@@ -32,9 +32,14 @@ export function splitSessionTime(session: TimedSession, unit: 'day' | 'hour') {
 }
 
 export function workSecondsInDateRange(session: TimedSession, from: Date | null, to: Date | null) {
-  return splitSessionTime(session, 'day').reduce(
-    (sum, slice) =>
-      (!from || slice.start >= from) && (!to || slice.start <= to) ? sum + slice.seconds : sum,
-    0
+  const a = Date.parse(session.started_at),
+    b = Date.parse(session.ended_at)
+  const start = from?.getTime() ?? -Infinity,
+    end = to?.getTime() ?? Infinity
+  if (b <= a) return a >= start && a < end ? session.work_seconds : 0
+  return Math.max(
+    0,
+    Math.round((session.work_seconds * (Math.min(b, end) - a)) / (b - a)) -
+      Math.round((session.work_seconds * (Math.max(a, start) - a)) / (b - a))
   )
 }
