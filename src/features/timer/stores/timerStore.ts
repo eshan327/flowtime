@@ -7,6 +7,13 @@ export type TimerPhase = 'idle' | 'working' | 'breaking' | 'done'
 export const MAX_SESSION_SECONDS = 6 * 60 * 60
 
 export interface TimerState {
+  runId: string | null
+  runStartedAt: string | null
+  segmentStartedAt: string | null
+  completedWorkSeconds: number
+  runBreakDivisor: number | null
+  protocolVersion: number
+  updatedAt: string | null
   sessionId: string | null
   syncRevision: string | null
   syncPending: boolean
@@ -46,6 +53,13 @@ export interface TimerState {
 
 export function createInitialTimerState() {
   return {
+    runId: null as string | null,
+    runStartedAt: null as string | null,
+    segmentStartedAt: null as string | null,
+    completedWorkSeconds: 0,
+    runBreakDivisor: null as number | null,
+    protocolVersion: 0,
+    updatedAt: null as string | null,
     sessionId: null,
     syncRevision: null,
     syncPending: false,

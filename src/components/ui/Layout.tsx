@@ -19,7 +19,6 @@ import { Modal } from '@/components/ui/Modal'
 import { useUser } from '@/context/UserContext'
 import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useTimer } from '@/features/timer/hooks/useTimer'
-import { useRunawayProtection } from '@/features/timer/hooks/useRunawayProtection'
 import {
   TimerSessionContext,
   useTimerSessionPipeline,
@@ -131,12 +130,6 @@ export function Layout({ children }: { children: ReactNode }) {
   const settingsPending = useTimerSettingsStore((state) => state.syncPending)
   useTimer(timerReady)
   const sessions = useTimerSessionPipeline({ userId: user?.id })
-  useRunawayProtection({
-    enabled: timerReady,
-    userId: user?.id,
-    isSavingSession: sessions.isSavingSession,
-    saveTimerSession: sessions.saveTimerSession,
-  })
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const [isAccountOpen, setIsAccountOpen] = useState(false)

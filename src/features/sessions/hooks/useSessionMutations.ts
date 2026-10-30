@@ -1,97 +1,47 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useUser } from '@/context/UserContext'
 import { queryKeys } from '@/lib/queryKeys'
-import { snapshotColumns } from '@/lib/sessionSnapshot'
-import type { SessionSnapshotInput } from '@/lib/sessionSnapshot'
-import { supabase } from '@/lib/supabaseClient'
+import { commandFlowtime } from '@/lib/flowtimeApi'
 
 export interface SessionUpdateInput {
   id: string
-  taskId: string | null
-  workSeconds: number
-  breakSeconds: number
-  startedAt: string
-  endedAt: string
-  notes: string | null
-  snapshot: SessionSnapshotInput
+  taskId?: string | null
+  workSeconds?: number
+  breakSeconds?: number
+  startedAt?: string
+  endedAt?: string
+  notes?: string | null
 }
 
 export function useSessionMutations() {
   const queryClient = useQueryClient()
   const { user } = useUser()
-
-  const updateSession = useMutation({
-    mutationFn: async (payload: SessionUpdateInput) => {
-      const userId = user?.id
-      if (!userId) {
-        throw new Error('User is not authenticated')
-      }
-
-      const { error } = await supabase
-        .from('sessions')
-        .update({
-          task_id: payload.taskId,
-          ...snapshotColumns(payload.snapshot),
-          work_seconds: payload.workSeconds,
-          break_seconds: payload.breakSeconds,
-          started_at: payload.startedAt,
-          ended_at: payload.endedAt,
-          notes: payload.notes,
-          edited_at: new Date().toISOString(),
-        })
-        .eq('id', payload.id)
-        .eq('user_id', userId)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      if (user?.id) void queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user.id) })
-    },
-  })
-
-  const softDeleteSession = useMutation({
-    mutationFn: async (sessionId: string) => {
-      const userId = user?.id
-      if (!userId) {
-        throw new Error('User is not authenticated')
-      }
-
-      const { error } = await supabase
-        .from('sessions')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', sessionId)
-        .eq('user_id', userId)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      if (user?.id) void queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user.id) })
-    },
-  })
-
-  const restoreSession = useMutation({
-    mutationFn: async (sessionId: string) => {
-      const userId = user?.id
-      if (!userId) {
-        throw new Error('User is not authenticated')
-      }
-
-      const { error } = await supabase
-        .from('sessions')
-        .update({ deleted_at: null })
-        .eq('id', sessionId)
-        .eq('user_id', userId)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      if (user?.id) void queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user.id) })
-    },
-  })
-
-  return {
-    updateSession,
-    softDeleteSession,
-    restoreSession,
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.sessions(user?.id) })
+  const mutate = async (op: Record<string, unknown>) => {
+    if (!user) throw new Error('User is not authenticated')
+    await commandFlowtime('sessions', { operations: [op] })
   }
+  const updateSession = useMutation({
+    mutationFn: (p: SessionUpdateInput) =>
+      mutate({
+        action: 'update',
+        id: p.id,
+        ...(p.taskId !== undefined ? { task_id: p.taskId } : {}),
+        ...(p.workSeconds !== undefined ? { work_seconds: p.workSeconds } : {}),
+        ...(p.breakSeconds !== undefined ? { break_seconds: p.breakSeconds } : {}),
+        ...(p.startedAt !== undefined ? { started_at: p.startedAt } : {}),
+        ...(p.endedAt !== undefined ? { ended_at: p.endedAt } : {}),
+        ...(p.notes !== undefined ? { notes: p.notes } : {}),
+      }),
+    onSuccess: invalidate,
+  })
+  const softDeleteSession = useMutation({
+    mutationFn: (id: string) => mutate({ action: 'trash', id }),
+    onSuccess: invalidate,
+  })
+  const restoreSession = useMutation({
+    mutationFn: (id: string) => mutate({ action: 'restore', id }),
+    onSuccess: invalidate,
+  })
+  return { updateSession, softDeleteSession, restoreSession }
 }

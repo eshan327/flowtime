@@ -6,7 +6,10 @@ export type Session = Database['public']['Tables']['sessions']['Row']
 
 export type TimeRange = 'day' | 'week' | 'month' | 'year'
 
-export type TaskCategorySummary = Pick<Category, 'id' | 'name' | 'color' | 'archived_at'>
+export type TaskCategorySummary = Pick<
+  Category,
+  'id' | 'name' | 'color' | 'archived_at' | 'deleted_at'
+>
 
 export interface TaskWithCategory extends Task {
   categories: TaskCategorySummary | null

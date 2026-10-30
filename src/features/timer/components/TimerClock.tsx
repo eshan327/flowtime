@@ -1,3 +1,4 @@
+import { timerNow } from '@/features/timer/lib/serverClock'
 import { useEffect, useState, type CSSProperties } from 'react'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { getBreakSeconds } from '@/features/timer/stores/timerSettingsStore'
@@ -20,7 +21,7 @@ export function TimerClock({
   breakEndAt,
   accentColor,
 }: TimerClockProps) {
-  const [now, setNow] = useState(Date.now)
+  const [now, setNow] = useState(timerNow)
   const workSeconds = useTimerStore((state) => state.workSeconds)
 
   useEffect(() => {
@@ -30,8 +31,8 @@ export function TimerClock({
       window.clearInterval(interval)
       interval = undefined
       if (document.visibilityState !== 'visible') return
-      setNow(Date.now())
-      interval = window.setInterval(() => setNow(Date.now()), 1000)
+      setNow(timerNow())
+      interval = window.setInterval(() => setNow(timerNow()), 1000)
     }
     updateClock()
     document.addEventListener('visibilitychange', updateClock)

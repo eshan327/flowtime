@@ -38,15 +38,13 @@ function database(responses: unknown[]) {
     global: {
       fetch: async (input, init) => {
         const url = new URL(String(input))
-        if (init?.method === 'POST') {
-          assert.equal(JSON.parse(String(init.body)).user_id, userId)
-        } else {
-          assert.equal(
-            url.searchParams.get('user_id'),
-            `eq.${userId}`,
-            'Every data operation must be owner-scoped'
-          )
-        }
+        assert.match(url.pathname, /\/rpc\/flowtime_(read|command)$/)
+        const payload = JSON.parse(String(init?.body))
+        assert.equal(
+          'user_id' in payload,
+          false,
+          'Ownership comes from the authenticated database context'
+        )
         calls.push({
           url,
           method: init?.method ?? 'GET',
@@ -102,64 +100,30 @@ test('strict tool schemas reject owner injection, empty edits, oversized input a
   )
 })
 
-test('task creation owns the row, appends it and safely reuses the caller UUID', async () => {
+test('legacy tools preserve names while shared RPCs carry stable command IDs and no caller-selected owner', async () => {
   const task = { id: taskId, name: 'Study', category_id: categoryId }
-  const { db, calls } = database([null, { id: categoryId }, [{ position: 7 }], task, task])
-  const args = { id: taskId, name: ' Study ', category_id: categoryId }
-  assert.deepEqual(await runTool(db, userId, 'create_task', args), { task, created: true })
-  assert.deepEqual(calls[3].body, {
-    id: taskId,
-    name: 'Study',
-    category_id: categoryId,
-    user_id: userId,
-    color: null,
-    position: 8,
-  })
-  assert.deepEqual(await runTool(db, userId, 'create_task', args), { task, created: false })
-  assert.equal(calls.filter((call) => call.method === 'POST').length, 1)
-})
-
-test('foreign/missing categories and conflicting retry payloads do not write', async () => {
-  for (const responses of [
-    [null, null],
-    [{ id: taskId, name: 'Different', category_id: categoryId }],
-  ]) {
-    const { db, calls } = database(responses)
-    await assert.rejects(
-      runTool(db, userId, 'create_task', { id: taskId, name: 'Study', category_id: categoryId }),
-      AgentError
-    )
-    assert.ok(calls.every((call) => call.method === 'GET'))
-  }
-})
-
-test('task completion retries preserve completion time and do not modify history', async () => {
-  const task = {
-    id: taskId,
-    name: 'Study',
-    category_id: null,
-    completed_at: '2026-10-01T12:00:00Z',
-  }
-  const { db, calls } = database([task, task])
-  await runTool(db, userId, 'update_task', { id: taskId, completed: true })
-  assert.deepEqual(calls[1].body, { completed_at: task.completed_at })
-  assert.ok(calls.every((call) => call.url.pathname.endsWith('/tasks')))
-})
-
-test('list pagination reports continuation and excludes soft-deleted history', async () => {
-  const { db, calls } = database([[{ id: 'a' }, { id: 'b' }]])
+  const { db, calls } = database([
+    { items: [task] },
+    { items: [task] },
+    { items: [], next_offset: null },
+  ])
   assert.deepEqual(
-    await runTool(db, userId, 'list_sessions', {
-      from: '2026-10-01T00:00:00Z',
-      to: '2026-10-02T00:00:00Z',
-      limit: 1,
+    await runTool(db, userId, 'create_task', {
+      id: taskId,
+      name: ' Study ',
+      category_id: categoryId,
     }),
-    { items: [{ id: 'a' }], next_offset: 1 }
+    { task, created: true }
   )
-  assert.equal(calls[0].url.searchParams.get('deleted_at'), 'is.null')
-  assert.equal(calls[0].url.searchParams.get('ended_at'), 'gt.2026-10-01T00:00:00Z')
-  assert.equal(calls[0].url.searchParams.get('started_at'), 'lt.2026-10-02T00:00:00Z')
-  assert.ok(!calls[0].url.searchParams.get('select')?.includes('notes'))
+  assert.equal(calls[0].body?.request_id, taskId)
+  assert.equal(calls[0].body?.operation, 'legacy_tasks')
+  const request_id = crypto.randomUUID()
+  await runTool(db, userId, 'update_task', { id: taskId, request_id, completed: true })
+  assert.equal(calls[1].body?.request_id, request_id)
+  assert.equal(calls[1].body?.operation, 'legacy_tasks')
+  await runTool(db, userId, 'list_sessions', {})
+  assert.equal(calls[2].body?.operation, 'sessions')
+  assert.equal(Object.keys(toolDefinitions).length, 14)
 })
 
 test('summary splits boundary work and retains historical names/categories', () => {
@@ -186,30 +150,37 @@ test('summary splits boundary work and retains historical names/categories', () 
   )
 })
 
-test('summary validates ranges and handles a server row cap below the requested page size', async () => {
-  const session = {
-    started_at: '2026-10-01T00:00:00Z',
-    ended_at: '2026-10-01T00:01:00Z',
-    work_seconds: 60,
-    task_id_snapshot: taskId,
-    task_name_snapshot: 'Study',
-    category_id_snapshot: null,
-    category_name_snapshot: null,
-  }
-  const { db, calls } = database([Array(100).fill(session), [session]])
-  const args = { from: '2026-10-01T00:00:00Z', to: '2026-10-02T00:00:00Z' }
-  const result = await runTool(db, userId, 'get_focus_summary', args)
-  assert.equal('work_seconds' in result && result.work_seconds, 101 * 60)
-  assert.equal(calls.length, 2)
-  await assert.rejects(
-    runTool(db, userId, 'get_focus_summary', { ...args, to: args.from }),
-    AgentError
+test('expanded schemas reject injected owners, invented actions, unsafe URLs and unbounded batches', () => {
+  assert.equal(
+    toolDefinitions.manage_tasks.schema.safeParse({
+      request_id: taskId,
+      operations: [{ action: 'delete_permanently', id: taskId }],
+    }).success,
+    false
   )
-  await assert.rejects(
-    runTool(db, userId, 'get_focus_summary', { ...args, to: '2027-10-01T00:00:00Z' }),
-    AgentError
+  assert.equal(
+    toolDefinitions.create_task.schema.safeParse({
+      id: taskId,
+      name: 'Study',
+      reference_url: 'javascript:alert(1)',
+    }).success,
+    false
   )
-  assert.equal(calls.length, 2)
+  assert.equal(
+    toolDefinitions.control_timer.schema.safeParse({
+      request_id: taskId,
+      expected_revision: null,
+      action: 'pause',
+    }).success,
+    false
+  )
+  assert.equal(
+    toolDefinitions.manage_categories.schema.safeParse({
+      request_id: taskId,
+      operations: Array.from({ length: 51 }, () => ({ action: 'trash', id: categoryId })),
+    }).success,
+    false
+  )
 })
 
 test('MCP and REST verify signed OAuth tokens, expose identical tools and fail closed', async (t) => {
@@ -224,9 +195,9 @@ test('MCP and REST verify signed OAuth tokens, expose identical tools and fail c
     if (url.pathname.endsWith('/.well-known/jwks.json')) return Response.json({ keys: [jwk] })
     if (url.pathname.endsWith('/user'))
       return Response.json({ id: userId, aud: 'authenticated', is_anonymous: false })
-    assert.equal(url.searchParams.get('user_id'), `eq.${userId}`)
+    assert.match(url.pathname, /\/rpc\/flowtime_read$/)
     databaseReads++
-    return Response.json([], { headers: { 'Content-Range': '*/0' } })
+    return Response.json({ items: [], next_offset: null })
   })
   t.after(() => fetchMock.mock.restore())
   const handler = createAgentHandler(config)
@@ -302,21 +273,12 @@ test('MCP and REST verify signed OAuth tokens, expose identical tools and fail c
   assert.equal((await createAgentHandler({ ...config, clientIds: [] })(request())).status, 503)
 })
 
-test('timer responses expose the saved break total as breakSeconds', async () => {
-  const { db } = database([
-    {
-      state: {
-        phase: 'breaking',
-        workSeconds: 3600,
-        breakTotal: 720,
-        breakEndAt: '2026-10-13T18:00:00Z',
-      },
-      revision: 'revision',
-    },
-    { timezone: 'America/New_York', break_divisor: 5 },
-  ])
-  const result = await runTool(db, userId, 'get_timer', {})
-  assert.ok('snapshot' in result && result.snapshot)
-  assert.equal(result.snapshot.breakSeconds, 720)
-  assert.equal(result.snapshot.workSeconds, 3600)
+test('timer tool retains snapshot breakSeconds while returning authoritative state/revision', async () => {
+  const result = {
+    snapshot: { phase: 'breaking', workSeconds: 3600, breakSeconds: 720 },
+    state: { phase: 'breaking', breakTotal: 720 },
+    revision: taskId,
+  }
+  const { db } = database([result])
+  assert.deepEqual(await runTool(db, userId, 'get_timer', {}), result)
 })

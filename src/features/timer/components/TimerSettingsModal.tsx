@@ -36,6 +36,8 @@ function ToggleRow({
 
 export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps) {
   const { settingsReady, settingsSyncError } = useUser()
+  const timezone = useTimerSettingsStore((s) => s.timezone)
+  const setTimezone = useTimerSettingsStore((s) => s.setTimezone)
   const syncPending = useTimerSettingsStore((state) => state.syncPending)
   const breakDivisor = useTimerSettingsStore((state) => state.breakDivisor)
   const chimeEnabled = useTimerSettingsStore((state) => state.chimeEnabled)
@@ -79,6 +81,24 @@ export function TimerSettingsModal({ isOpen, onClose }: TimerSettingsModalProps)
                 : 'Settings synced.'}
         </p>
         <fieldset disabled={!settingsReady}>
+          <label className="mb-4 block text-sm">
+            Time zone
+            <select
+              aria-label="Time zone"
+              className="mt-2 w-full rounded-lg border border-surface-border bg-surface-panel p-2"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+            >
+              {[...new Set([timezone, 'UTC', ...Intl.supportedValuesOf('timeZone')])].map(
+                (zone) => (
+                  <option key={zone}>{zone}</option>
+                )
+              )}
+            </select>
+          </label>
+          <p className="mb-3 text-xs text-ink-secondary">
+            Break divisor changes apply to the next continuous work period.
+          </p>
           <div className="border-b border-surface-border-subtle pb-4">
             <Input
               containerClassName="max-w-48"

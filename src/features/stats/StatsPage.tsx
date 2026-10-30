@@ -1,3 +1,6 @@
+import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
+import { calendarRange, midnightInZone } from '@/lib/timezone'
+import { workSecondsInDateRange } from '@/lib/sessionTime'
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { BarChart3, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -10,8 +13,6 @@ import { SummaryCards } from '@/features/stats/components/SummaryCards'
 import { useStats } from '@/features/stats/hooks/useStats'
 import { formatDuration } from '@/lib/formatting'
 import { formatRangeWindow, getRangeDatesForAnchor, shiftRangeAnchor } from '@/lib/dateRange'
-import { toLocalDateKey } from '@/lib/dateMath'
-import { splitSessionTime } from '@/lib/sessionTime'
 import { getErrorMessage } from '@/lib/errorMessages'
 import type { TimeRange } from '@/types'
 
@@ -29,6 +30,7 @@ function getNavigationFloor() {
 }
 
 export function StatsPage() {
+  const timezone = useTimerSettingsStore((s) => s.timezone)
   const [range, setRange] = useState<TimeRange>('week')
   const [anchorDate, setAnchorDate] = useState<Date>(() => new Date())
   const [selectedHeatmapDate, setSelectedHeatmapDate] = useState<string | null>(null)
@@ -36,20 +38,28 @@ export function StatsPage() {
   const stats = useStats(range, anchorDate)
 
   const selectedWindow = useMemo(
-    () => getRangeDatesForAnchor(range, anchorDate),
-    [range, anchorDate]
+    () => getRangeDatesForAnchor(range, anchorDate, timezone),
+    [range, anchorDate, timezone]
   )
-  const currentWindow = useMemo(() => getRangeDatesForAnchor(range, new Date()), [range])
+  const currentWindow = useMemo(
+    () => getRangeDatesForAnchor(range, new Date(), timezone),
+    [range, timezone]
+  )
   const previousWindow = useMemo(() => {
-    const previousAnchor = shiftRangeAnchor(range, anchorDate, -1)
-    return getRangeDatesForAnchor(range, previousAnchor)
-  }, [range, anchorDate])
+    const previousAnchor = shiftRangeAnchor(range, anchorDate, -1, timezone)
+    return getRangeDatesForAnchor(range, previousAnchor, timezone)
+  }, [range, anchorDate, timezone])
   const navigationFloor = useMemo(() => getNavigationFloor(), [])
 
   const isCurrentWindow = selectedWindow.from.getTime() === currentWindow.from.getTime()
   const canGoPrevious = previousWindow.to.getTime() >= navigationFloor.getTime()
   const canGoNext = selectedWindow.from.getTime() < currentWindow.from.getTime()
-  const selectedWindowLabel = formatRangeWindow(range, selectedWindow.from, selectedWindow.to)
+  const selectedWindowLabel = formatRangeWindow(
+    range,
+    selectedWindow.from,
+    selectedWindow.to,
+    timezone
+  )
   const hasRangeData = stats.totalSessions > 0
   const selectedDayCount = Math.max(
     1,
@@ -67,12 +77,11 @@ export function StatsPage() {
 
   const selectedHeatmapSessions = useMemo(() => {
     if (!selectedHeatmapDate) return []
-    return stats.heatmapSessions.filter((session) =>
-      splitSessionTime(session, 'day').some(
-        (slice) => slice.seconds > 0 && toLocalDateKey(slice.start) === selectedHeatmapDate
-      )
+    const window = calendarRange('day', midnightInZone(selectedHeatmapDate, timezone), timezone)
+    return stats.heatmapSessions.filter(
+      (session) => workSecondsInDateRange(session, window.from, window.to) > 0
     )
-  }, [stats.heatmapSessions, selectedHeatmapDate])
+  }, [stats.heatmapSessions, selectedHeatmapDate, timezone])
 
   const header = (
     <header className="flex flex-wrap items-end justify-between gap-4 border-b border-surface-border pb-5">
@@ -93,7 +102,7 @@ export function StatsPage() {
         <Button
           aria-label="Previous period"
           disabled={!canGoPrevious}
-          onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, -1))}
+          onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, -1, timezone))}
           size="icon"
           variant="outlined"
         >
@@ -102,7 +111,7 @@ export function StatsPage() {
         <Button
           aria-label="Next period"
           disabled={!canGoNext}
-          onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, 1))}
+          onClick={() => setAnchorDate((current) => shiftRangeAnchor(range, current, 1, timezone))}
           size="icon"
           variant="outlined"
         >
@@ -198,7 +207,8 @@ export function StatsPage() {
               <div>
                 <p className="text-sm text-ink-primary">
                   Activity on{' '}
-                  {new Date(`${selectedHeatmapDay.date}T00:00:00`).toLocaleDateString('en-US', {
+                  {midnightInZone(selectedHeatmapDay.date, timezone).toLocaleDateString('en-US', {
+                    timeZone: timezone,
                     weekday: 'long',
                     month: 'short',
                     day: 'numeric',
@@ -215,7 +225,8 @@ export function StatsPage() {
             <SessionLog
               focusRange={getRangeDatesForAnchor(
                 'day',
-                new Date(`${selectedHeatmapDay.date}T00:00:00`)
+                midnightInZone(selectedHeatmapDay.date, timezone),
+                timezone
               )}
               pageSize={6}
               sessions={selectedHeatmapSessions}
@@ -231,7 +242,7 @@ export function StatsPage() {
             <BreakdownChart
               data={stats.byCategory.map((item) => ({
                 color: item.color,
-                key: item.categoryId ?? item.categoryName,
+                key: JSON.stringify([item.categoryId, item.categoryName, item.color]),
                 name: item.categoryName,
                 sessionCount: item.sessionCount,
                 totalSeconds: item.totalSeconds,
@@ -245,7 +256,7 @@ export function StatsPage() {
               data={stats.byTask.map((item) => ({
                 color: item.color,
                 detail: item.categoryName ?? 'Uncategorized',
-                key: item.taskId ?? item.taskName,
+                key: JSON.stringify([item.taskId, item.taskName, item.categoryName, item.color]),
                 name: item.taskName,
                 sessionCount: item.sessionCount,
                 totalSeconds: item.totalSeconds,

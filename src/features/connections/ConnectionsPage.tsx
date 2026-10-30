@@ -25,6 +25,7 @@ export function ConnectionsPage() {
   const [params] = useSearchParams()
   const authorizationId = params.get('authorization_id')
   const queryClient = useQueryClient()
+  const [expanded, setExpanded] = useState(false)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const signedIn = !!user && !user.is_anonymous
@@ -50,6 +51,20 @@ export function ConnectionsPage() {
     },
   })
 
+  const access = useQuery({
+    queryKey: ['agent-access', user?.id],
+    enabled: signedIn,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('flowtime_access')
+      if (error) throw error
+      return data as unknown as { items: { client_id: string; approved: boolean }[] }
+    },
+  })
+  async function setExpandedAccess(clientId: string, approve: boolean) {
+    const { error } = await supabase.rpc('flowtime_access', { client: clientId, approve })
+    if (error) throw error
+    await queryClient.invalidateQueries({ queryKey: ['agent-access', user?.id] })
+  }
   async function act(action: () => Promise<void>) {
     setPending(true)
     setMessage(null)
@@ -83,6 +98,7 @@ export function ConnectionsPage() {
             skipBrowserRedirect: true,
           })
       if (error) throw error
+      if (approved && expanded && details) await setExpandedAccess(details.client.id, true)
       redirectToClient(data.redirect_url)
     })
   }
@@ -112,6 +128,7 @@ export function ConnectionsPage() {
       ) : (
         <>
           <p className="text-sm text-ink-secondary">Signed in as {user.email}</p>
+          {access.error ? <p role="alert">{access.error.message}</p> : null}
           {(authorization.isFetching || grants.isFetching) && <Spinner />}
           {details && (
             <>
@@ -129,9 +146,18 @@ export function ConnectionsPage() {
                 <li>Read your tasks, categories, study history, timer snapshot, and settings.</li>
                 <li>Create, rename, move, complete, and reopen your tasks.</li>
                 <li>
-                  Cannot delete tasks, edit study history, control the timer, or change settings.
+                  Expanded control additionally manages task/category trash and recovery, corrects
+                  history, controls the timer, and updates synced settings.
                 </li>
               </ul>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={expanded}
+                  onChange={(e) => setExpanded(e.target.checked)}
+                />
+                Also approve expanded control
+              </label>
               <p className="text-sm text-ink-secondary">
                 Only approve a connection you started. Study history can reveal your routines. You
                 can revoke access from Agent connections in your account.
@@ -157,8 +183,8 @@ export function ConnectionsPage() {
           {!authorizationId && grants.data && (
             <>
               <p className="text-sm text-ink-secondary">
-                Revoking stops token refresh. An existing access token may remain usable until it
-                expires.
+                Disabling expanded control blocks those operations immediately. Revoking also stops
+                token refresh. Basic access may remain usable until it expires.
               </p>
               {grants.data.length === 0 && (
                 <p className="text-ink-secondary">No assistants connected.</p>
@@ -173,22 +199,42 @@ export function ConnectionsPage() {
                       <p className="text-ink-primary">{grant.client.name}</p>
                       <p className="break-all text-xs text-ink-tertiary">{grant.client.id}</p>
                     </div>
-                    <Button
-                      disabled={pending}
-                      onClick={() =>
-                        act(async () => {
-                          const { error: revokeError } = await supabase.auth.oauth.revokeGrant({
-                            clientId: grant.client.id,
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        disabled={pending}
+                        onClick={() =>
+                          void act(() =>
+                            setExpandedAccess(
+                              grant.client.id,
+                              !access.data?.items.find((a) => a.client_id === grant.client.id)
+                                ?.approved
+                            )
+                          )
+                        }
+                      >
+                        {access.data?.items.find((a) => a.client_id === grant.client.id)?.approved
+                          ? 'Disable expanded control'
+                          : 'Enable expanded control'}
+                      </Button>
+                      <Button
+                        disabled={pending}
+                        onClick={() =>
+                          act(async () => {
+                            if (access.data?.items.some((a) => a.client_id === grant.client.id))
+                              await setExpandedAccess(grant.client.id, false)
+                            const { error: revokeError } = await supabase.auth.oauth.revokeGrant({
+                              clientId: grant.client.id,
+                            })
+                            if (revokeError) throw revokeError
+                            await queryClient.invalidateQueries({
+                              queryKey: ['oauth-grants', user.id],
+                            })
                           })
-                          if (revokeError) throw revokeError
-                          await queryClient.invalidateQueries({
-                            queryKey: ['oauth-grants', user.id],
-                          })
-                        })
-                      }
-                    >
-                      Revoke
-                    </Button>
+                        }
+                      >
+                        Revoke
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>

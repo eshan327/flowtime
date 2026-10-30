@@ -1,10 +1,10 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, Fragment } from 'react'
 import type { ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
 import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { useTimerSettingsSync } from '@/features/timer/hooks/useTimerSettingsSync'
-import { useTimerSync } from '@/features/timer/hooks/useTimerSync'
+import { useTimerCommandStatus, useTimerSync } from '@/features/timer/hooks/useTimerSync'
 import { queryClient } from '@/lib/queryClient'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -64,6 +64,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       (previousUserId !== undefined && previousUserId !== nextUserId) ||
       (timerOwnerUserId !== null && timerOwnerUserId !== nextUserId)
     ) {
+      useTimerCommandStatus.setState({ pending: 0, conflicts: [], error: null })
       queryClient.clear()
       useTimerStore.getState().clearUserState()
       useTimerSettingsStore.getState().clearUserState()
@@ -119,7 +120,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         timerReady: timerSync.timerReady && settingsSync.settingsReady,
       }}
     >
-      {children}
+      <Fragment key={user?.id ?? 'signed-out'}>{children}</Fragment>
     </UserContext.Provider>
   )
 }

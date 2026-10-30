@@ -1,3 +1,5 @@
+import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
+import { zonedInput, fromZonedInput } from '@/lib/timezone'
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -8,6 +10,7 @@ import type { SessionWithTask, TaskWithCategory } from '@/types'
 export interface SessionEditValues {
   id: string
   taskId: string | null
+  taskChanged: boolean
   workSeconds: number
   breakSeconds: number
   startedAt: string
@@ -25,13 +28,9 @@ interface SessionEditModalProps {
   onSave: (values: SessionEditValues) => Promise<void> | void
 }
 
-function toLocalInputValue(isoString: string) {
-  const date = new Date(isoString)
-  const offsetMs = date.getTimezoneOffset() * 60 * 1000
-  const local = new Date(date.getTime() - offsetMs)
-  return local.toISOString().slice(0, -1)
+function toLocalInputValue(isoString: string, timezone: string) {
+  return zonedInput(isoString, timezone)
 }
-
 export function SessionEditModal({
   session,
   tasks,
@@ -78,7 +77,10 @@ function SessionEditModalContent({
   onClose,
   onSave,
 }: SessionEditModalContentProps) {
-  const [taskId, setTaskId] = useState<string>(session.task_id ?? '')
+  const [timezone] = useState(() => useTimerSettingsStore.getState().timezone)
+  const [taskChanged, setTaskChanged] = useState(false)
+  const initialTaskId = session.task_id ?? snapshotSession(session).taskIdSnapshot
+  const [taskId, setTaskId] = useState<string>(initialTaskId ?? '')
   const [workMinutes, setWorkMinutes] = useState(
     String(Math.max(0, Number((session.work_seconds / 60).toFixed(2))))
   )
@@ -86,31 +88,37 @@ function SessionEditModalContent({
     String(Math.max(0, Number((session.break_seconds / 60).toFixed(2))))
   )
   const [notes, setNotes] = useState(session.notes ?? '')
-  const [startedAt, setStartedAt] = useState(toLocalInputValue(session.started_at))
-  const [endedAt, setEndedAt] = useState(toLocalInputValue(session.ended_at))
+  const [startedAt, setStartedAt] = useState(toLocalInputValue(session.started_at, timezone))
+  const [endedAt, setEndedAt] = useState(toLocalInputValue(session.ended_at, timezone))
   const [validationError, setValidationError] = useState<string | null>(null)
 
   const currentTaskFallbackOption = useMemo(() => {
-    if (!session.task_id) return null
-    if (tasks.some((task) => task.id === session.task_id)) return null
+    if (!initialTaskId) return null
+    if (tasks.some((task) => task.id === initialTaskId)) return null
 
     const fallbackTaskName = snapshotSession(session).taskNameSnapshot
     if (!fallbackTaskName) return null
 
     return {
-      id: session.task_id,
+      id: initialTaskId,
       name: `${fallbackTaskName} (not active)`,
     }
-  }, [session, tasks])
+  }, [session, tasks, initialTaskId])
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit session">
       <div className="space-y-4">
+        <p className="text-xs text-ink-secondary">
+          Times shown in {timezone}. Unchanged timestamps retain their exact original instant.
+        </p>
         <div>
           <p className="mb-2 text-xs uppercase tracking-[0.1em] text-ink-tertiary">Task</p>
           <select
             className="h-10 w-full rounded-lg border border-surface-border-subtle bg-surface-sidebar px-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/15"
-            onChange={(event) => setTaskId(event.target.value)}
+            onChange={(event) => {
+              setTaskId(event.target.value)
+              setTaskChanged(true)
+            }}
             value={taskId}
           >
             <option value="">No task</option>
@@ -198,12 +206,23 @@ function SessionEditModalContent({
                 return
               }
 
-              const parsedStart = new Date(
-                startedAt === toLocalInputValue(session.started_at) ? session.started_at : startedAt
-              )
-              const parsedEnd = new Date(
-                endedAt === toLocalInputValue(session.ended_at) ? session.ended_at : endedAt
-              )
+              let parsedStart: Date, parsedEnd: Date
+              try {
+                parsedStart =
+                  startedAt === toLocalInputValue(session.started_at, timezone)
+                    ? new Date(session.started_at)
+                    : fromZonedInput(
+                        startedAt.length === 16 ? startedAt + ':00' : startedAt,
+                        timezone
+                      )
+                parsedEnd =
+                  endedAt === toLocalInputValue(session.ended_at, timezone)
+                    ? new Date(session.ended_at)
+                    : fromZonedInput(endedAt.length === 16 ? endedAt + ':00' : endedAt, timezone)
+              } catch (error) {
+                setValidationError((error as Error).message)
+                return
+              }
 
               if (Number.isNaN(parsedStart.getTime())) {
                 setValidationError('Start time is invalid.')
@@ -226,14 +245,15 @@ function SessionEditModalContent({
               void onSave({
                 id: session.id,
                 taskId: taskId || null,
+                taskChanged,
                 workSeconds: Math.round(parsedWorkMinutes * 60),
                 breakSeconds: Math.round(parsedBreakMinutes * 60),
                 startedAt:
-                  startedAt === toLocalInputValue(session.started_at)
+                  startedAt === toLocalInputValue(session.started_at, timezone)
                     ? session.started_at
                     : parsedStart.toISOString(),
                 endedAt:
-                  endedAt === toLocalInputValue(session.ended_at)
+                  endedAt === toLocalInputValue(session.ended_at, timezone)
                     ? session.ended_at
                     : parsedEnd.toISOString(),
                 notes: normalizedNotes,
