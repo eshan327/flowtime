@@ -59,7 +59,7 @@ test('offline transitions retain fractional credit, frozen divisor, segment IDs 
   )
 })
 
-test('durable journal retains concurrent branches and replays dependency chains before timestamp ties', () => {
+test('journal retries retired clock reviews, retains server conflicts and orders dependency chains', () => {
   const values = new Map<string, string>()
   Object.defineProperty(globalThis, 'localStorage', {
     configurable: true,
@@ -76,10 +76,12 @@ test('durable journal retains concurrent branches and replays dependency chains 
   const first = command('start_work', 0),
     second = command('stop_work', 60, first.next_revision),
     branch = command('select_task', 1)
-  for (const [id, input] of [
-    ['z', first],
-    ['a', second],
-    ['b', branch],
+  const clockReview =
+    'Device clock changed or resumed without calibration. Review the local work before importing.'
+  for (const [id, input, conflict] of [
+    ['z', first, clockReview],
+    ['a', second, undefined],
+    ['b', branch, 'Timer changed on another device.'],
   ] as const)
     storeTimerCommand({
       id,
@@ -89,10 +91,23 @@ test('durable journal retains concurrent branches and replays dependency chains 
       before: initial,
       after: initial,
       segments: [],
+      conflict,
     })
+  const otherKey = 'flowtime-command-v2:another-owner:z'
+  const otherEntry = JSON.stringify({
+    ...JSON.parse(values.get('flowtime-command-v2:owner:z')!),
+    userId: 'another-owner',
+  })
+  values.set(otherKey, otherEntry)
   const entries = readTimerJournal('owner')
   assert.equal(entries.length, 3)
   assert.ok(entries.findIndex((e) => e.id === 'z') < entries.findIndex((e) => e.id === 'a'))
+  const retried = entries.find((e) => e.id === 'z')!
+  assert.equal(retried.conflict, undefined)
+  assert.deepEqual(retried.input, first)
+  assert.deepEqual(JSON.parse(values.get('flowtime-command-v2:owner:z')!), retried)
+  assert.equal(entries.find((e) => e.id === 'b')!.conflict, 'Timer changed on another device.')
+  assert.equal(values.get(otherKey), otherEntry)
   assert.equal(readTimerJournal('other').length, 0)
 })
 
@@ -110,7 +125,7 @@ test('account calendar boundaries and precise local edits handle DST, offsets, m
   assert.equal(zonedInput('2026-10-01T13:30:00Z', zone), '2026-10-01T09:30:00')
 })
 
-test('server-calibrated clocks detect wall-clock jumps and sleep before automatic replay', (t) => {
+test('server-calibrated clocks track elapsed time and detect wall-clock jumps and sleep', (t) => {
   let wall = 100000,
     mono = 1000
   const wallMock = mock.method(Date, 'now', () => wall),

@@ -176,7 +176,18 @@ export function readTimerJournal(userId: string): TimerJournalEntry[] {
   const result: TimerJournalEntry[] = []
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
-    if (key?.startsWith(prefix + userId + ':')) result.push(JSON.parse(localStorage.getItem(key)!))
+    if (key?.startsWith(prefix + userId + ':')) {
+      const entry: TimerJournalEntry = JSON.parse(localStorage.getItem(key)!)
+      // Retry actions held by the retired browser clock check through normal server validation.
+      if (
+        entry.conflict ===
+        'Device clock changed or resumed without calibration. Review the local work before importing.'
+      ) {
+        delete entry.conflict
+        storeTimerCommand(entry)
+      }
+      result.push(entry)
+    }
   }
   const sorted = result.sort(
     (a, b) => a.queuedAt.localeCompare(b.queuedAt) || a.id.localeCompare(b.id)

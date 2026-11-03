@@ -252,12 +252,6 @@ export function useTimerSync(userId: string | undefined) {
           before,
           after: predicted.state,
           segments: predicted.segments,
-          ...(clock.uncertain
-            ? {
-                conflict:
-                  'Device clock changed or resumed without calibration. Review the local work before importing.',
-              }
-            : {}),
         }
         storeTimerCommand(entry)
         applyServerTimer(
