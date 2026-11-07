@@ -209,3 +209,29 @@ export function storeTimerCommand(entry: TimerJournalEntry) {
 export function removeTimerCommand(entry: TimerJournalEntry) {
   localStorage.removeItem(prefix + entry.userId + ':' + entry.id)
 }
+
+// User actions wait for polling and each other; repeated background refreshes share one job.
+export function createTimerCommandQueue(refresh: () => Promise<void>) {
+  let tail = Promise.resolve()
+  let polling: Promise<void> | null = null
+  function send(action: () => Promise<void>) {
+    const result = tail.then(action)
+    tail = result.catch(() => undefined)
+    return result
+  }
+  function sync(): Promise<void> {
+    polling ??= send(refresh).finally(() => {
+      polling = null
+    })
+    return polling
+  }
+  return { send, sync }
+}
+
+export function isTimerConflict(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code
+  return (
+    !!code &&
+    ['40001', '23505', '22023', '22007', '22008', '22P02', '23514', 'P0002', '55000'].includes(code)
+  )
+}

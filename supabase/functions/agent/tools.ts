@@ -230,7 +230,7 @@ export const toolDefinitions = {
     })
   ),
   get_timer: tool(
-    'Inspect the authoritative server timer, revision and settings. Clock values derive from server timestamps; unsynchronized offline actions remain unknown. Opens compact timer/task controls in supporting hosts.',
+    'Inspect the authoritative server timer, revision and settings. Clock values derive from server timestamps; unsynchronized offline actions remain unknown. Returns data only; no embedded window.',
     z.object({}).strict(),
     true,
     timerOutput

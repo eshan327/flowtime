@@ -16,7 +16,7 @@ The original seven names remain available. There are fourteen tools:
 | `list_sessions`, `get_session` | Full saved history and individual details, including notes and snapshots |
 | `manage_sessions` | Explicit manual entry, corrections, soft-delete and restoration |
 | `get_focus_summary` | Complete totals, counts, streaks, snapshot breakdowns, daily trends and calendar-day hourly data |
-| `get_timer`, `control_timer` | Server timer state and revision-checked commands; compact MCP Apps controls |
+| `get_timer`, `control_timer` | Server timer state and revision-checked commands; text/data results only |
 | `get_settings`, `update_settings` | Actual synced settings, revision checks and reset |
 
 Management tools accept typed `operations`, a stable UUID `request_id`, and at most 50 operations within the 16 KiB request limit. Batches commit completely or roll back. Bulk trash requires the user's confirmation and `confirmed: true`. There is no permanent-delete or arbitrary-SQL tool.
@@ -41,11 +41,11 @@ A per-user database lock serializes commands. The timer transition, segment hist
 
 Switching tasks while working commits the previous segment and continues immediately. Segment IDs differ but share one continuous run ID. Break credit and the six-hour cap span the whole run. The divisor is frozen at run start; later settings apply to future runs. Stopping starts the earned break. Pause is unsupported. Runaway work is capped and requires acknowledgement before restarting.
 
-The browser stores each command durably before changing its local display. Separate localStorage records preserve concurrent branches, and dependency ordering preserves replay order. Stable IDs make uncertain responses safe to retry. A server-calibrated clock detects wall-clock jumps or an uncalibrated offline reload; uncertain timestamps are retained for review rather than automatically replayed. The existing IndexedDB session outbox remains intact and continues retrying pre-upgrade saves. An already-saved legacy segment is adopted without being rewritten or saved twice.
+The browser stores each command durably before changing its local display. Separate localStorage records preserve concurrent branches, and dependency ordering preserves replay order. Stable IDs make uncertain responses safe to retry. A server-calibrated clock detects wall-clock jumps or an uncalibrated offline reload; the server validates replay timestamps against its clock and the last committed action. The existing IndexedDB session outbox remains intact and continues retrying pre-upgrade saves. An already-saved legacy segment is adopted without being rewritten or saved twice.
 
 Conflicting offline actions retain their candidate work and load the server result. The recovery screen compares candidates with saved history, offers explicit manual import of uncovered time, and separately confirms discarding a local action. It does not overwrite history or automatically invent duplicate sessions. Old tabs cannot overwrite command-managed timer state or segment history; they must reload. Device storage failure prevents an unqueued optimistic command.
 
-The server cannot know uncommitted actions on offline devices. The compact ChatGPT panel derives its clock from server timestamps and calls the same tools through the MCP Apps host bridge. Preferences do not control ChatGPT's device-local audio or OS shortcuts.
+The server cannot know uncommitted actions on offline devices. The ChatGPT tools return text and structured data without advertising or opening an embedded panel. Preferences do not control ChatGPT's device-local audio or OS shortcuts.
 
 ## OAuth and database security
 

@@ -3,6 +3,8 @@ import { calibrateServerClock, serverClock } from '../src/features/timer/lib/ser
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
+  createTimerCommandQueue,
+  isTimerConflict,
   predictTimer,
   readTimerJournal,
   storeTimerCommand,
@@ -147,4 +149,48 @@ test('server-calibrated clocks track elapsed time and detect wall-clock jumps an
   calibrateServerClock('2026-10-01T12:00:02Z')
   wall += 3600000
   assert.equal(serverClock().uncertain, true)
+})
+
+test('timer clicks wait for a poll, retain their order, and a failed action does not block the next', async () => {
+  let release!: () => void
+  const blocked = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const events: string[] = []
+  const queue = createTimerCommandQueue(async () => {
+    events.push('poll')
+    await blocked
+    events.push('refreshed')
+  })
+  const poll = queue.sync()
+  assert.equal(queue.sync(), poll)
+  const start = queue.send(async () => {
+    events.push('start')
+  })
+  const stop = queue.send(async () => {
+    events.push('stop')
+  })
+  await Promise.resolve()
+  assert.deepEqual(events, ['poll'])
+  release()
+  await Promise.all([poll, start, stop])
+  assert.deepEqual(events, ['poll', 'refreshed', 'start', 'stop'])
+  await assert.rejects(
+    queue.send(async () => {
+      throw new Error('unavailable')
+    }),
+    /unavailable/
+  )
+  await queue.send(async () => {
+    events.push('retry')
+  })
+  assert.equal(events.at(-1), 'retry')
+})
+
+test('only definitive timer rejections require recovery; temporary failures retain retryable commands', () => {
+  for (const code of ['40001', '23505', '22023', 'P0002', '55000'])
+    assert.equal(isTimerConflict({ code }), true, code)
+  for (const code of [undefined, '', 'PGRST301', 'PGRST002', '57014', '08006', '53300', '42501'])
+    assert.equal(isTimerConflict({ code }), false, String(code))
+  assert.equal(isTimerConflict(null), false)
 })

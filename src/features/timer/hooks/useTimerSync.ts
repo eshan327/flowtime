@@ -4,6 +4,8 @@ import { create } from 'zustand'
 import { createInitialTimerState, useTimerStore } from '@/features/timer/stores/timerStore'
 import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import {
+  createTimerCommandQueue,
+  isTimerConflict,
   predictTimer,
   readTimerJournal,
   removeTimerCommand,
@@ -27,13 +29,21 @@ export const useTimerCommandStatus = create<{
   error: string | null
 }>(() => ({ pending: 0, conflicts: [], error: null }))
 let active: {
-  send: (action: TimerAction, taskId?: string | null) => Promise<void>
+  send: (
+    action: TimerAction,
+    taskId?: string | null,
+    expectedRevision?: string | null
+  ) => Promise<void>
   sync: () => Promise<void>
 } | null = null
-export async function sendTimerCommand(action: TimerAction, taskId?: string | null) {
+export async function sendTimerCommand(
+  action: TimerAction,
+  taskId?: string | null,
+  expectedRevision?: string | null
+) {
   try {
     if (!active) throw new Error('Loading your timer.')
-    await active.send(action, taskId)
+    await active.send(action, taskId, expectedRevision)
   } catch (error) {
     useTimerCommandStatus.setState({
       error: error instanceof Error ? error.message : 'Timer command failed.',
@@ -109,7 +119,6 @@ export function useTimerSync(userId: string | undefined) {
   useEffect(() => {
     if (!userId) return
     let stopped = false,
-      busy = false,
       ready = false
     function updateStatus(error: unknown = null) {
       if (stopped) return
@@ -120,9 +129,8 @@ export function useTimerSync(userId: string | undefined) {
       })
       setStatus({ userId, ready, error })
     }
-    async function sync() {
-      if (busy || stopped) return
-      busy = true
+    async function refresh() {
+      if (stopped) return
       try {
         const journal = readTimerJournal(userId!)
         for (const entry of journal) {
@@ -135,8 +143,8 @@ export function useTimerSync(userId: string | undefined) {
               applyServerTimer(timer, userId!)
             void queryClient.invalidateQueries({ queryKey: queryKeys.sessions(userId) })
           } catch (error) {
-            const code = (error as { code?: string }).code
-            if (!code) throw error
+            if (stopped) return
+            if (!isTimerConflict(error)) throw error
             for (const pending of readTimerJournal(userId!)) {
               if (!pending.conflict)
                 storeTimerCommand({ ...pending, conflict: (error as { message: string }).message })
@@ -147,6 +155,8 @@ export function useTimerSync(userId: string | undefined) {
         const timer = await readFlowtime<ServerTimer>('timer')
         if (stopped) return
         calibrateServerClock(timer.server_time)
+        if (timer.revision !== useTimerStore.getState().syncRevision)
+          void queryClient.invalidateQueries({ queryKey: queryKeys.sessions(userId) })
         if (!ready) {
           const local = useTimerStore.getState()
           if (
@@ -196,73 +206,87 @@ export function useTimerSync(userId: string | undefined) {
           useTimerCommandStatus.setState({ error: message })
           setStatus({ userId, ready: false, error: storageError })
         }
-      } finally {
-        busy = false
       }
     }
+    const queue = createTimerCommandQueue(refresh)
+    const sync = queue.sync
     const controller = {
       sync,
-      send: async (action: TimerAction, taskId?: string | null) => {
-        if (busy) throw new Error('Timer is synchronizing. Try again in a moment.')
-        if (
-          readTimerJournal(userId!).some((e) => e.conflict) &&
-          !['stop_work', 'skip_break', 'finish_break', 'acknowledge_runaway'].includes(action)
-        )
-          throw new Error('Review the offline conflict before controlling the timer.')
-        const current = useTimerStore.getState(),
-          before = serializeTimer(),
-          settings = useTimerSettingsStore.getState()
-        const selectedId = taskId === undefined ? before.selectedTaskId : taskId
-        const tasks = queryClient.getQueryData<TaskWithCategory[]>(queryKeys.tasks(userId)) ?? []
-        const task = tasks.find((t) => t.id === selectedId)
-        if (
-          ['select_task', 'start_work'].includes(action) &&
-          selectedId &&
-          (!task ||
-            task.completed_at ||
-            task.deleted_at ||
-            task.categories?.deleted_at ||
-            task.categories?.archived_at)
-        )
-          throw new Error('Select an available task.')
-        const target = task
-          ? {
-              selectedTaskId: task.id,
-              selectedTaskName: task.name,
-              selectedTaskColor: task.categories?.color ?? task.color,
-              selectedCategoryId: task.category_id,
-              selectedCategoryName: task.categories?.name ?? null,
-              selectedCategoryColor: task.categories?.color ?? null,
-            }
-          : null
-        const clock = serverClock()
-        const input = {
-          action,
-          expected_revision: current.syncRevision,
-          next_revision: crypto.randomUUID(),
-          occurred_at: new Date(clock.now).toISOString(),
-          ...(taskId !== undefined ? { task_id: taskId } : {}),
-        }
-        const predicted = predictTimer(before, input, target, settings)
-        const entry: TimerJournalEntry = {
-          id: crypto.randomUUID(),
-          userId: userId!,
-          queuedAt: new Date().toISOString(),
-          input,
-          before,
-          after: predicted.state,
-          segments: predicted.segments,
-        }
-        storeTimerCommand(entry)
-        applyServerTimer(
-          { state: predicted.state, revision: input.next_revision, server_time: input.occurred_at },
-          userId!,
-          true
-        )
-        useTimerCommandStatus.setState({ error: null })
-        updateStatus()
-        await sync()
-      },
+      send: (action: TimerAction, taskId?: string | null, expectedRevision?: string | null) =>
+        queue.send(async () => {
+          if (stopped) return
+          // Refresh before a new online action so ChatGPT changes do not use a stale revision.
+          if (!readTimerJournal(userId!).some((entry) => !entry.conflict)) await refresh()
+          if (stopped) return
+          // Automatic expiry belongs to the observed timer, never a newer run.
+          if (
+            expectedRevision !== undefined &&
+            useTimerStore.getState().syncRevision !== expectedRevision
+          )
+            return
+          if (
+            readTimerJournal(userId!).some((e) => e.conflict) &&
+            !['stop_work', 'skip_break', 'finish_break', 'acknowledge_runaway'].includes(action)
+          )
+            throw new Error('Review the offline conflict before controlling the timer.')
+          const current = useTimerStore.getState(),
+            before = serializeTimer(),
+            settings = useTimerSettingsStore.getState()
+          const selectedId = taskId === undefined ? before.selectedTaskId : taskId
+          const tasks = queryClient.getQueryData<TaskWithCategory[]>(queryKeys.tasks(userId)) ?? []
+          const task = tasks.find((t) => t.id === selectedId)
+          if (
+            ['select_task', 'start_work'].includes(action) &&
+            selectedId &&
+            (!task ||
+              task.completed_at ||
+              task.deleted_at ||
+              task.categories?.deleted_at ||
+              task.categories?.archived_at)
+          )
+            throw new Error('Select an available task.')
+          const target = task
+            ? {
+                selectedTaskId: task.id,
+                selectedTaskName: task.name,
+                selectedTaskColor: task.categories?.color ?? task.color,
+                selectedCategoryId: task.category_id,
+                selectedCategoryName: task.categories?.name ?? null,
+                selectedCategoryColor: task.categories?.color ?? null,
+              }
+            : null
+          const clock = serverClock()
+          const input = {
+            action,
+            expected_revision: current.syncRevision,
+            next_revision: crypto.randomUUID(),
+            occurred_at: new Date(clock.now).toISOString(),
+            ...(taskId !== undefined ? { task_id: taskId } : {}),
+          }
+          const predicted = predictTimer(before, input, target, settings)
+          const entry: TimerJournalEntry = {
+            id: crypto.randomUUID(),
+            userId: userId!,
+            queuedAt: new Date().toISOString(),
+            input,
+            before,
+            after: predicted.state,
+            segments: predicted.segments,
+          }
+          storeTimerCommand(entry)
+          applyServerTimer(
+            {
+              state: predicted.state,
+              revision: input.next_revision,
+              server_time: input.occurred_at,
+            },
+            userId!,
+            true
+          )
+          useTimerCommandStatus.setState({ error: null })
+          updateStatus()
+          await refresh()
+        }),
     }
     active = controller
     const resume = () => {

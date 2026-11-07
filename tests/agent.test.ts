@@ -231,10 +231,15 @@ test('MCP and REST verify signed OAuth tokens, expose identical tools and fail c
   const names = (await restTools.json()).tools.map((tool: { name: string }) => tool.name)
   const mcpTools = await handler(request('', { jsonrpc: '2.0', id: 1, method: 'tools/list' }))
   assert.equal(mcpTools.status, 200)
+  const advertised = (await mcpTools.json()).result.tools
   assert.deepEqual(
-    (await mcpTools.json()).result.tools.map((tool: { name: string }) => tool.name),
+    advertised.map((tool: { name: string }) => tool.name),
     names
   )
+  for (const tool of advertised) {
+    assert.equal(tool._meta?.ui, undefined, `${tool.name} must not open a panel`)
+    assert.equal(tool._meta?.['openai/outputTemplate'], undefined)
+  }
   const initialize = await handler(
     request('', {
       jsonrpc: '2.0',
@@ -247,7 +252,9 @@ test('MCP and REST verify signed OAuth tokens, expose identical tools and fail c
       },
     })
   )
-  assert.equal((await initialize.json()).result.serverInfo.name, 'flowtime')
+  const initialized = (await initialize.json()).result
+  assert.equal(initialized.serverInfo.name, 'flowtime')
+  assert.equal(initialized.capabilities.resources, undefined)
   assert.equal((await handler(request('/tools/list_tasks', { user_id: 'other' }))).status, 400)
   assert.equal((await handler(request('/tools/unknown'))).status, 404)
   assert.equal(

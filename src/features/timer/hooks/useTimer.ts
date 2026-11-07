@@ -9,6 +9,7 @@ export function useTimer(enabled: boolean) {
   const chimeEnabled = useTimerSettingsStore((state) => state.chimeEnabled)
   const chimeId = useTimerSettingsStore((state) => state.chimeId)
   const phase = useTimerStore((state) => state.phase)
+  const revision = useTimerStore((state) => state.syncRevision)
   const startedAt = useTimerStore((state) => state.startedAt)
   const breakEndAt = useTimerStore((state) => state.breakEndAt)
   const setWorkSeconds = useTimerStore((state) => state.setWorkSeconds)
@@ -40,7 +41,7 @@ export function useTimer(enabled: boolean) {
         )
 
         if (elapsed >= MAX_SESSION_SECONDS) {
-          void sendTimerCommand('stop_work')
+          void sendTimerCommand('stop_work', undefined, revision)
           return
         }
 
@@ -48,7 +49,7 @@ export function useTimer(enabled: boolean) {
       } else if (phase === 'breaking' && breakEndAt) {
         const remaining = Math.ceil((breakEndAt.getTime() - timerNow()) / 1000)
         if (remaining <= 0) {
-          void sendTimerCommand('finish_break')
+          void sendTimerCommand('finish_break', undefined, revision)
         }
       }
     }
@@ -69,5 +70,5 @@ export function useTimer(enabled: boolean) {
       window.clearInterval(interval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [enabled, phase, startedAt, breakEndAt, setWorkSeconds])
+  }, [enabled, phase, revision, startedAt, breakEndAt, setWorkSeconds])
 }
