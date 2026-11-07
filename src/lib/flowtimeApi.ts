@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { withRequestTimeout } from './requestTimeout'
 import type { Json } from '@/types/supabase'
 
 export interface FlowtimePage<T> {
@@ -11,7 +12,9 @@ export async function readFlowtime<T>(
   operation: string,
   input: Record<string, unknown> = {}
 ): Promise<T> {
-  const { data, error } = await supabase.rpc('flowtime_read', { operation, input: input as Json })
+  const { data, error } = await withRequestTimeout((signal) =>
+    supabase.rpc('flowtime_read', { operation, input: input as Json }).abortSignal(signal)
+  )
   if (error) throw error
   return data as T
 }
@@ -20,11 +23,15 @@ export async function commandFlowtime<T>(
   input: Record<string, unknown>,
   requestId: string = crypto.randomUUID()
 ): Promise<T> {
-  const { data, error } = await supabase.rpc('flowtime_command', {
-    operation,
-    input: input as Json,
-    request_id: requestId,
-  })
+  const { data, error } = await withRequestTimeout((signal) =>
+    supabase
+      .rpc('flowtime_command', {
+        operation,
+        input: input as Json,
+        request_id: requestId,
+      })
+      .abortSignal(signal)
+  )
   if (error) throw error
   return data as T
 }

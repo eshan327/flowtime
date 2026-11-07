@@ -29,7 +29,7 @@ const TimerSettingsModal = lazy(() =>
 export function TimerPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
-  const { timerReady, timerSyncError } = useUser()
+  const { user, authLoading, timerReady, timerSyncError } = useUser()
   const { activeTasks: tasks, addTask, isLoading: tasksLoading, error: tasksError } = useTasks()
   const { categories, isLoading: categoriesLoading } = useCategories()
 
@@ -140,9 +140,16 @@ export function TimerPage() {
 
         {!timerReady || timerSyncError ? (
           <p className="mx-auto mt-3 max-w-2xl text-sm text-ink-secondary" role="status">
-            {timerSyncError
-              ? 'Timer saved on this device. Cross-device sync will retry when connected.'
-              : 'Loading your timer...'}
+            {!user && !authLoading
+              ? 'Sign in from Account to sync your timer.'
+              : timerSyncError
+                ? 'Unable to sync your timer. Reconnecting automatically; reload if this continues.'
+                : 'Loading your timer...'}
+            {timerSyncError ? (
+              <Button size="sm" variant="ghost" onClick={() => window.location.reload()}>
+                Reload
+              </Button>
+            ) : null}
           </p>
         ) : null}
 

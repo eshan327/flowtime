@@ -102,6 +102,13 @@ export function applyServerTimer(timer: ServerTimer, userId: string, pending = f
     throw new Error('Invalid server timer timestamp.')
   if ((source.phase === 'working' && !startedAt) || (source.phase === 'breaking' && !breakEndAt))
     throw new Error('Missing server timer timestamp.')
+  const current = useTimerStore.getState()
+  if (
+    current.ownerUserId === userId &&
+    current.syncRevision === timer.revision &&
+    current.syncPending === pending
+  )
+    return
   useTimerStore.setState({
     ...s,
     ownerUserId: userId,
@@ -127,17 +134,23 @@ export function useTimerSync(userId: string | undefined) {
         pending: journal.filter((e) => !e.conflict).length,
         conflicts: journal.filter((e) => !!e.conflict),
       })
-      setStatus({ userId, ready, error })
+      setStatus((previous) =>
+        previous.userId === userId && previous.ready === ready && previous.error === error
+          ? previous
+          : { userId, ready, error }
+      )
     }
-    async function refresh() {
+    async function refresh(freshRequestId?: string) {
       if (stopped) return
       try {
         const journal = readTimerJournal(userId!)
+        let freshTimer: ServerTimer | undefined
         for (const entry of journal) {
           if (entry.conflict) continue
           try {
             const timer = await commandFlowtime<ServerTimer>('timer', { ...entry.input }, entry.id)
             if (stopped) return
+            if (entry.id === freshRequestId) freshTimer = timer
             removeTimerCommand(entry)
             if (!readTimerJournal(userId!).some((e) => !e.conflict))
               applyServerTimer(timer, userId!)
@@ -152,7 +165,8 @@ export function useTimerSync(userId: string | undefined) {
             break
           }
         }
-        const timer = await readFlowtime<ServerTimer>('timer')
+        // A newly committed command already returns the authoritative state and clock.
+        const timer = freshTimer ?? (await readFlowtime<ServerTimer>('timer'))
         if (stopped) return
         calibrateServerClock(timer.server_time)
         if (timer.revision !== useTimerStore.getState().syncRevision)
@@ -285,7 +299,7 @@ export function useTimerSync(userId: string | undefined) {
           )
           useTimerCommandStatus.setState({ error: null })
           updateStatus()
-          await refresh()
+          await refresh(entry.id)
         }),
     }
     active = controller

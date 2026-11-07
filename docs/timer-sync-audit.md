@@ -34,3 +34,21 @@ Regression coverage exercises the actual browser controller with delayed/mocked 
 Release requires deploying the updated agent Edge Function and browser build, then publishing the updated skill through the existing plugin release process. Preserve existing endpoint, OAuth identities and approvals. Refresh ChatGPT connector metadata and verify in a new chat that task/timer reads show no embedded panel. Reload existing browser tabs so they use the new controller. The repository changes alone do not update deployed clients or cached ChatGPT metadata.
 
 A real signed-in ChatGPT/browser interaction was not performed, and no synthetic work was written to the user's production history. The intended host verification after release is: read tasks/timer without a panel, start/stop a user-authorized session in chat, observe the browser update, and confirm one saved session without spurious recovery.
+
+
+## Mobile startup and performance follow-up
+
+The reported device is iPhone Safari. Auditing the startup path found three unbounded waits: session restoration, the timer RPC, and the independent settings read. Both timer and settings readiness gate the controls; settings errors were not propagated to the timer loading message. A queued timer poll could therefore block subsequent clicks indefinitely. A signed-out session also had no terminal message on the timer screen.
+
+The follow-up bounds complete API operations (including waiting for authentication) to 15 seconds, aborts timed-out requests, bounds authentication network requests, and exposes account/settings errors with a reload action. The existing poll can retry after failure. Signed-out sessions show the Account sign-in instruction. Late request results cannot overwrite a completed timeout. Timer command IDs remain stable across uncertain retries; no timeout automatically repeats unrelated writes.
+
+Performance changes verified by regression tests:
+
+- Successful online timer actions use the command response directly: two sequential RPCs instead of three (fresh read, then command; no duplicate final read).
+- Polls with an unchanged revision preserve the timer state object and timestamp identities. Successful unchanged status updates also preserve React state.
+- Insights requests two summaries instead of two summaries plus range/year raw session lists. Heatmap details load only for the selected day, with explicit loading/error/retry states and shared history caching.
+- Today's timer totals request only the first summary page (`limit: 1`); the database returns complete totals on each page, so breakdown pagination is unnecessary here.
+
+Route chunks and the chart library were already lazy-loaded, so no new bundler dependency or chart rewrite was introduced. Fast timer polling remains at three seconds; no cache-duration increase delays cross-device timer updates. No database schema or permissions change is required.
+
+Tests simulate stalled initial timer/settings requests, aborts, late completions, recovery, request counts and state identity. These reproduce the indefinite-wait failure mechanism, not a captured trace from the user's iPhone. Physical-device Safari performance and the exact original network/authentication failure remain unverified; request-count reductions are not claimed as measured mobile load-time improvements.

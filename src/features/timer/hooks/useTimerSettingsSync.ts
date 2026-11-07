@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { withRequestTimeout } from '@/lib/requestTimeout'
 import { createTimerSync } from '@/features/timer/lib/timerSync'
 import { sanitizeSettings, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { supabase } from '@/lib/supabaseClient'
@@ -37,11 +38,14 @@ export function useTimerSettingsSync(userId: string | undefined) {
         }
       },
       read: async () => {
-        const { data, error } = await supabase
-          .from('user_settings')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle()
+        const { data, error } = await withRequestTimeout((signal) =>
+          supabase
+            .from('user_settings')
+            .select('*')
+            .eq('user_id', userId)
+            .abortSignal(signal)
+            .maybeSingle()
+        )
         if (error) throw error
         return data
           ? {

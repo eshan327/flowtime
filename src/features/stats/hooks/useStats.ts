@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useUser } from '@/context/UserContext'
 import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
-import { fetchSessionRows } from '@/features/sessions/api/sessionQueries'
 import { fetchFocusSummary, type FocusDay } from '@/lib/focusSummary'
 import { getRangeDatesForAnchor } from '@/lib/dateRange'
 import { queryKeys } from '@/lib/queryKeys'
@@ -37,7 +36,7 @@ export function useStats(range: TimeRange, anchorDate: Date) {
     queryFn: async () => {
       const yearAgo = new Date()
       yearAgo.setUTCFullYear(yearAgo.getUTCFullYear() - 1)
-      const [summary, heatmap, sessions, heatmapSessions] = await Promise.all([
+      const [summary, heatmap] = await Promise.all([
         fetchFocusSummary({
           from: from.toISOString(),
           to: to.toISOString(),
@@ -46,10 +45,8 @@ export function useStats(range: TimeRange, anchorDate: Date) {
           anchor: range === 'day' ? dateKeyInZone(anchorDate, timezone) : undefined,
         }),
         fetchFocusSummary({ from: yearAgo.toISOString(), to: new Date().toISOString(), timezone }),
-        fetchSessionRows({ userId: userId!, fromIso: from.toISOString(), toIso: to.toISOString() }),
-        fetchSessionRows({ userId: userId!, fromIso: yearAgo.toISOString() }),
       ])
-      return { summary, heatmap, sessions, heatmapSessions }
+      return { summary, heatmap }
     },
   })
   const summary = query.data?.summary
@@ -61,7 +58,6 @@ export function useStats(range: TimeRange, anchorDate: Date) {
   return {
     isLoading: query.isLoading,
     error: query.error,
-    sessions: query.data?.sessions ?? [],
     totalSessions: summary?.session_count ?? 0,
     totalWorkSeconds: summary?.work_seconds ?? 0,
     currentStreak: summary?.current_streak ?? 0,
@@ -82,6 +78,5 @@ export function useStats(range: TimeRange, anchorDate: Date) {
       sessionCount: t.session_count,
     })),
     allDays,
-    heatmapSessions: query.data?.heatmapSessions ?? [],
   }
 }

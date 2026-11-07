@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useUser } from '@/context/UserContext'
 import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
-import { fetchFocusSummary } from '@/lib/focusSummary'
+import { readFlowtime } from '@/lib/flowtimeApi'
+import type { FocusSummary } from '@/lib/focusSummary'
 import { dateKeyInZone } from '@/lib/timezone'
 export function useTodaySummary() {
   const { user } = useUser()
@@ -17,7 +18,7 @@ export function useTodaySummary() {
     enabled: !!user,
     refetchInterval: 5000,
     queryFn: async () => {
-      const s = await fetchFocusSummary({ period: 'day', timezone })
+      const s = await readFlowtime<FocusSummary>('summary', { period: 'day', timezone, limit: 1 })
       return { count: s.session_count, totalWorkSeconds: s.work_seconds }
     },
   })

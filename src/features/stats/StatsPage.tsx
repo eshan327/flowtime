@@ -1,3 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
+import { useUser } from '@/context/UserContext'
+import { fetchSessionRows } from '@/features/sessions/api/sessionQueries'
+import { queryKeys } from '@/lib/queryKeys'
 import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { calendarRange, midnightInZone } from '@/lib/timezone'
 import { workSecondsInDateRange } from '@/lib/sessionTime'
@@ -30,6 +34,7 @@ function getNavigationFloor() {
 }
 
 export function StatsPage() {
+  const { user } = useUser()
   const timezone = useTimerSettingsStore((s) => s.timezone)
   const [range, setRange] = useState<TimeRange>('week')
   const [anchorDate, setAnchorDate] = useState<Date>(() => new Date())
@@ -75,13 +80,37 @@ export function StatsPage() {
     return stats.allDays.find((day) => day.date === selectedHeatmapDate) ?? null
   }, [selectedHeatmapDate, stats.allDays])
 
-  const selectedHeatmapSessions = useMemo(() => {
-    if (!selectedHeatmapDate) return []
-    const window = calendarRange('day', midnightInZone(selectedHeatmapDate, timezone), timezone)
-    return stats.heatmapSessions.filter(
-      (session) => workSecondsInDateRange(session, window.from, window.to) > 0
-    )
-  }, [stats.heatmapSessions, selectedHeatmapDate, timezone])
+  const heatmapWindow = useMemo(
+    () =>
+      selectedHeatmapDate
+        ? calendarRange('day', midnightInZone(selectedHeatmapDate, timezone), timezone)
+        : null,
+    [selectedHeatmapDate, timezone]
+  )
+  const daySessions = useQuery({
+    queryKey: queryKeys.sessionsHistoryRange(
+      user?.id,
+      heatmapWindow?.from.toISOString() ?? null,
+      heatmapWindow?.to.toISOString() ?? null
+    ),
+    enabled: !!user && !!heatmapWindow,
+    queryFn: () =>
+      fetchSessionRows({
+        userId: user!.id,
+        ascending: false,
+        fromIso: heatmapWindow!.from.toISOString(),
+        toIso: heatmapWindow!.to.toISOString(),
+      }),
+  })
+  const selectedHeatmapSessions = useMemo(
+    () =>
+      heatmapWindow
+        ? (daySessions.data ?? []).filter(
+            (session) => workSecondsInDateRange(session, heatmapWindow.from, heatmapWindow.to) > 0
+          )
+        : [],
+    [daySessions.data, heatmapWindow]
+  )
 
   const header = (
     <header className="flex flex-wrap items-end justify-between gap-4 border-b border-surface-border pb-5">
@@ -216,21 +245,34 @@ export function StatsPage() {
                   })}
                 </p>
                 <p className="text-xs text-ink-tertiary">
-                  {selectedHeatmapSessions.length} sessions ·{' '}
-                  {formatDuration(selectedHeatmapDay.totalSeconds)} focused
+                  {daySessions.isLoading
+                    ? 'Loading sessions'
+                    : `${selectedHeatmapSessions.length} sessions`}{' '}
+                  · {formatDuration(selectedHeatmapDay.totalSeconds)} focused
                 </p>
               </div>
             </div>
 
-            <SessionLog
-              focusRange={getRangeDatesForAnchor(
-                'day',
-                midnightInZone(selectedHeatmapDay.date, timezone),
-                timezone
-              )}
-              pageSize={6}
-              sessions={selectedHeatmapSessions}
-            />
+            {daySessions.isLoading ? (
+              <Spinner />
+            ) : daySessions.isError ? (
+              <p role="alert" className="text-sm text-red-300">
+                Unable to load sessions for this day.
+                <Button size="sm" variant="ghost" onClick={() => void daySessions.refetch()}>
+                  Retry
+                </Button>
+              </p>
+            ) : (
+              <SessionLog
+                focusRange={getRangeDatesForAnchor(
+                  'day',
+                  midnightInZone(selectedHeatmapDay.date, timezone),
+                  timezone
+                )}
+                pageSize={6}
+                sessions={selectedHeatmapSessions}
+              />
+            )}
           </div>
         ) : null}
       </section>

@@ -7,9 +7,11 @@ import { useTimerSettingsSync } from '@/features/timer/hooks/useTimerSettingsSyn
 import { useTimerCommandStatus, useTimerSync } from '@/features/timer/hooks/useTimerSync'
 import { queryClient } from '@/lib/queryClient'
 import { supabase } from '@/lib/supabaseClient'
+import { withRequestTimeout } from '@/lib/requestTimeout'
 
 interface UserContextValue {
   user: User | null
+  authLoading: boolean
   timerReady: boolean
   timerSyncError: unknown
   settingsReady: boolean
@@ -18,6 +20,7 @@ interface UserContextValue {
 
 export const UserContext = createContext<UserContextValue>({
   user: null,
+  authLoading: true,
   timerReady: false,
   timerSyncError: null,
   settingsReady: false,
@@ -31,7 +34,8 @@ export function useUser() {
 let anonymousSessionPromise: Promise<Session | null> | null = null
 
 async function getOrCreateSession() {
-  const { data } = await supabase.auth.getSession()
+  const { data, error } = await withRequestTimeout(() => supabase.auth.getSession())
+  if (error) throw error
   if (data.session) return data.session
 
   anonymousSessionPromise ??= supabase.auth
@@ -48,12 +52,16 @@ async function getOrCreateSession() {
 }
 
 export function UserProvider({ children }: { children: ReactNode }) {
+  const [authLoading, setAuthLoading] = useState(true)
+  const [sessionError, setSessionError] = useState<unknown>(null)
   const [user, setUser] = useState<User | null>(null)
   const timerSync = useTimerSync(user?.id)
   const settingsSync = useTimerSettingsSync(user?.id)
   const previousUserIdRef = useRef<string | null | undefined>(undefined)
 
   const setSessionUser = (session: { user: User } | null) => {
+    setAuthLoading(false)
+    setSessionError(null)
     const nextUser = session?.user ?? null
     const nextUserId = nextUser?.id ?? null
     const previousUserId = previousUserIdRef.current
@@ -77,14 +85,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isActive = true
 
-    getOrCreateSession()
+    withRequestTimeout(() => getOrCreateSession())
       .then((session) => {
         if (!isActive) return
         setSessionUser(session)
       })
-      .catch(() => {
+      .catch((error) => {
         if (!isActive) return
-        setSessionUser(null)
+        setAuthLoading(false)
+        setSessionError(error)
       })
 
     const {
@@ -115,8 +124,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     <UserContext.Provider
       value={{
         user,
+        authLoading,
         ...timerSync,
         ...settingsSync,
+        timerSyncError: sessionError ?? timerSync.timerSyncError ?? settingsSync.settingsSyncError,
         timerReady: timerSync.timerReady && settingsSync.settingsReady,
       }}
     >

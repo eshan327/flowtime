@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { registerHooks } from 'node:module'
 import test from 'node:test'
+import { withRequestTimeout } from '../src/lib/requestTimeout.ts'
 
 const values = new Map<string, string>()
 const storage = {
@@ -19,7 +20,10 @@ const storage = {
 let effect: () => () => void
 let remote: any
 let readGate: Promise<void> | undefined
+let settingsGate: Promise<void> | undefined
 let failure: unknown
+let status: any
+let reads = 0
 const commands: any[] = []
 const invalidations: unknown[] = []
 const taskId = crypto.randomUUID()
@@ -35,13 +39,36 @@ Object.assign(globalThis, {
   },
   document: { visibilityState: 'visible', addEventListener() {}, removeEventListener() {} },
   timerTest: {
+    settings: {
+      from() {
+        return this
+      },
+      select() {
+        return this
+      },
+      eq() {
+        return this
+      },
+      abortSignal() {
+        return this
+      },
+      async maybeSingle() {
+        await settingsGate
+        return { data: null, error: null }
+      },
+    },
     effect: (callback: typeof effect) => {
       effect = callback
     },
-    read: async () => {
-      await readGate
-      return structuredClone(remote)
+    setStatus: (update: any) => {
+      status = typeof update === 'function' ? update(status) : update
     },
+    read: () =>
+      withRequestTimeout(async () => {
+        reads++
+        await readGate
+        return structuredClone(remote)
+      }),
     command: async (_operation: string, input: any, id: string) => {
       commands.push({ input, id })
       if (failure) throw failure
@@ -70,10 +97,14 @@ Object.assign(globalThis, {
 const moduleUrl = (source: string) => `data:text/javascript,${encodeURIComponent(source)}`
 const hooks = registerHooks({
   resolve(specifier, context, nextResolve) {
-    if (context.parentURL?.endsWith('/hooks/useTimerSync.ts') && specifier === 'react')
+    if (
+      (context.parentURL?.endsWith('/hooks/useTimerSync.ts') ||
+        context.parentURL?.endsWith('/hooks/useTimerSettingsSync.ts')) &&
+      specifier === 'react'
+    )
       return {
         url: moduleUrl(
-          'export const useEffect = globalThis.timerTest.effect; export const useState = value => [value, () => {}]'
+          'export const useEffect = globalThis.timerTest.effect; export const useState = value => [value, globalThis.timerTest.setStatus]'
         ),
         shortCircuit: true,
       }
@@ -82,6 +113,11 @@ const hooks = registerHooks({
         url: moduleUrl(
           'export const readFlowtime = globalThis.timerTest.read; export const commandFlowtime = globalThis.timerTest.command'
         ),
+        shortCircuit: true,
+      }
+    if (specifier === '@/lib/supabaseClient')
+      return {
+        url: moduleUrl('export const supabase = globalThis.timerTest.settings'),
         shortCircuit: true,
       }
     if (specifier === '@/lib/queryClient')
@@ -103,6 +139,7 @@ const { useTimerStore, createInitialTimerState } =
   await import('../src/features/timer/stores/timerStore.ts')
 const { predictTimer, readTimerJournal } =
   await import('../src/features/timer/lib/timerCommands.ts')
+const { useTimerSettingsSync } = await import('../src/features/timer/hooks/useTimerSettingsSync.ts')
 hooks.deregister()
 
 function mount() {
@@ -110,6 +147,8 @@ function mount() {
   commands.length = 0
   invalidations.length = 0
   failure = undefined
+  status = { ready: false, error: null }
+  reads = 0
   readGate = undefined
   useTimerStore.setState(createInitialTimerState())
   useTimerCommandStatus.setState({ pending: 0, conflicts: [], error: null })
@@ -204,5 +243,60 @@ test('a queued automatic expiry cannot change a newer remote timer', async () =>
     assert.equal(useTimerCommandStatus.getState().error, null)
   } finally {
     cleanup()
+  }
+})
+
+test('a hung initial mobile read leaves loading, then retry restores the server timer', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const cleanup = mount()
+  readGate = new Promise<void>(() => {})
+  try {
+    const sync = retryTimerCommands()
+    for (let i = 0; i < 6; i++) await Promise.resolve()
+    t.mock.timers.tick(15000)
+    await sync
+    assert.equal(status.ready, false)
+    assert.match(status.error.message, /Connection timed out/)
+    readGate = undefined
+    await retryTimerCommands()
+    assert.equal(status.ready, true)
+    assert.equal(status.error, null)
+    assert.equal(useTimerStore.getState().syncRevision, remote.revision)
+  } finally {
+    cleanup()
+  }
+})
+
+test('unchanged polls preserve timer object identities and clicks avoid a redundant final read', async () => {
+  const cleanup = mount()
+  try {
+    await retryTimerCommands()
+    await sendTimerCommand('start_work')
+    const before = useTimerStore.getState()
+    await retryTimerCommands()
+    assert.equal(useTimerStore.getState(), before)
+    const count = reads
+    await sendTimerCommand('stop_work')
+    assert.equal(reads - count, 1)
+  } finally {
+    cleanup()
+  }
+})
+
+test('a stalled settings request reports an error and releases startup readiness', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  status = { ready: false, error: null }
+  settingsGate = new Promise<void>(() => {})
+  useTimerSettingsSync(userId)
+  const cleanup = effect!()
+  try {
+    for (let i = 0; i < 6; i++) await Promise.resolve()
+    t.mock.timers.tick(15000)
+    for (let i = 0; i < 12; i++) await Promise.resolve()
+    assert.equal(status.ready, true)
+    assert.match(status.error.message, /Connection timed out/)
+  } finally {
+    cleanup()
+    settingsGate = undefined
   }
 })
