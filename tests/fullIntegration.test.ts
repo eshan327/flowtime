@@ -2,6 +2,14 @@ import { setup, owner, other, client } from './helpers/flowtimeDatabase.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
+function httpConflict(message: string) {
+  return {
+    code: 'PGRST',
+    message: JSON.stringify({ code: '40001', message }),
+    detail: '{"status":409,"headers":{}}',
+  }
+}
+
 test('expanded operations enforce consent, client/audience ownership, revocation and no direct RPC-helper access', async (t) => {
   const { db, claims, command, read } = await setup()
   t.after(() => db.close())
@@ -152,7 +160,15 @@ test('timer switching is atomic, keeps continuous earned breaks, retries exactly
   assert.equal((await read('sessions')).items[0].work_seconds, 62)
   await assert.rejects(
     command('timer', { action: 'stop_work', expected_revision: first.revision }),
-    /another device/
+    httpConflict('Timer changed on another device. Refresh before retrying.')
+  )
+  await assert.rejects(
+    command('timer', {
+      action: 'stop_work',
+      expected_revision: switched.revision,
+      occurred_at: time(61),
+    }),
+    httpConflict('Offline clock or action order conflicts. Review the local work.')
   )
   const stop = { action: 'stop_work', expected_revision: switched.revision, occurred_at: time(126) }
   const stopId = crypto.randomUUID()
@@ -200,7 +216,7 @@ test('focus lock, missing tasks, atomic failure, six-hour cap and stale settings
   })
   await assert.rejects(
     command('settings', { expected_revision: null, break_divisor: 1 }),
-    /Settings changed/
+    httpConflict('Settings changed. Refresh before retrying.')
   )
   await assert.rejects(
     command('settings', { expected_revision: settings.revision, timezone: 'Invalid/Zone' }),
@@ -278,7 +294,7 @@ test('history corrections preserve snapshots; manual validation, complete summar
   await command('sessions', { operations: [{ action: 'trash', id: session }] })
   await assert.rejects(
     read('sessions', { limit: 1, cursor: page.next_cursor }),
-    /Restart pagination/
+    httpConflict('Data or filters changed. Restart pagination.')
   )
   await command('sessions', { operations: [{ action: 'restore', id: session }] })
   assert.equal((await read('session', { id: session })).notes, 'Correction')
@@ -297,7 +313,10 @@ test('category changes invalidate task cursors that depend on parent visibility'
   })
   const page = await read('tasks', { limit: 1 })
   await command('categories', { operations: [{ action: 'trash', id: cat }] })
-  await assert.rejects(read('tasks', { limit: 1, cursor: page.next_cursor }), /Restart pagination/)
+  await assert.rejects(
+    read('tasks', { limit: 1, cursor: page.next_cursor }),
+    httpConflict('Data or filters changed. Restart pagination.')
+  )
 })
 
 test('adopting a legacy timer preserves a session already saved by the old offline pipeline', async (t) => {
