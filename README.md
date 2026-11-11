@@ -122,9 +122,10 @@ Optional fallback:
 
 ## Schema Migrations
 
-A schema-only baseline is captured in `supabase/baseline/20261029.json` for review and isolated tests; do not apply it as a production migration. Inspect linked migration history before introducing the next database migration. Keep applied migration files in Git even when a later migration reverses them; Supabase Preview compares their versions with the remote history. After schema changes, run:
+A schema-only baseline is captured in `supabase/baseline/20261029.json` for review and isolated tests; do not apply it as a production migration. Inspect linked migration history before introducing the next database migration. Keep applied migration files in Git even when a later migration reverses them; Supabase Preview compares their versions with the remote history. For migrations already applied through the dashboard or MCP, use the recorded remote version in the filename rather than generating a different timestamp for the same SQL. After schema changes, run:
 
 ```bash
+supabase migration list
 supabase db push
 pnpm update-types
 ```

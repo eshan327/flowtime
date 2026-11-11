@@ -88,7 +88,7 @@ export async function setup() {
   )
   await db.exec(
     await readFile(
-      new URL('../../supabase/migrations/20261030034114_empty_trash.sql', import.meta.url),
+      new URL('../../supabase/migrations/20261030034709_empty_trash.sql', import.meta.url),
       'utf8'
     )
   )
