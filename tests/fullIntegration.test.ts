@@ -10,6 +10,30 @@ function httpConflict(message: string) {
   }
 }
 
+test('task due dates persist on create, survive unrelated edits, and can be changed or cleared', async (t) => {
+  const { db, command, read } = await setup()
+  t.after(() => db.close())
+  const id = crypto.randomUUID()
+  const task = async () => (await read('tasks', { ids: [id], status: 'all' })).items[0]
+  await command('tasks', {
+    operations: [
+      { action: 'create', id, name: 'Deadline', due_date: '2026-11-12', notes: 'Keep me' },
+    ],
+  })
+  assert.equal((await task()).due_date, '2026-11-12')
+  await command('tasks', { operations: [{ action: 'update', id, name: 'Renamed' }] })
+  assert.equal((await task()).due_date, '2026-11-12')
+  await command('tasks', { operations: [{ action: 'update', id, due_date: '2026-11-13' }] })
+  assert.equal((await task()).due_date, '2026-11-13')
+  await assert.rejects(
+    command('tasks', { operations: [{ action: 'update', id, due_date: '2026-02-30' }] })
+  )
+  assert.equal((await task()).due_date, '2026-11-13')
+  await command('tasks', { operations: [{ action: 'update', id, due_date: null }] })
+  assert.equal((await task()).due_date, null)
+  assert.equal((await task()).notes, 'Keep me')
+})
+
 test('expanded operations enforce consent, client/audience ownership, revocation and no direct RPC-helper access', async (t) => {
   const { db, claims, command, read } = await setup()
   t.after(() => db.close())

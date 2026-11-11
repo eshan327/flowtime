@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -7,9 +7,11 @@ import type { TaskWithCategory } from '@/types'
 export function TaskContextModal({
   task,
   onClose,
+  focusDueDate = false,
 }: {
   task: TaskWithCategory
   onClose: () => void
+  focusDueDate?: boolean
 }) {
   const [initial] = useState(task)
   const [notes, setNotes] = useState(task.notes ?? ''),
@@ -17,6 +19,10 @@ export function TaskContextModal({
     [priority, setPriority] = useState(task.priority ?? ''),
     [url, setUrl] = useState(task.reference_url ?? '')
   const { updateTask } = useTasks()
+  const dueInputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (focusDueDate) dueInputRef.current?.focus()
+  }, [focusDueDate])
   return (
     <Modal isOpen onClose={onClose} title={task.name}>
       <form
@@ -39,6 +45,27 @@ export function TaskContextModal({
             .catch(() => {})
         }}
       >
+        <div className="flex items-end gap-2">
+          <Input
+            ref={dueInputRef}
+            disabled={updateTask.isPending}
+            label="Due date (optional)"
+            max="9999-12-31"
+            type="date"
+            value={due}
+            onChange={(e) => setDue(e.target.value)}
+          />
+          {due ? (
+            <Button
+              className="shrink-0 text-ink-tertiary"
+              disabled={updateTask.isPending}
+              onClick={() => setDue('')}
+              variant="ghost"
+            >
+              Remove
+            </Button>
+          ) : null}
+        </div>
         <label className="block text-sm">
           Notes
           <textarea
@@ -48,7 +75,6 @@ export function TaskContextModal({
             onChange={(e) => setNotes(e.target.value)}
           />
         </label>
-        <Input label="Due date" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
         <label className="block text-sm">
           Priority
           <select

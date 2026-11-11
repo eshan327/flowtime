@@ -1,7 +1,7 @@
 import { TaskContextModal } from './TaskContextModal'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, GripVertical, MoreHorizontal, Trash2 } from 'lucide-react'
+import { CalendarDays, Check, GripVertical, MoreHorizontal, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
@@ -19,6 +19,7 @@ import {
 } from '@/lib/ordering'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { getMenuPosition } from '@/features/tasks/lib/menuPosition'
+import { formatTaskDueDate } from '@/features/tasks/lib/dueDate'
 import type { Category, TaskWithCategory } from '@/types'
 
 interface TaskItemProps {
@@ -43,8 +44,10 @@ export function TaskItem({
   onReorderTask,
 }: TaskItemProps) {
   const accentColor = task.categories?.color ?? task.color ?? DEFAULT_TASK_COLOR
+  const dueDate = task.due_date ? formatTaskDueDate(task.due_date) : null
 
   const [showDetails, setShowDetails] = useState(false)
+  const [focusDueDate, setFocusDueDate] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [draftName, setDraftName] = useState(task.name)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -182,7 +185,13 @@ export function TaskItem({
 
   return (
     <div className="relative">
-      {showDetails ? <TaskContextModal task={task} onClose={() => setShowDetails(false)} /> : null}
+      {showDetails ? (
+        <TaskContextModal
+          task={task}
+          focusDueDate={focusDueDate}
+          onClose={() => setShowDetails(false)}
+        />
+      ) : null}
       {dropPlacement === 'before' ? (
         <span className="absolute -top-1 left-0 right-0 h-0.5 bg-ink-primary" />
       ) : null}
@@ -304,7 +313,7 @@ export function TaskItem({
               />
             ) : (
               <Button
-                className="h-auto w-full justify-start p-0 text-left text-base text-ink-primary"
+                className="h-auto w-full justify-start break-words p-0 text-left text-base text-ink-primary"
                 onDoubleClick={() => {
                   setIsEditing(true)
                   setDraftName(task.name)
@@ -315,6 +324,22 @@ export function TaskItem({
                 {task.name}
               </Button>
             )}
+            {dueDate ? (
+              <Button
+                aria-label={`${dueDate.label} for ${task.name}. Change due date`}
+                className={`mt-1 h-auto max-w-full justify-start gap-1.5 px-0 py-0.5 text-left text-xs font-normal ${dueDate.isOverdue ? 'text-red-300' : dueDate.isToday ? 'text-amber-200' : 'text-ink-tertiary'}`}
+                onClick={() => {
+                  setFocusDueDate(true)
+                  setShowDetails(true)
+                }}
+                size="sm"
+                title={dueDate.fullDate}
+                variant="ghost"
+              >
+                <CalendarDays aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                <time dateTime={task.due_date!}>{dueDate.label}</time>
+              </Button>
+            ) : null}
           </div>
 
           <div className="relative" ref={menuAnchorRef}>
@@ -355,6 +380,19 @@ export function TaskItem({
                       variant="ghost"
                     >
                       Edit name
+                    </Button>
+
+                    <Button
+                      className="w-full justify-start px-3 py-2 text-left text-sm text-ink-secondary transition hover:bg-surface-hover hover:text-ink-primary"
+                      onClick={() => {
+                        closeMenu()
+                        setFocusDueDate(true)
+                        setShowDetails(true)
+                      }}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      {task.due_date ? 'Change due date' : 'Set due date'}
                     </Button>
 
                     <Button
@@ -436,6 +474,7 @@ export function TaskItem({
                       variant="ghost"
                       onClick={() => {
                         closeMenu()
+                        setFocusDueDate(false)
                         setShowDetails(true)
                       }}
                     >

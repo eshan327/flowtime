@@ -39,8 +39,22 @@ export function useTasks() {
     return result.items[0]
   }
   const addTask = useMutation({
-    mutationFn: ({ name, categoryId }: { name: string; categoryId: string | null }) =>
-      mutate({ action: 'create', id: crypto.randomUUID(), name, category_id: categoryId }),
+    mutationFn: ({
+      name,
+      categoryId,
+      dueDate,
+    }: {
+      name: string
+      categoryId: string | null
+      dueDate?: string | null
+    }) =>
+      mutate({
+        action: 'create',
+        id: crypto.randomUUID(),
+        name,
+        category_id: categoryId,
+        ...(dueDate ? { due_date: dueDate } : {}),
+      }),
     onSuccess: invalidate,
   })
   const updateTask = useMutation({

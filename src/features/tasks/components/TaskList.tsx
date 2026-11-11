@@ -11,7 +11,11 @@ interface TaskListProps {
   tasks: TaskWithCategory[]
   categories: Category[]
   activeTab: string
-  onAddTask: (payload: { name: string; categoryId: string | null }) => Promise<unknown> | void
+  onAddTask: (payload: {
+    name: string
+    categoryId: string | null
+    dueDate?: string | null
+  }) => Promise<unknown> | void
   onUpdateTask: (payload: { id: string; name?: string; color?: string }) => Promise<void> | void
   onCompleteTask: (taskId: string) => Promise<void> | void
   onDeleteTask: (taskId: string) => Promise<void> | void
@@ -122,7 +126,9 @@ export function TaskList({
       <div className="space-y-5">
         <AddTaskForm
           label="Add a task…"
-          onAdd={(name) => onAddTask({ name, categoryId: emptySection?.categoryId ?? null })}
+          onAdd={(name, dueDate) =>
+            onAddTask({ name, dueDate, categoryId: emptySection?.categoryId ?? null })
+          }
           prominent
         />
         <EmptyState
@@ -138,7 +144,9 @@ export function TaskList({
     <div className="space-y-7">
       <AddTaskForm
         label="Add a task…"
-        onAdd={(name) => onAddTask({ name, categoryId: activeTab === 'all' ? null : activeTab })}
+        onAdd={(name, dueDate) =>
+          onAddTask({ name, dueDate, categoryId: activeTab === 'all' ? null : activeTab })
+        }
         prominent
       />
 

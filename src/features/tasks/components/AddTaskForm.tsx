@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Plus, X } from 'lucide-react'
+import { CalendarDays, Check, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { getErrorMessage } from '@/lib/errorMessages'
 import { Input } from '@/components/ui/Input'
 
 interface AddTaskFormProps {
   label: string
-  onAdd: (name: string) => Promise<unknown> | void
+  onAdd: (name: string, dueDate: string | null) => Promise<unknown> | void
   prominent?: boolean
 }
 
@@ -21,6 +21,8 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
   const inputRef = useRef<HTMLInputElement>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [value, setValue] = useState('')
+  const [showDueDate, setShowDueDate] = useState(false)
+  const [dueDate, setDueDate] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -47,6 +49,8 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
   const reset = () => {
     setIsOpen(false)
     setValue('')
+    setShowDueDate(false)
+    setDueDate('')
     setError(null)
     setIsSubmitting(false)
   }
@@ -58,7 +62,7 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
     setIsSubmitting(true)
     setError(null)
     try {
-      await onAdd(trimmed)
+      await onAdd(trimmed, dueDate || null)
       reset()
     } catch (submitError) {
       setError(getErrorMessage(submitError, 'Unable to add task. Please try again.'))
@@ -89,59 +93,99 @@ export function AddTaskForm({ label, onAdd, prominent = false }: AddTaskFormProp
   }
 
   return (
-    <div
-      className={`flex items-center gap-2 ${prominent ? 'rounded-[4px] border border-surface-border p-2' : ''}`}
+    <form
+      className={`space-y-2 ${prominent ? 'rounded-[4px] border border-surface-border p-2' : ''}`}
+      onSubmit={(event) => {
+        event.preventDefault()
+        void handleSubmit()
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && !isSubmitting) {
+          event.preventDefault()
+          reset()
+        }
+      }}
     >
-      <Input
-        aria-label={label}
-        error={error ?? undefined}
-        disabled={isSubmitting}
-        autoCapitalize="off"
-        autoComplete="new-password"
-        autoCorrect="off"
-        name="task-title"
-        onChange={(event) => setValue(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault()
-            void handleSubmit()
-          }
+      <div className="flex items-center gap-2">
+        <Input
+          aria-label={label}
+          error={error ?? undefined}
+          disabled={isSubmitting}
+          autoCapitalize="off"
+          autoComplete="new-password"
+          autoCorrect="off"
+          name="task-title"
+          onChange={(event) => setValue(event.target.value)}
+          containerClassName="min-w-0 flex-1"
+          maxLength={200}
+          placeholder="Task title"
+          ref={inputRef}
+          spellCheck={false}
+          value={value}
+        />
 
-          if (event.key === 'Escape') {
-            event.preventDefault()
-            reset()
-          }
-        }}
-        placeholder="Task title"
-        ref={inputRef}
-        spellCheck={false}
-        value={value}
-      />
+        <Button
+          aria-label="Save"
+          className="shrink-0 p-0"
+          disabled={isSubmitting || !value.trim()}
+          loading={isSubmitting}
+          type="submit"
+          size="icon"
+          variant="outlined"
+        >
+          {!isSubmitting ? <Check className="h-4 w-4" /> : null}
+        </Button>
 
-      <Button
-        aria-label="Save"
-        className="p-0"
-        disabled={isSubmitting}
-        loading={isSubmitting}
-        onClick={() => {
-          void handleSubmit()
-        }}
-        size="icon"
-        variant="outlined"
-      >
-        {!isSubmitting ? <Check className="h-4 w-4" /> : null}
-      </Button>
-
-      <Button
-        aria-label="Cancel"
-        disabled={isSubmitting}
-        className="p-0"
-        onClick={reset}
-        size="icon"
-        variant="outlined"
-      >
-        <X className="h-4 w-4" />
-      </Button>
-    </div>
+        <Button
+          aria-label="Cancel"
+          disabled={isSubmitting}
+          className="shrink-0 p-0"
+          onClick={reset}
+          size="icon"
+          variant="outlined"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      {showDueDate ? (
+        <div className="flex items-end gap-2 px-1 pb-1">
+          <Input
+            autoFocus
+            containerClassName="min-w-0 max-w-56"
+            disabled={isSubmitting}
+            label="Due date (optional)"
+            max="9999-12-31"
+            onChange={(event) => setDueDate(event.target.value)}
+            type="date"
+            value={dueDate}
+          />
+          <Button
+            aria-label="Remove due date"
+            className="shrink-0 text-ink-tertiary"
+            disabled={isSubmitting}
+            onClick={() => {
+              setDueDate('')
+              setShowDueDate(false)
+              inputRef.current?.focus()
+            }}
+            size="icon"
+            variant="ghost"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <Button
+          className="gap-1.5 px-2 text-xs text-ink-tertiary"
+          disabled={isSubmitting}
+          onClick={() => setShowDueDate(true)}
+          size="sm"
+          variant="ghost"
+        >
+          <CalendarDays aria-hidden="true" className="h-3.5 w-3.5" />
+          Due date
+        </Button>
+      )}
+    </form>
   )
 }
