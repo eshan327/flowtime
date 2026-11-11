@@ -5,7 +5,7 @@ import { prepareChimeAudio, scheduleDoneChime } from '@/lib/audio'
 import { sendTimerCommand } from './useTimerSync'
 import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 
-export function useTimer(enabled: boolean) {
+export function useTimer(enabled: boolean, showClock: boolean) {
   const chimeEnabled = useTimerSettingsStore((state) => state.chimeEnabled)
   const chimeId = useTimerSettingsStore((state) => state.chimeId)
   const phase = useTimerStore((state) => state.phase)
@@ -15,6 +15,7 @@ export function useTimer(enabled: boolean) {
   const setWorkSeconds = useTimerStore((state) => state.setWorkSeconds)
 
   useEffect(() => {
+    if (!enabled || !chimeEnabled) return
     // Unlock audio during a user gesture, before the browser goes into the background.
     document.addEventListener('pointerdown', prepareChimeAudio)
     document.addEventListener('keydown', prepareChimeAudio)
@@ -22,7 +23,7 @@ export function useTimer(enabled: boolean) {
       document.removeEventListener('pointerdown', prepareChimeAudio)
       document.removeEventListener('keydown', prepareChimeAudio)
     }
-  }, [])
+  }, [enabled, chimeEnabled])
 
   useEffect(() => {
     if (!enabled || !chimeEnabled || phase !== 'breaking' || !breakEndAt) return
@@ -54,21 +55,38 @@ export function useTimer(enabled: boolean) {
       }
     }
 
-    tick()
-
-    const interval = window.setInterval(tick, 1000)
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        tick()
+    let interval: number | undefined
+    let deadlineTimeout: number | undefined
+    // Expiry and the six-hour cap must still run when there is no visible clock.
+    const deadline =
+      phase === 'working' && startedAt
+        ? new Date(useTimerStore.getState().runStartedAt ?? startedAt).getTime() +
+          MAX_SESSION_SECONDS * 1000
+        : breakEndAt?.getTime()
+    const updateClock = () => {
+      window.clearInterval(interval)
+      interval = undefined
+      tick()
+      if (phase === 'working' && showClock && document.visibilityState === 'visible')
+        interval = window.setInterval(tick, 1000)
+    }
+    const checkDeadline = () => {
+      tick()
+      if (deadline !== undefined && deadline > timerNow()) {
+        deadlineTimeout = window.setTimeout(checkDeadline, deadline - timerNow())
       }
     }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+    updateClock()
+    if (deadline !== undefined)
+      deadlineTimeout = window.setTimeout(checkDeadline, Math.max(0, deadline - timerNow()))
+    document.addEventListener('visibilitychange', updateClock)
+    window.addEventListener('pageshow', updateClock)
 
     return () => {
       window.clearInterval(interval)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.clearTimeout(deadlineTimeout)
+      document.removeEventListener('visibilitychange', updateClock)
+      window.removeEventListener('pageshow', updateClock)
     }
-  }, [enabled, phase, revision, startedAt, breakEndAt, setWorkSeconds])
+  }, [enabled, showClock, phase, revision, startedAt, breakEndAt, setWorkSeconds])
 }

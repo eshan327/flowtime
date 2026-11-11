@@ -4,6 +4,7 @@ import { createTimerSync } from '@/features/timer/lib/timerSync'
 import { sanitizeSettings, useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStore'
 import { supabase } from '@/lib/supabaseClient'
 import { commandFlowtime } from '@/lib/flowtimeApi'
+import { startVisiblePolling } from '@/lib/visiblePolling'
 
 export function useTimerSettingsSync(userId: string | undefined) {
   const [status, setStatus] = useState<{ userId?: string; ready: boolean; error: unknown }>({
@@ -103,19 +104,11 @@ export function useTimerSettingsSync(userId: string | undefined) {
     const resume = () => {
       if (document.visibilityState === 'visible') void controller.sync()
     }
-    // ponytail: reuse timer polling; use Realtime if instant propagation is needed.
-    const interval = window.setInterval(resume, 3000)
-    window.addEventListener('online', resume)
-    window.addEventListener('focus', resume)
-    document.addEventListener('visibilitychange', resume)
-    void controller.sync()
+    const stopPolling = startVisiblePolling(resume, 60_000)
     return () => {
       controller.stop()
       unsubscribe()
-      window.clearInterval(interval)
-      window.removeEventListener('online', resume)
-      window.removeEventListener('focus', resume)
-      document.removeEventListener('visibilitychange', resume)
+      stopPolling()
     }
   }, [userId])
 

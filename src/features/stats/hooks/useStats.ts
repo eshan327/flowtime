@@ -8,6 +8,7 @@ import { queryKeys } from '@/lib/queryKeys'
 import { DEFAULT_NEUTRAL_COLOR } from '@/lib/colors'
 import { dateKeyInZone } from '@/lib/timezone'
 import type { TimeRange, DaySummary, HeatmapDay } from '@/types'
+import { usePollingInterval } from '@/hooks/usePollingInterval'
 function days(rows: FocusDay[]): DaySummary[] {
   return rows.map((d) => ({
     date: d.date,
@@ -24,6 +25,7 @@ export function useStats(range: TimeRange, anchorDate: Date) {
   const { user } = useUser()
   const userId = user?.id
   const timezone = useTimerSettingsStore((s) => s.timezone)
+  const refetchInterval = usePollingInterval(60_000)
   const { from, to } = useMemo(
     () => getRangeDatesForAnchor(range, anchorDate, timezone),
     [range, anchorDate, timezone]
@@ -32,7 +34,9 @@ export function useStats(range: TimeRange, anchorDate: Date) {
     queryKey: queryKeys.sessionsStatsRange(userId, range, from.toISOString(), to.toISOString()),
     enabled: !!userId,
     placeholderData: keepPreviousData,
-    refetchInterval: 5000,
+    refetchInterval,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
     queryFn: async () => {
       const yearAgo = new Date()
       yearAgo.setUTCFullYear(yearAgo.getUTCFullYear() - 1)

@@ -61,6 +61,8 @@ const CHIME_NOTE_MAP: Record<ChimeOptionId, ChimeNote[]> = {
 }
 
 let audioContext: AudioContext | null = null
+let audioPrepared = false
+let activeChimes = 0
 
 function getChimeAudioContext() {
   if (typeof window === 'undefined') return null
@@ -68,17 +70,56 @@ function getChimeAudioContext() {
     window.AudioContext ||
     (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
   if (!AudioContextClass) return null
-  if (!audioContext || audioContext.state === 'closed') audioContext = new AudioContextClass()
+  if (!audioContext || audioContext.state === 'closed') {
+    audioContext = new AudioContextClass({ latencyHint: 'playback' })
+    audioPrepared = false
+  }
   return audioContext
 }
 
 export function prepareChimeAudio(): void {
   const ctx = getChimeAudioContext()
-  if (ctx && ctx.state !== 'running') void ctx.resume().catch(() => undefined)
+  if (!ctx || (audioPrepared && (activeChimes === 0 || ctx.state === 'running'))) return
+  void ctx
+    .resume()
+    .then(() => {
+      audioPrepared = true
+      suspendIdleAudio(ctx)
+    })
+    .catch(() => undefined)
 }
 
-function playNotes(ctx: AudioContext, chimeId: ChimeOptionId, startAt: number) {
+function suspendIdleAudio(ctx: AudioContext) {
+  if (activeChimes === 0 && ctx.state === 'running') {
+    void ctx
+      .suspend()
+      .then(() => {
+        if (activeChimes > 0) return ctx.resume()
+      })
+      .catch(() => undefined)
+  }
+}
+
+function retainChime(ctx: AudioContext) {
+  activeChimes++
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    activeChimes--
+    suspendIdleAudio(ctx)
+  }
+}
+
+function playNotes(
+  ctx: AudioContext,
+  chimeId: ChimeOptionId,
+  startAt: number,
+  onFinished: () => void
+) {
   const notes = CHIME_NOTE_MAP[chimeId] ?? CHIME_NOTE_MAP[DEFAULT_DONE_CHIME_ID]
+  let ended = 0
+  let cancelled = false
   const oscillators = notes.map((note) => {
     const oscillator = ctx.createOscillator()
     const gainNode = ctx.createGain()
@@ -93,42 +134,62 @@ function playNotes(ctx: AudioContext, chimeId: ChimeOptionId, startAt: number) {
     oscillator.onended = () => {
       oscillator.disconnect()
       gainNode.disconnect()
+      if (!cancelled && ++ended === notes.length) onFinished()
     }
     oscillator.start(noteStart)
     oscillator.stop(noteEnd)
     return oscillator
   })
-  return () => oscillators.forEach((oscillator) => oscillator.stop())
+  return () => {
+    cancelled = true
+    oscillators.forEach((oscillator) => oscillator.stop())
+  }
 }
 
 export function playDoneChime(chimeId: ChimeOptionId = DEFAULT_DONE_CHIME_ID): void {
   const ctx = getChimeAudioContext()
   if (!ctx) return
+  const release = retainChime(ctx)
   void ctx
     .resume()
-    .then(() => playNotes(ctx, chimeId, ctx.currentTime))
-    .catch(() => undefined)
+    .then(() => playNotes(ctx, chimeId, ctx.currentTime, release))
+    .catch(release)
 }
 
 export function scheduleDoneChime(deadline: Date, chimeId: ChimeOptionId) {
   if (deadline.getTime() <= Date.now()) return
   const ctx = getChimeAudioContext()
   if (!ctx) return
+  const release = retainChime(ctx)
+  let finished = false
   let cancelNotes: (() => void) | undefined
+  const finish = () => {
+    if (finished) return
+    finished = true
+    ctx.removeEventListener('statechange', schedule)
+    release()
+  }
   const schedule = () => {
+    if (finished) return
     cancelNotes?.()
     cancelNotes = undefined
     const remaining = (deadline.getTime() - Date.now()) / 1000
     if (ctx.state === 'running' && remaining > 0) {
-      cancelNotes = playNotes(ctx, chimeId, ctx.currentTime + remaining)
+      cancelNotes = playNotes(ctx, chimeId, ctx.currentTime + remaining, finish)
+    } else if (remaining <= 0 || ctx.state === 'closed') {
+      finish()
     }
   }
   schedule()
   // Audio time pauses on suspension: re-arm against wall time, never replay an expired break.
   ctx.addEventListener('statechange', schedule)
+  if (ctx.state !== 'running') void ctx.resume().catch(() => undefined)
   return () => {
     ctx.removeEventListener('statechange', schedule)
     // A normal timer tick marks the break done while the scheduled notes are still ringing.
-    if (Date.now() < deadline.getTime() || ctx.state !== 'running') cancelNotes?.()
+    if (Date.now() < deadline.getTime() || ctx.state !== 'running' || !cancelNotes) {
+      cancelNotes?.()
+      finish()
+    }
   }
 }

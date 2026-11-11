@@ -12,7 +12,7 @@ import {
   LogIn,
   LogOut,
 } from 'lucide-react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { FlowtimeMark } from '@/components/FlowtimeMark'
 import { Modal } from '@/components/ui/Modal'
@@ -25,6 +25,7 @@ import {
 } from '@/features/timer/hooks/useTimerSessionPipeline'
 import { getQueuedSessionCount } from '@/features/sessions/lib/sessionOutbox'
 import { supabase } from '@/lib/supabaseClient'
+import { startVisiblePolling } from '@/lib/visiblePolling'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Timer', icon: Clock3, preload: () => import('@/features/timer/TimerPage') },
@@ -127,8 +128,9 @@ function UserAvatar({
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, timerReady, settingsSyncError } = useUser()
+  const { pathname } = useLocation()
   const settingsPending = useTimerSettingsStore((state) => state.syncPending)
-  useTimer(timerReady)
+  useTimer(timerReady, pathname === '/')
   const sessions = useTimerSessionPipeline({ userId: user?.id })
   const [isAuthPending, setIsAuthPending] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
@@ -154,7 +156,6 @@ export function Layout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true
-    let interval: number | undefined
     const refresh = () => {
       if (document.visibilityState !== 'visible') return
       setIsOnline(navigator.onLine)
@@ -168,26 +169,15 @@ export function Layout({ children }: { children: ReactNode }) {
         setPendingSyncCount(0)
       }
     }
-    const updatePolling = () => {
-      window.clearInterval(interval)
-      interval = undefined
-      if (document.visibilityState !== 'visible') return
-      refresh()
-      interval = window.setInterval(refresh, 5000)
-    }
-
-    updatePolling()
-    window.addEventListener('online', refresh)
+    const stopPolling = startVisiblePolling(refresh, 60_000)
+    if (navigator.onLine === false) refresh()
     window.addEventListener('offline', refresh)
-    document.addEventListener('visibilitychange', updatePolling)
     return () => {
       active = false
-      window.clearInterval(interval)
-      window.removeEventListener('online', refresh)
+      stopPolling()
       window.removeEventListener('offline', refresh)
-      document.removeEventListener('visibilitychange', updatePolling)
     }
-  }, [user?.id])
+  }, [user?.id, sessions.queuedSessionCount])
 
   useEffect(() => {
     let active = true

@@ -17,6 +17,7 @@ import {
 import { readFlowtime, commandFlowtime } from '@/lib/flowtimeApi'
 import { queryClient } from '@/lib/queryClient'
 import { queryKeys } from '@/lib/queryKeys'
+import { startVisiblePolling } from '@/lib/visiblePolling'
 import type { TaskWithCategory } from '@/types'
 interface ServerTimer {
   state: CommandState
@@ -306,20 +307,13 @@ export function useTimerSync(userId: string | undefined) {
     const resume = () => {
       if (document.visibilityState === 'visible') void sync()
     }
-    const interval = window.setInterval(resume, 3000)
-    window.addEventListener('online', resume)
-    window.addEventListener('focus', resume)
+    const stopPolling = startVisiblePolling(resume, 15_000)
     window.addEventListener('storage', resume)
-    document.addEventListener('visibilitychange', resume)
-    void sync()
     return () => {
       stopped = true
       if (active === controller) active = null
-      window.clearInterval(interval)
-      window.removeEventListener('online', resume)
-      window.removeEventListener('focus', resume)
+      stopPolling()
       window.removeEventListener('storage', resume)
-      document.removeEventListener('visibilitychange', resume)
     }
   }, [userId])
   return {

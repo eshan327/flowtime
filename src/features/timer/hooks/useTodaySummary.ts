@@ -4,9 +4,11 @@ import { useTimerSettingsStore } from '@/features/timer/stores/timerSettingsStor
 import { readFlowtime } from '@/lib/flowtimeApi'
 import type { FocusSummary } from '@/lib/focusSummary'
 import { dateKeyInZone } from '@/lib/timezone'
+import { usePollingInterval } from '@/hooks/usePollingInterval'
 export function useTodaySummary() {
   const { user } = useUser()
   const timezone = useTimerSettingsStore((s) => s.timezone)
+  const refetchInterval = usePollingInterval(60_000)
   return useQuery({
     queryKey: [
       'sessions',
@@ -16,7 +18,9 @@ export function useTodaySummary() {
       timezone,
     ],
     enabled: !!user,
-    refetchInterval: 5000,
+    refetchInterval,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
     queryFn: async () => {
       const s = await readFlowtime<FocusSummary>('summary', { period: 'day', timezone, limit: 1 })
       return { count: s.session_count, totalWorkSeconds: s.work_seconds }

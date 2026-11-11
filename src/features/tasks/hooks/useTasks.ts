@@ -4,6 +4,7 @@ import { useUser } from '@/context/UserContext'
 import { queryKeys } from '@/lib/queryKeys'
 import { commandFlowtime, readAllFlowtime } from '@/lib/flowtimeApi'
 import type { TaskWithCategory } from '@/types'
+import { usePollingInterval } from '@/hooks/usePollingInterval'
 export interface TaskUpdate {
   id: string
   name?: string
@@ -18,11 +19,12 @@ export interface TaskUpdate {
 export function useTasks() {
   const { user } = useUser()
   const client = useQueryClient()
+  const refetchInterval = usePollingInterval(30_000)
   const tasksQuery = useQuery({
     queryKey: queryKeys.tasks(user?.id),
     queryFn: () => readAllFlowtime<TaskWithCategory>('tasks', { status: 'all' }),
     enabled: !!user,
-    refetchInterval: 3000,
+    refetchInterval,
     refetchOnWindowFocus: 'always',
     refetchOnReconnect: 'always',
   })

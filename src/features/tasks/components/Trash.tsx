@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/Button'
 import { commandFlowtime, readAllFlowtime } from '@/lib/flowtimeApi'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Category, TaskWithCategory, Session } from '@/types'
+import { usePollingInterval } from '@/hooks/usePollingInterval'
 export function Trash() {
   const { user } = useUser()
   const client = useQueryClient()
+  const refetchInterval = usePollingInterval(60_000)
   const query = useQuery({
     queryKey: ['trash', user?.id],
     queryFn: async () => {
@@ -18,7 +20,9 @@ export function Trash() {
       return { categories, tasks, sessions }
     },
     enabled: !!user,
-    refetchInterval: 5000,
+    refetchInterval,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
   })
   const invalidateTrash = () =>
     Promise.all([

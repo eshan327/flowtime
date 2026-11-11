@@ -1,5 +1,5 @@
 import { timerNow } from '@/features/timer/lib/serverClock'
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import { DEFAULT_TASK_COLOR } from '@/features/tasks/constants'
 import { getBreakSeconds } from '@/features/timer/stores/timerSettingsStore'
 import { useTimerStore } from '@/features/timer/stores/timerStore'
@@ -48,12 +48,7 @@ export function TimerClock({
       : phase === 'breaking' && breakEndAt
         ? Math.max(0, Math.ceil((breakEndAt.getTime() - now) / 1000))
         : 0
-  const progress =
-    phase === 'breaking' && breakTotal > 0
-      ? (breakTotal - seconds) / breakTotal
-      : phase === 'working'
-        ? (workSeconds % 60) / 60
-        : 0
+  const progress = phase === 'breaking' && breakTotal > 0 ? (breakTotal - seconds) / breakTotal : 0
   const accent = accentColor ?? DEFAULT_TASK_COLOR
   const clock = formatClock(seconds)
   const supportingValue =
@@ -64,15 +59,35 @@ export function TimerClock({
         : null
 
   return (
-    <div
-      className={`timer-dial relative mx-auto flex aspect-square w-full max-w-[32rem] [container-type:inline-size] shrink-0 items-center justify-center rounded-full sm:w-[min(32rem,calc(100svh-20rem),100%)] ${phase === 'working' ? 'is-running' : ''}`}
-      style={
-        {
-          '--timer-accent': accent,
-          '--timer-progress': `${progress * 360}deg`,
-        } as CSSProperties
-      }
-    >
+    <div className="timer-dial relative mx-auto flex aspect-square w-full max-w-[32rem] [container-type:inline-size] [contain:paint] shrink-0 items-center justify-center rounded-full sm:w-[min(32rem,calc(100svh-20rem),100%)]">
+      <svg
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full -rotate-90"
+        focusable="false"
+        viewBox="0 0 100 100"
+      >
+        <circle
+          cx="50"
+          cy="50"
+          r="49"
+          fill="none"
+          stroke={phase === 'working' ? accent : 'rgb(var(--surface-border))'}
+          strokeOpacity={phase === 'working' ? 0.7 : 0.58}
+          strokeWidth="0.8"
+        />
+        {phase === 'breaking' ? (
+          <circle
+            cx="50"
+            cy="50"
+            r="49"
+            fill="none"
+            pathLength="1"
+            stroke={accent}
+            strokeDasharray={`${Math.max(0, Math.min(1, progress))} 1`}
+            strokeWidth="0.8"
+          />
+        ) : null}
+      </svg>
       <div className="relative z-[1] flex w-[78%] flex-col items-center">
         <p
           className={`whitespace-nowrap font-medium leading-none tabular-nums text-ink-primary ${clock.length > 5 ? 'text-[19cqw] tracking-[-0.055em]' : 'text-[27cqw] tracking-[-0.065em]'}`}

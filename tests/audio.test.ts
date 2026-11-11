@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { prepareChimeAudio, scheduleDoneChime } from '../src/lib/audio.ts'
+import { playDoneChime, prepareChimeAudio, scheduleDoneChime } from '../src/lib/audio.ts'
 
 class FakeAudioContext extends EventTarget {
   state = 'running'
   currentTime = 10
   destination = {}
-  notes: { starts: number[]; stops: number[] }[] = []
+  notes: { starts: number[]; stops: number[]; end: () => void }[] = []
   constructor() {
     super()
     contexts.push(this)
@@ -16,10 +16,14 @@ class FakeAudioContext extends EventTarget {
     this.dispatchEvent(new Event('statechange'))
     return Promise.resolve()
   }
+  suspend() {
+    this.state = 'suspended'
+    this.dispatchEvent(new Event('statechange'))
+    return Promise.resolve()
+  }
   createOscillator() {
-    const note = { starts: [] as number[], stops: [] as number[] }
-    this.notes.push(note)
-    return {
+    const oscillator = {
+      onended: () => {},
       connect() {},
       disconnect() {},
       frequency: { setValueAtTime() {} },
@@ -30,6 +34,9 @@ class FakeAudioContext extends EventTarget {
         note.stops.push(time)
       },
     }
+    const note = { starts: [] as number[], stops: [] as number[], end: () => oscillator.onended() }
+    this.notes.push(note)
+    return oscillator
   }
   createGain() {
     return {
@@ -69,6 +76,8 @@ test('expired restored timers stay silent and normal expiry cleanup lets the chi
   cancel()
   assert.equal(notes.length, 2)
   assert.ok(notes.every((note) => note.stops.length === 1))
+  notes.forEach((note) => note.end())
+  assert.equal(ctx.state, 'suspended')
 })
 
 test('suspended audio re-arms only before the deadline and never chimes on a late return', (t) => {
@@ -90,4 +99,35 @@ test('suspended audio re-arms only before the deadline and never chimes on a lat
   prepareChimeAudio()
   assert.equal(ctx.notes.length, count)
   cancel()
+})
+
+test('unlocking and repeated gestures leave idle audio suspended; previews release it after the final note', async () => {
+  prepareChimeAudio()
+  await Promise.resolve()
+  const ctx = contexts.at(-1)!
+  assert.equal(ctx.state, 'suspended')
+  prepareChimeAudio()
+  assert.equal(ctx.state, 'suspended')
+  playDoneChime('gentle-bell')
+  await Promise.resolve()
+  assert.equal(ctx.state, 'running')
+  const notes = ctx.notes.slice(-2)
+  notes[0].end()
+  assert.equal(ctx.state, 'running')
+  notes[1].end()
+  assert.equal(ctx.state, 'suspended')
+})
+
+test('finishing one preview does not suspend another chime that is still playing', async () => {
+  const ctx = contexts.at(-1)!
+  const count = ctx.notes.length
+  playDoneChime('classic-rise')
+  playDoneChime('gentle-bell')
+  await Promise.resolve()
+  const notes = ctx.notes.slice(count)
+  assert.equal(notes.length, 5)
+  notes.slice(0, 3).forEach((note) => note.end())
+  assert.equal(ctx.state, 'running')
+  notes.slice(3).forEach((note) => note.end())
+  assert.equal(ctx.state, 'suspended')
 })

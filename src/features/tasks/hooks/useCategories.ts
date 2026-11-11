@@ -3,14 +3,18 @@ import { useUser } from '@/context/UserContext'
 import { queryKeys } from '@/lib/queryKeys'
 import { commandFlowtime, readAllFlowtime } from '@/lib/flowtimeApi'
 import type { Category } from '@/types'
+import { usePollingInterval } from '@/hooks/usePollingInterval'
 export function useCategories() {
   const { user } = useUser()
   const client = useQueryClient()
+  const refetchInterval = usePollingInterval(60_000)
   const query = useQuery({
     queryKey: queryKeys.categories(user?.id),
     queryFn: () => readAllFlowtime<Category>('categories'),
     enabled: !!user,
-    refetchInterval: 3000,
+    refetchInterval,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
   })
   const invalidate = () =>
     Promise.all([

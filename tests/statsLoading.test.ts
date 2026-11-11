@@ -4,8 +4,10 @@ import test from 'node:test'
 
 const queries: any[] = []
 const calls: any[] = []
+const connection = { visible: true, online: true }
 Object.assign(globalThis, {
   statsTest: {
+    connection,
     query: (options: any) => {
       queries.push(options)
       return { data: undefined, isLoading: true }
@@ -28,9 +30,10 @@ const moduleUrl = (source: string) => `data:text/javascript,${encodeURIComponent
 const hooks = registerHooks({
   resolve(specifier, context, nextResolve) {
     const mocks: Record<string, string> = {
-      react: 'export const useMemo = fn => fn()',
+      react:
+        'export const useMemo = fn => fn(); export const useSyncExternalStore = (subscribe, getSnapshot) => getSnapshot()',
       '@tanstack/react-query':
-        'export const useQuery = globalThis.statsTest.query; export const keepPreviousData = value => value',
+        'export const useQuery = globalThis.statsTest.query; export const keepPreviousData = value => value; export const focusManager = {subscribe:()=>()=>{},isFocused:()=>globalThis.statsTest.connection.visible}; export const onlineManager = {subscribe:()=>()=>{},isOnline:()=>globalThis.statsTest.connection.online}',
       '@/context/UserContext': 'export const useUser = () => ({ user: { id: "owner" } })',
       '@/features/timer/stores/timerSettingsStore':
         'export const useTimerSettingsStore = fn => fn({timezone:"America/New_York"})',
@@ -62,4 +65,19 @@ test('Insights loads only summaries and timer totals request just one page', asy
   assert.deepEqual(await queries.pop().queryFn(), { count: 12, totalWorkSeconds: 3600 })
   assert.equal(calls.length, 1)
   assert.equal(calls[0].input.limit, 1)
+})
+
+test('summary polling is infrequent in front and registers no interval while hidden or offline', () => {
+  for (const hook of [() => useStats('week', new Date()), useTodaySummary]) {
+    hook()
+    assert.equal(queries.pop().refetchInterval, 60_000)
+    connection.visible = false
+    hook()
+    assert.equal(queries.pop().refetchInterval, false)
+    connection.visible = true
+    connection.online = false
+    hook()
+    assert.equal(queries.pop().refetchInterval, false)
+    connection.online = true
+  }
 })
